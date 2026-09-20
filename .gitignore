@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets. Never committed.
+.env
+.env.*
+!.env.example
+
+# Local working state. The committed demo lives in fixtures/.
+var/
+*.log
+.DS_Store

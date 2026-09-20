@@ -1,0 +1,38 @@
+# The seven-element scorecard from the lab notes (experiment 1), with no decision
+# block. It exists to reproduce those numbers offline: the fixture answers were
+# collected under exactly these question bodies, so every one is a cache hit.
+#
+# Do not reword anything here. The answer cache is keyed on each question's exact
+# body, so a reworded element is correctly treated as unanswered.
+name: Sentiment
+version: 1
+scores:
+  - name: Sentiment
+    key: sentiment
+    question_type: choice
+    instructions: What is the overall sentiment of this text?
+    criteria: {positive: null, negative: null}
+    elements:
+      - key: praise
+        question_type: noul
+        instructions: Does the text express praise or approval of something?
+      - key: criticism
+        question_type: noul
+        instructions: Does the text express criticism or disapproval of something?
+      - key: mixed
+        question_type: noul
+        instructions: Does the text express both positive and negative feelings?
+      - key: irony
+        question_type: noul
+        instructions: Is the text sarcastic or ironic?
+      - key: recommend
+        question_type: noul
+        instructions: Would the author recommend or endorse the thing being discussed?
+      - key: expectation
+        question_type: choice
+        instructions: How did the thing being described compare with what the author expected?
+        criteria: {exceeded: null, met: null, fell_short: null, unclear: null}
+      - key: intensity
+        question_type: score
+        instructions: How strong is the emotion expressed in the text?
+        criteria: [none, mild, moderate, strong]

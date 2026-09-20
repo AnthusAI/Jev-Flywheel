@@ -1,0 +1,24 @@
+# The scorecard the flywheel starts from: Jev's own holistic answer, nothing else.
+#
+# The decision is hand-written, not fitted. A weight of 2.0 on the two-option
+# centered log-ratio equals the log-odds (clr = log-odds / 2 for two options), so
+# this head reproduces Jev's own probability exactly. That makes v1 an honest
+# baseline -- "what Jev says" -- and an identity check on the whole pipeline.
+name: Sentiment
+version: 1
+scores:
+  - name: Sentiment
+    key: sentiment
+    question_type: choice
+    instructions: What is the overall sentiment of this text?
+    criteria: {positive: null, negative: null}
+    decision:
+      model: linear_threshold
+      classes: ["positive", "negative"]
+      positive_class: "positive"
+      threshold: 0.0
+      features: [self.holistic.clr.positive]
+      parameters:
+        weights:
+          intercept: 0.0
+          self.holistic.clr.positive: 2.0

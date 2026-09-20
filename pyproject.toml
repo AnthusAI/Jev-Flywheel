@@ -1,0 +1,38 @@
+[project]
+name = "jev-flywheel"
+version = "0.1.0"
+description = "A minimal demonstration of layering an ML decision model on top of Jev, with a human-in-the-loop feedback flywheel"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Anthus AI Solutions", email = "info@anthus.ai" }]
+keywords = ["jev", "typesafe", "calibration", "active-learning", "scorecard"]
+
+dependencies = [
+  "typesafe-sdk",
+  "pyyaml>=6.0",
+  "numpy>=1.24",
+  "scikit-learn>=1.3",
+  "scipy>=1.10",
+  "rich>=13.0",
+  "click>=8.1",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# The Tactus meta-cognition procedure. Optional so the rest of the demo installs
+# without pulling a Lua runtime.
+steer = ["tactus>=0.52.0"]
+charts = ["matplotlib>=3.7"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+flywheel = "jev_flywheel.cli:cli"
+
+[tool.setuptools]
+packages = ["jev_flywheel"]
+
+[tool.pytest.ini_options]
+testpaths = ["jev_flywheel", "tests"]
+python_files = ["*_test.py", "test_*.py"]
+asyncio_mode = "auto"
