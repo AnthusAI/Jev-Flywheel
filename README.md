@@ -165,6 +165,124 @@ pricing, committing — are Python behind a small host module. The model is aske
 the disagreements and propose edits. It never writes a weight; the proposal format has nowhere to
 put one.
 
+## A steering round, step by step
+
+This is the round in the committed recording, with the real output at each stage. It is the part
+worth understanding, because it is where a scorecard actually changes.
+
+**1. You label. The console picks the item and shows its work.**
+
+```
+╭─ Question 91 · scorecard v3 · Sentiment ─────────────────────────────────────────╮
+│  While the lacrosse workout was somewhat encouraging, I'm uncertain about        │
+│  overall trajectory.                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────╯
+We say     negative  (73% confident, raw 72%)
+Jev alone  negative  (85%)  (agrees)
+Why        self.holistic.clr.positive (+0.59)
+Chosen because: uncertainty 0.61, disagreement 0.00, conflict 0.00, ambiguity 0.61,
+novelty 0.82  (picked with probability 0.0003 from 5278 unlabeled)
+[a]gree   [d]isagree   [s]kip   [q]uit
+```
+
+You press `d`: the label is `positive`. One disagreement is not interesting by itself. After 140
+labels there are 43 of them, and refits have taken the one question the scorecard asks as far as
+it goes — out-of-fold accuracy sits at 0.740 while disagreements keep arriving. That is the
+trigger: more labels are not helping, so the questions are the problem.
+
+**2. The round begins by assembling evidence, not by calling a model.** The host builds a briefing
+from what is on disk:
+
+```json
+{"n_labeled": 140, "n_effective": 110.6, "capability_tier": "shrunk",
+ "feature_budget": 22, "features_in_use": 1, "disagreements": 43,
+ "label_distribution": {"positive": 67, "negative": 73},
+ "last_fit": {"out_of_fold_accuracy": 0.740, "out_of_fold_brier": 0.165}}
+```
+
+plus all 43 disagreements with their text, what we said, how confident we were and any comment;
+a balanced 40-item sample of labeled items *whether we got them right or wrong*; and the current
+elements ranked by permutation importance. The held-out split is not in there, and never is.
+
+The labeled sample matters more than it looks. An errors-only briefing hides anything the
+scorecard already handles: on this corpus sports items produce a 9% error rate against 73% for
+workplace items, so a list of mistakes is nearly all workplace text and the pattern is invisible.
+
+**3. One model call.** It reads that and replies with JSON. What it actually said:
+
+> *"The label in this data tracks the text's domain rather than its expressed sentiment:
+> sports/recreation texts are labeled positive and business/workplace/operations texts are
+> labeled negative, even when the wording is purely neutral logistics or the sentiment is
+> deliberately hedged and mixed. The only feature is holistic sentiment, so it misfires in both
+> directions..."*
+
+```json
+{"add_elements": [{"key": "topic_domain", "question_type": "choice",
+  "instructions": "Which best describes the main subject of this text: sports, athletics, or
+                   recreational activities; business, workplace, or organizational operations;
+                   or something else?",
+  "criteria": {"sports_or_recreation": null, "business_or_workplace": null,
+               "something_else": null}}],
+ "retire_elements": [], "reword_elements": []}
+```
+
+Note what is *not* in that reply: any number. The format has no field for a weight, so the model
+cannot set one even if it tries.
+
+**4. Code takes over.** The proposal is parsed, applied to a copy of the scorecard and validated —
+a bad element key, or a feature the question cannot produce, fails here with a message the model
+can be asked to repair, before anything is spent. Then it is priced:
+
+```
+Changes: add topic_domain
+Features: +topic_domain.clr.sports_or_recreation +topic_domain.clr.business_or_workplace
+          (3 of a budget of 22)
+Cost: 140 Jev requests to evaluate
+Serving it on every item would need 8,061 requests in all
+```
+
+140 requests, because 140 labeled items have no answer to a question that did not exist until
+now. Ten new elements would have cost the same 140: a request carries every question at once.
+(In `make demo` this step is free — the recording ships the answers, so a replay spends nothing.)
+
+**5. It is measured, not argued about.** Jev answers the new question for those items, the head is
+refit out of fold, and the candidate is compared with the incumbent on the same labels and the
+same weights:
+
+```
+Out of fold on 140 labels (111 effective, tier shrunk):
+  candidate: accuracy 0.874, ECE 0.026, Brier 0.080
+  incumbent: accuracy 0.762, ECE 0.022, Brier 0.161
+```
+
+The candidate wins on accuracy and on Brier and is a hair *worse* on ECE, which is why promotion
+is decided on Brier — a proper scoring rule that accounts for both — with accuracy not allowed to
+regress. Had it lost, the round would end here and the scorecard would not change. Three of twelve
+runs end exactly that way.
+
+**6. You approve it.** Only now does anything want your attention, and it arrives with that diff
+and those numbers. Say no and nothing is written.
+
+**7. The scorecard gains a question; the fit gains a weight.**
+
+```yaml
+ elements:
++  - key: topic_domain
++    question_type: choice
++    instructions: Which best describes the main subject of this text...
++    criteria: {sports_or_recreation: null, business_or_workplace: null, something_else: null}
+ decision:
+   features: [self.holistic.clr.positive,
++             topic_domain.clr.sports_or_recreation, topic_domain.clr.business_or_workplace]
+   parameters:
+     weights: {positive: {...}}        # set by the fit, never by the model
+```
+
+Afterwards the element inventory ranks the new question **above** the original one — permutation
+importance 0.656 against 0.238 for the holistic sentiment answer. The scorecard now states in
+writing that subject matter decides these labels more than sentiment does, and every later run is
+scored against that claim.
+
 ## How often does it work?
 
 This is the number to judge the idea by, and it is not 100%.
@@ -185,35 +303,18 @@ state a procedure?" Those are good features. They are simply not the bias we are
 
 Adding a checklist of *kinds* of factor to the prompt — scope, exceptions, subject matter,
 register, thresholds, without naming sport or the workplace — took it from 3 to 4 of 12. That is
-a nudge, and it is reported as one. Full records, including every proposal's exact wording, are
-in [`studies/`](studies/).
+a nudge, and it is reported as one.
 
-## How we fooled ourselves
-
-Four separate measurement defects, each of which changed the answer when it was fixed. They are
-listed because the corrections are the most transferable part of this project.
-
-1. **The proposal parser was a bare `json.loads`.** Models wrap JSON in prose and code fences, so
-   any proposal that did was recorded as *"proposed nothing."* This produced a confident **0 of
-   12** that was never true.
-2. **The detector for "did it find it" required a sports keyword**, so an element naming only the
-   workplace pole could never score. Asymmetric by construction.
-3. **Accuracy was compared across runs** that each drew their own held-out sample, so baselines
-   ranged 0.747–0.795 and the differences were noise. Only *paired* within-run deltas mean
-   anything.
-4. **Failed runs did not record which arm they belonged to**, so four runs lost to expired AWS
-   credentials vanished from the analysis and the reported denominator was quietly short.
-
-And one idea that simply did not work. We reasoned that the analyst is frame-locked — told it is
+**One design change made it worse.** We thought the analyst might be frame-locked: told it is
 improving a *sentiment* scorecard, it proposes sentiment features, which would explain why a
-factor orthogonal to sentiment stays invisible. So we added a second agent that never sees the
-task at all: two groups of texts, "Group A" and "Group B", and one question, what separates them?
+factor orthogonal to sentiment goes unnoticed. So we added a second agent that never sees the
+task — two groups of texts, "Group A" and "Group B", and one question: what separates them? It
+found the axis in **1 of 12** runs against 3 of 12 for the plain loop, with a lower average gain.
+The prediction was written down beforehand in
+[`studies/PREREGISTERED.md`](studies/PREREGISTERED.md) — 6 of 12 — which is why it is reported
+here. Removing the frame did not help.
 
-It found the axis in **1 of 12** runs, against 3 of 12 for the plain loop, with a lower average
-gain. We had written the prediction down first — 6 of 12 — in
-[`studies/PREREGISTERED.md`](studies/PREREGISTERED.md), which is the only reason it appears here
-rather than being quietly dropped. Stripping the frame made things worse, and the diagnosis that
-motivated it is, by our own pre-registered criterion, wrong.
+Every run's record, including each proposal's exact wording, is in [`studies/`](studies/).
 
 ## What this does not prove
 
