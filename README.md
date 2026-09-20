@@ -74,8 +74,9 @@ plainly:
 > *"The dataset intentionally contains a learnable domain pattern... That makes the experiment a
 > demonstration of task-specific alignment."*
 
-The skew runs well past the tier it was aimed at — 83% of strong-positive items carry a sports
-cue against 19% of strong-negative — and it is genuinely predictive. Asked "what is this text
+The skew runs well past the tier it was aimed at. By a simple keyword rule (ours, not the
+corpus's — `scripts/audit_corpus.py` reproduces it offline), 83% of strong-positive items carry a
+sports cue against 19% of strong-negative. And it is genuinely predictive. Asked "what is this text
 about?", Jev names a domain on 57% of neutral items, and on those the rule *sports → positive,
 workplace → negative* is 90.3% accurate. One element asking that question is worth **+9 points**
 over the refit baseline. An element asking a placebo question ("does the text contain a number?")
@@ -83,6 +84,11 @@ is worth nothing, which is the control that matters.
 
 So there is an answer key. That is unusual, and it is the point: you can ask whether the machine
 found the thing, instead of only whether the number went up.
+
+`python scripts/audit_corpus.py` reproduces every claim in this section offline, including the
+per-tier skew and the request-cost fit. It also reports something worth knowing before reading
+any accuracy here: the fixtures are de-duplicated by text, which fell unevenly, so the corpus is
+57% positive and a majority-class baseline already scores 56.6%.
 
 This is the third of three articles. The
 [first](https://anth.us/blog/fine-tuned-classification-with-confidence/) (September 2025)
@@ -94,9 +100,17 @@ trusted. This one asks whether a loop can name what the first one hid.
 
 [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) takes some text and a set
 of typed questions — yes/no, choice, or a score on a rubric — and answers all of them **in one
-request**. Cost is dominated by the text, not the questions: eight questions averaged 501 input
-tokens per item against about 335 for two. That makes a decomposition affordable that would not
-be with ordinary prompts, where every extra question is another call.
+request**. That is the economic fact the whole design rests on: N questions cost one request,
+not N.
+
+Measured on the bundled answers (all 8,801 items, eight questions each): a request averages
+**502 input tokens**, and barely moves with the text — the shortest tenth of the corpus costs
+495 tokens and the longest 510, fitting `tokens ≈ 0.14 × characters + 488`. These texts are
+single sentences, so per-request overhead dominates here. Ask the same eight questions as eight
+separate calls and you pay that overhead eight times over. On long inputs the saving is larger
+again, because the text itself is sent once rather than N times. Either way the conclusion is the
+same and it is what makes decomposition affordable: **adding a question is cheap; adding a request
+is not.**
 
 | Word | Meaning |
 |---|---|
@@ -235,8 +249,10 @@ is powered to show the effect exists, not to order four models within a few poin
 - **Features have a frozen contract.** Choice answers use a centered log-ratio, not per-option
   logits, because probabilities sum to one and per-option logits are collinear — regularization
   splits weight between them arbitrarily and two refits on the same data disagree. Probabilities
-  are clipped at 0.01 because Jev's tails are not calibrated and answers flip about 1% of the time
-  between identical runs.
+  are clipped at 0.01 because Jev's tails are not calibrated and its answers are not perfectly
+  stable between identical runs (measured at roughly 1% in
+  [earlier work](https://anth.us/blog/can-you-trust-jev-confidence/) on this corpus, not
+  re-measured here).
 - **Missing features are zero when serving and an error when training.** In log-odds space zero
   means "no evidence", so a degraded request degrades gracefully. But training on imputed rows
   biases a new element's weight toward zero, and then the optimizer retires its own good proposal.
@@ -247,9 +263,10 @@ is powered to show the effect exists, not to order four models within a few poin
   inverse-propensity weighting), not row count. Feature budgets scale with it, and asking for more
   is refused with a message saying what would suffice.
 - **Selection costs effective sample size, and that is measurable.** Sharper picks mean more
-  unequal propensities, and the fit is weighted by their inverse: at temperature 0.35, 45 labels
-  were worth 21 effective; at 0.60 they are worth 36.9. Select too keenly and you starve the fit
-  below the floor at which it can fit anything. Most active-learning write-ups never measure this.
+  unequal propensities, and the fit is weighted by their inverse: on the bundled corpus, at
+  temperature 0.35 a run of 45 labels is worth 21 effective; at the shipped 0.60 it is worth 38.
+  Select too keenly and you starve the fit below the floor at which it can fit anything at all.
+  Most active-learning write-ups never measure this.
 - **The agent never sees the held-out split.** It gets out-of-fold numbers only. An agent that saw
   the scoreboard, even indirectly, would tune to it one round at a time.
 
