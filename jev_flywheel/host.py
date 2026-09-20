@@ -200,13 +200,17 @@ class FlywheelHost:
                 self.workspace.feedback(), self.score_name).values() if f.label is not None],
             candidate.questions())
         self._proposal, self._candidate = proposal, candidate
+        tokens = plan.requests * ESTIMATED_INPUT_TOKENS_PER_REQUEST
         return {
             "ok": True, "noop": noop, "problems": [], "diff": diff,
+            "root_cause": proposal.root_cause,
             "n_features": len(score.decision.features), "feature_budget": budget,
             "plan": {
                 "requests": plan.requests, "missing_answers": plan.missing_answers,
-                "estimated_input_tokens": plan.requests * ESTIMATED_INPUT_TOKENS_PER_REQUEST,
+                "estimated_input_tokens": tokens,
             },
+            "summary_text": _check_text(diff, len(score.decision.features), budget,
+                                        plan.requests, tokens),
         }
 
     # ---- evaluating it -----------------------------------------------------------
@@ -251,6 +255,7 @@ class FlywheelHost:
             "tier": result.tier.name, "n_train": result.n, "n_effective": round(result.n_effective, 1),
             "candidate": _metrics(comparison.candidate),
             "incumbent": _metrics(comparison.incumbent),
+            "summary_text": _evaluation_text(result, comparison),
         }
 
     def _top_up(self, item_ids: List[str], questions: Mapping[str, Any]) -> None:
@@ -278,6 +283,39 @@ class FlywheelHost:
         })
         self._applied_version = version
         return {"version": version, "already_applied": False}
+
+
+def _check_text(diff: Mapping[str, Any], n_features: int, budget: int, requests: int,
+                tokens: int) -> str:
+    """The proposed change, in words, for the human deciding whether to approve it."""
+    changes = []
+    if diff["added"]:
+        changes.append("add " + ", ".join(diff["added"]))
+    if diff["retired"]:
+        changes.append("retire " + ", ".join(diff["retired"]))
+    if diff["reworded"]:
+        changes.append("reword " + ", ".join(diff["reworded"]))
+    if diff["holistic_reworded"]:
+        changes.append("reword the holistic question")
+    features = [f"+{f}" for f in diff["features_added"]] + [f"-{f}" for f in diff["features_removed"]]
+    cost = (f"{requests} Jev requests (about {tokens:,} input tokens) to evaluate"
+            if requests else "no new Jev requests: every answer is already cached")
+    return (f"Changes: {'; '.join(changes) or 'none'}\n"
+            f"Features: {' '.join(features) or 'unchanged'} ({n_features} of a budget of {budget})\n"
+            f"Cost: {cost}")
+
+
+def _evaluation_text(result: FitResult, comparison: Comparison) -> str:
+    """How the candidate did against the incumbent, out of fold, in words."""
+    def line(label: str, summary) -> str:
+        return (f"  {label}: accuracy {summary.accuracy:.3f}, ECE {summary.ece:.3f}, "
+                f"Brier {summary.brier:.3f}")
+    text = (f"Out of fold on {result.n} labels ({result.n_effective:.0f} effective, "
+            f"tier {result.tier.name}):\n{line('candidate', comparison.candidate)}\n"
+            f"{line('incumbent', comparison.incumbent)}")
+    if comparison.reasons:
+        text += "\nNot promoted: " + "; ".join(comparison.reasons)
+    return text
 
 
 def _round(value: Optional[float]) -> Optional[float]:

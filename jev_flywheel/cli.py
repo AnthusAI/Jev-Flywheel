@@ -27,7 +27,6 @@ from rich.console import Console as RichConsole
 from rich.table import Table
 
 from jev_flywheel import console as label_console
-from jev_flywheel.answers import AnswerCache
 from jev_flywheel.jev import JevSession
 from jev_flywheel.loop import refit, status as loop_status
 from jev_flywheel.report import alignment_curve, history as version_history, scoreboard
@@ -67,6 +66,61 @@ class Group(click.Group):
         return list(self.commands)
 
 
+def _steer_options(function):
+    """Options shared by ``steer`` and ``label --steer``."""
+    for option in reversed([
+        click.option("--provider", default="bedrock", show_default=True,
+                     type=click.Choice(["bedrock", "openai"]), help="Which LLM provider."),
+        click.option("--model", default="us.moonshotai.kimi-k3", show_default=True,
+                     help="Model id. Kimi K3 on Bedrock is called through its inference profile."),
+        click.option("--allow-spend", is_flag=True,
+                     help="Let evaluating a proposal call Jev for missing answers "
+                          "(needs TYPESAFE_API_KEY). Without it, a proposal that needs new "
+                          "answers stops at its price."),
+        click.option("--max-auto-requests", type=int, default=300, show_default=True,
+                     help="Jev requests approved without asking; more than this asks first."),
+        click.option("--scripted-reply", "scripted", multiple=True,
+                     type=click.Path(path_type=Path, exists=True, dir_okay=False),
+                     help="Replace the language model with this file's contents (repeat for "
+                          "repairs). For demos and tests: no API keys needed."),
+    ]):
+        function = option(function)
+    return function
+
+
+def _run_steering(ctx, workspace, score_name, provider, model, allow_spend, max_auto_requests,
+                  scripted):
+    from dotenv import load_dotenv
+    from jev_flywheel.steer import SteerError, run_steering
+
+    load_dotenv()
+    handler = (ctx.obj or {}).get("hitl_handler")   # tests inject one; otherwise interactive
+    try:
+        outcome = run_steering(
+            workspace, score_name, provider=provider, model=model, allow_spend=allow_spend,
+            client_factory=(ctx.obj or {}).get("client_factory"), hitl_handler=handler,
+            mock_replies=[p.read_text() for p in scripted] if scripted else None,
+            max_auto_requests=max_auto_requests)
+    except SteerError as error:
+        raise click.ClickException(str(error))
+    return outcome
+
+
+def _print_outcome(outcome):
+    detail = outcome.detail
+    click.echo(f"\nDecision: {outcome.decision}")
+    if detail.get("root_cause"):
+        click.echo(f"Why: {detail['root_cause']}")
+    if outcome.promoted:
+        click.echo(f"Scorecard v{detail['version']} is now the current version.")
+    for key in ("problem", "reason", "reasons"):
+        if detail.get(key):
+            click.echo(str(detail[key]))
+    if outcome.decision == "needs_spend":
+        click.echo(f"Evaluating it needs {detail['requests']} Jev requests. "
+                   "Re-run with --allow-spend to send them.")
+
+
 @click.group(cls=Group)
 @click.option("--workspace", "-w", default=lambda: os.environ.get(
     "JEV_FLYWHEEL_WORKSPACE", DEFAULT_WORKSPACE), show_default="var", type=click.Path(path_type=Path),
@@ -102,14 +156,23 @@ def init(ctx, fixtures, force):
               help="Who is labeling; recorded on every judgement.")
 @click.option("--seed", type=int, default=None, help="Fix the random choices, for reproducibility.")
 @click.option("--no-refit", is_flag=True, help="Do not refit automatically when one is due.")
+@click.option("--steer", "auto_steer", is_flag=True,
+              help="Run a steering round when the policy says one is worth it.")
+@_steer_options
 @click.pass_context
-def label(ctx, score_name, count, editor, seed, no_refit):
+def label(ctx, score_name, count, editor, seed, no_refit, auto_steer, provider, model,
+          allow_spend, max_auto_requests, scripted):
     """Answer questions one at a time: agree, disagree, or skip, with an optional comment."""
     workspace = _workspace(ctx)
     score_name = _score_name(workspace, score_name)
+
+    def rethink(ws, name):
+        _print_outcome(_run_steering(ctx, ws, name, provider, model, allow_spend,
+                                    max_auto_requests, scripted))
+
     session = label_console.run(
         workspace, score_name, rng=random.Random(seed), editor=editor, max_questions=count,
-        auto_refit=not no_refit)
+        auto_refit=not no_refit, on_rethink=rethink if auto_steer else None)
     click.echo(f"\n{session.labeled} labeled ({session.agreed} agreed), {session.skipped} skipped, "
                f"{len(session.refits)} refit(s) attempted.")
 
@@ -219,6 +282,23 @@ def history(ctx, score_name):
         table.add_row(f"v{point.version}", point.kind, str(point.n_feedback),
                       f"{summary.accuracy:.3f}", f"{summary.ece:.3f}", f"{summary.brier:.3f}")
     RichConsole().print(table)
+
+
+@cli.command()
+@score_option
+@_steer_options
+@click.pass_context
+def steer(ctx, score_name, provider, model, allow_spend, max_auto_requests, scripted):
+    """One round of meta-cognition: a language model reads the disagreements and proposes edits.
+
+    The Tactus procedure asks the model why the predictions are wrong, prices its proposal,
+    fits the candidate out of fold, and only if it beats the current scorecard puts it in
+    front of you. Nothing changes unless you approve.
+    """
+    workspace = _workspace(ctx)
+    score_name = _score_name(workspace, score_name)
+    _print_outcome(_run_steering(ctx, workspace, score_name, provider, model, allow_spend,
+                                 max_auto_requests, scripted))
 
 
 @cli.command()

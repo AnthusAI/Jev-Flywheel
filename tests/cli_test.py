@@ -199,3 +199,74 @@ def test_topup_with_yes_asks_only_for_the_missing_question_once_per_item(ready, 
     assert "3 requests sent, 0 failed" in result.output
     # ...and afterwards there is nothing left to fetch for those items.
     assert "Nothing to fetch" in run(home, "topup", "--items", "labeled").output
+
+
+# ---- steer -------------------------------------------------------------------------
+
+def _reply_file(tmp_path, **kwargs):
+    import json
+
+    path = tmp_path / "reply.json"
+    path.write_text(json.dumps({"root_cause": "sarcasm goes undetected", **kwargs}))
+    return path
+
+
+SARCASM_ELEMENT = {"key": "sarcasm", "question_type": "noul",
+                   "instructions": "Is the writer being sarcastic, so the words say the opposite?"}
+
+
+@pytest.fixture
+def labeled_home(ready, home):
+    label_like_a_human(ready, 100, comment="reads positive but it is sarcasm")
+    return ready
+
+
+def steer_obj(workspace, approvals=(True,)):
+    from jev_flywheel.steer import ScriptedApprover
+    from tests.host_test import Client
+
+    return {"client_factory": lambda: Client(workspace), "hitl_handler": ScriptedApprover(approvals)}
+
+
+def test_steer_runs_a_round_and_reports_the_decision_and_the_new_version(labeled_home, home, tmp_path):
+    reply = _reply_file(tmp_path, add_elements=[SARCASM_ELEMENT])
+
+    result = run(home, "steer", "--allow-spend", "--scripted-reply", str(reply),
+                 obj=steer_obj(labeled_home))
+
+    assert result.exit_code == 0, result.output
+    assert "Decision: promoted" in result.output
+    assert "sarcasm goes undetected" in result.output
+    assert "is now the current version" in result.output
+    assert Workspace(home).version == 2
+
+
+def test_steer_stops_at_the_price_without_allow_spend(labeled_home, home, tmp_path):
+    reply = _reply_file(tmp_path, add_elements=[SARCASM_ELEMENT])
+
+    result = run(home, "steer", "--scripted-reply", str(reply), obj=steer_obj(labeled_home))
+
+    assert "Decision: needs_spend" in result.output
+    assert "--allow-spend" in result.output
+    assert Workspace(home).version == 1
+
+
+def test_steer_with_a_declined_approval_changes_nothing(labeled_home, home, tmp_path):
+    reply = _reply_file(tmp_path, add_elements=[SARCASM_ELEMENT])
+
+    result = run(home, "steer", "--allow-spend", "--scripted-reply", str(reply),
+                 obj=steer_obj(labeled_home, approvals=(False,)))
+
+    assert "Decision: rejected_by_human" in result.output
+    assert Workspace(home).version == 1
+
+
+def test_steer_reports_a_proposal_of_no_change(labeled_home, home, tmp_path):
+    result = run(home, "steer", "--scripted-reply", str(_reply_file(tmp_path)),
+                 obj=steer_obj(labeled_home))
+
+    assert "Decision: no_change_proposed" in result.output
+
+
+def test_steer_is_listed_beside_the_other_commands(ready, home):
+    assert "steer" in run(home, "--help").output

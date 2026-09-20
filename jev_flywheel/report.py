@@ -19,7 +19,7 @@ alignment while test accuracy stays flat, the human was *defining* the label, no
 confirming it, and the article should say so.
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from jev_flywheel.evaluate import Bin, Summary, reliability_bins, summarize
 from jev_flywheel.fit import latest_feedback
