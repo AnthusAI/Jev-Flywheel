@@ -355,6 +355,88 @@ def topup(ctx, which, limit, yes, concurrency):
         click.echo("Run it again to retry the failures; completed answers are kept.")
 
 
+@cli.command()
+@score_option
+@click.argument("out", type=click.Path(path_type=Path))
+@click.option("--title", required=True, help="A name for this recording.")
+@click.option("--provenance", required=True,
+              help="Who or what produced the labels and comments. Said plainly, in the README.")
+@click.option("--fixtures", type=click.Path(path_type=Path, exists=True), default=PACKAGED_FIXTURES,
+              show_default="fixtures/")
+@click.pass_context
+def record(ctx, score_name, out, title, provenance, fixtures):
+    """Export this workspace's session so anyone can replay it offline.
+
+    Captures the labels and comments, the Jev answers collected beyond the bundled fixtures,
+    and each refit and steering round (with the analyst's exact reply and your decision).
+    """
+    from jev_flywheel import recording
+
+    workspace = _workspace(ctx)
+    score_name = _score_name(workspace, score_name)
+    path = recording.record(workspace, score_name, out, fixtures, title=title,
+                            provenance=provenance)
+    script = recording.load(path)
+    click.echo(f"Recorded {script['n_labels']} labels and {len(script['steps'])} steps to {path}")
+    click.echo(f"Replay with: flywheel replay {path}")
+
+
+@cli.command()
+@click.argument("recording", type=click.Path(path_type=Path, exists=True, file_okay=False))
+@click.option("--fixtures", type=click.Path(path_type=Path, exists=True), default=PACKAGED_FIXTURES,
+              show_default="fixtures/")
+@click.option("--chart", type=click.Path(path_type=Path), default=None,
+              help="Also write the flywheel figure to this PNG (needs jev-flywheel[charts]).")
+@click.pass_context
+def replay(ctx, recording, fixtures, chart):
+    """Replay a recorded flywheel run offline: no keys, no network, no model, no person.
+
+    The labels are fed back in order and each recorded refit and steering round runs when its
+    turn comes. Fitting is deterministic, so this reproduces the same scorecard lineage.
+    """
+    from jev_flywheel import recording as rec
+    from jev_flywheel.report import complete_items
+
+    try:
+        script = rec.load(recording)
+    except rec.RecordingError as error:
+        raise click.ClickException(str(error))
+    console = RichConsole()
+    console.print(f"[bold]{script['title']}[/bold]: {script['n_labels']} labels")
+    idle: list = []
+
+    def flush():
+        if idle:
+            console.print(f"  [dim]...{len(idle)} refits that did not beat the incumbent "
+                          f"(last: {idle[-1]})[/dim]")
+            idle.clear()
+
+    def say(message):
+        # A refit runs every few labels and mostly changes nothing; say so once, not twenty times.
+        if message.endswith(("refit rejected", "refit held")):
+            idle.append(message.split(":")[0])
+            return
+        flush()
+        console.print(f"  {message}")
+
+    workspace = rec.replay(recording, ctx.obj["workspace"], fixtures, on_step=say)
+    flush()
+    score_name = script["score"]
+    items = complete_items(workspace, "test")
+    table = Table(title=f"Scorecard lineage, scored on the same {len(items):,} held-out items",
+                  title_justify="left")
+    for name in ("version", "how", "after N labels", "accuracy", "ECE", "Brier"):
+        table.add_column(name, justify="right" if name != "how" else "left")
+    for point in version_history(workspace, score_name, item_ids=items):
+        summary = point.scoreboard.summary
+        table.add_row(f"v{point.version}", point.kind, str(point.n_feedback),
+                      f"{summary.accuracy:.3f}", f"{summary.ece:.3f}", f"{summary.brier:.3f}")
+    console.print(table)
+    if chart:
+        from jev_flywheel.charts import save_chart
+        console.print(f"Figure written to {save_chart(workspace, score_name, chart)}")
+
+
 def main():  # pragma: no cover - console-script entry point
     cli(obj={})
 

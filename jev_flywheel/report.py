@@ -19,7 +19,7 @@ alignment while test accuracy stays flat, the human was *defining* the label, no
 confirming it, and the article should say so.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from jev_flywheel.evaluate import Bin, Summary, reliability_bins, summarize
 from jev_flywheel.fit import latest_feedback
@@ -49,12 +49,19 @@ class Scoreboard:
 
 
 def scoreboard(workspace: Workspace, score_name: str, card: Optional[Scorecard] = None,
-               *, split: str = "test", version: Optional[int] = None) -> Scoreboard:
-    """Accuracy and calibration against the corpus's reference labels."""
+               *, split: str = "test", version: Optional[int] = None,
+               item_ids: Optional[Set[str]] = None) -> Scoreboard:
+    """Accuracy and calibration against the corpus's reference labels.
+
+    ``item_ids`` restricts scoring to a fixed set of items, so that several scorecard
+    versions can be compared on exactly the same held-out items. Without it, a version
+    that asks a new question is scored on items that may lack its answers.
+    """
     version = version or workspace.version
     card = card or workspace.scorecard(version)
     score = card.score(score_name)
-    items = [i for i in workspace.split(split) if i.reference_label is not None]
+    items = [i for i in workspace.split(split) if i.reference_label is not None
+             and (item_ids is None or i.id in item_ids)]
     answers = workspace.cache.bulk_partial_answers([i.id for i in items], card.questions())
 
     confidences: List[float] = []
@@ -114,12 +121,24 @@ class VersionPoint:
     scoreboard: Scoreboard
 
 
-def history(workspace: Workspace, score_name: str,
-            split: str = "test") -> List[VersionPoint]:
-    """The scoreboard for every scorecard version, placed by how much feedback existed."""
+def complete_items(workspace: Workspace, split: str = "test",
+                   version: Optional[int] = None) -> Set[str]:
+    """Items in a split that have every answer a scorecard version asks for."""
+    questions = workspace.scorecard(version).questions()
+    return {i.id for i in workspace.split(split)
+            if all(workspace.cache.get(i.id, n, q) is not None for n, q in questions.items())}
+
+
+def history(workspace: Workspace, score_name: str, split: str = "test",
+            item_ids: Optional[Set[str]] = None) -> List[VersionPoint]:
+    """The scoreboard for every scorecard version, placed by how much feedback existed.
+
+    Pass ``item_ids`` (see ``complete_items``) to compare every version on the same items.
+    """
     return [
         VersionPoint(entry["version"], entry["kind"], entry.get("n_feedback", 0),
-                     scoreboard(workspace, score_name, version=entry["version"], split=split))
+                     scoreboard(workspace, score_name, version=entry["version"], split=split,
+                                item_ids=item_ids))
         for entry in workspace.lineage()
     ]
 

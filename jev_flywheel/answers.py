@@ -111,6 +111,29 @@ class AnswerCache:
                 handle.write(json.dumps(row, ensure_ascii=False) + "\n")
                 handle.flush()
 
+    def put_hashed(self, item_id: str, name: str, qhash: str, answer: Mapping[str, Any],
+                   model: Optional[str] = None) -> None:
+        """Store an answer under a question hash that is already known.
+
+        Used to restore a recording: its rows carry the hash of the wording they were
+        collected under, and that wording is not needed to put them back.
+        """
+        answer = normalize_answer(answer)
+        self._answers[(item_id, name, qhash)] = answer
+        self.model = model or self.model
+        if self.path:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            row = {"item_id": item_id, "name": name, "qhash": qhash,
+                   "model": model, "answer": answer}
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+                handle.flush()
+
+    def rows(self):
+        """Every stored answer as ``(item_id, name, qhash, answer)``."""
+        for (item_id, name, qhash), answer in self._answers.items():
+            yield item_id, name, qhash, answer
+
     def get(self, item_id: str, name: str, question: Mapping[str, Any]) -> Optional[dict]:
         return self._answers.get((item_id, name, question_hash(question)))
 

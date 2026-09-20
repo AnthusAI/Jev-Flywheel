@@ -1,0 +1,104 @@
+{
+  "format": 1,
+  "title": "A simulated labeler, one steering round",
+  "score": "Sentiment",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 33,
+      "op": "refit"
+    },
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic sentiment question, and the disagreements show it is systematically fooled by surface tone. In every hedged/contrastive text, the human labels by the FIRST evaluative statement about the subject (criticism-first = negative even when a reassuring coda follows; praise-first = positive even when doubts follow), while the holistic answer follows the trailing clause or overall polish. Separately, the human treats purely neutral, procedural wording with no evaluative content as negative, which the holistic question reads as mildly positive.\", \"add_elements\": [{\"key\": \"first_evaluative_polarity\", \"question_type\": \"choice\", \"instructions\": \"Setting aside any later reassurance or doubt, is the first evaluative statement about the main subject positive (praise or success, even if hedged), negative (a shortcoming, concern, or need for improvement), or is there no evaluative statement?\", \"criteria\": [\"positive_first\", \"negative_first\", \"no_evaluation\"]}, {\"key\": \"contains_evaluative_language\", \"question_type\": \"noul\", \"instructions\": \"Does the text contain any explicit evaluative language (praise, criticism, or a value judgment), as opposed to purely neutral, factual, or procedural wording?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

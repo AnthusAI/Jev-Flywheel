@@ -92,6 +92,8 @@ class FlywheelHost:
         self._fit: Optional[FitResult] = None
         self._comparison: Optional[Comparison] = None
         self._applied_version: Optional[int] = None
+        # The analyst's raw reply, kept so a round can be recorded and replayed exactly.
+        self.last_reply: Optional[str] = None
 
     # ---- what the agent is shown -----------------------------------------------
 
@@ -170,6 +172,7 @@ class FlywheelHost:
     def check(self, reply: Any) -> Dict[str, Any]:
         """Parse the agent's proposal, apply it, and price what evaluating it would cost."""
         self._proposal = self._candidate = self._fit = self._comparison = None
+        self.last_reply = reply if isinstance(reply, str) else json.dumps(_plain(reply))
         problems: List[str] = []
         try:
             proposal = parse_proposal(_plain(reply) if not isinstance(reply, str) else reply)
@@ -299,6 +302,7 @@ class FlywheelHost:
         version = self.workspace.commit_scorecard(card, kind="steer", provenance={
             **details, "proposal": self._proposal.summary() if self._proposal else {},
             "root_cause": self._proposal.root_cause if self._proposal else "",
+            "analyst_reply": self.last_reply,
             "fit": self._fit.provenance,
         })
         self._applied_version = version

@@ -22,9 +22,12 @@ dependencies = [
 [project.optional-dependencies]
 # The Tactus meta-cognition procedure. Optional so the rest of the demo installs
 # without pulling a Lua runtime.
-steer = ["tactus>=0.52.0"]
+# Tactus 0.52's wheel does not declare everything its CLI and registry import (typer, boto3),
+# and Bedrock credentials from `aws login` need botocore's CRT extra. Listed here so
+# `pip install 'jev-flywheel[steer]'` is enough.
+steer = ["tactus>=0.52.0", "typer", "boto3", "botocore[crt]"]
 charts = ["matplotlib>=3.7"]
-dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "pyflakes"]
 
 [project.scripts]
 flywheel = "jev_flywheel.cli:cli"
