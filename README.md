@@ -16,8 +16,9 @@ it doesn't](#what-this-proves-and-what-it-doesnt).*
 | Scorecard | Accuracy | Calibration error (ECE) | Brier |
 |---|---|---|---|
 | v1: Jev alone | 0.768 | 0.151 | 0.188 |
-| v2: after a refit on 33 labels | 0.767 | 0.060 | 0.161 |
-| v3: after one steering round, 140 labels | **0.853** | **0.036** | **0.102** |
+| v2: after a refit on 37 labels | 0.763 | 0.112 | 0.177 |
+| v3: after a refit on 87 labels | 0.765 | 0.030 | 0.164 |
+| v4: after one steering round, 140 labels | **0.870** | **0.030** | **0.093** |
 
 Two different mechanisms did two different jobs. **A refit fixes calibration** and cannot
 change accuracy: it only re-weighs the answers Jev already gave. **Steering fixes accuracy**,
@@ -146,7 +147,14 @@ element answers:
 > procedural wording with no evaluative content as negative.
 
 It added two elements, `first_evaluative_polarity` and `contains_evaluative_language`, and
-retired none. Held-out accuracy went from 0.767 to 0.853.
+retired none. Held-out accuracy went from 0.765 to 0.870.
+
+**How often does it do that?** Not always, and this is the number to judge the idea by. Across
+12 runs (4 analyst models x 3 seeds, 140 labels each), the loop proposed an element naming the
+subject-matter axis in **3**. When it lands it is worth +13 to +15 points; the runs that miss it
+still gain about +5 by decomposing sentiment instead. Mean gain over the refit baseline, paired
+within each run, was **+7.4 points**. Full records, including every proposal's exact wording, are
+in `studies/`.
 
 ## Design decisions worth stealing
 
@@ -201,10 +209,22 @@ real labels. That is what `flywheel label` is for.
 
 Other things to hold in mind:
 
-- **The analyst is not deterministic.** Two live runs against the same 600 held-out items gave
-  +2.4 and +8.5 points, because Kimi K3 proposed different elements each time. The recording
-  commits one of them. Expect variance, and treat any single round as one draw.
-- **600 items is roughly ±1.5 points** on a paired comparison.
+- **The analyst is not deterministic**, and the spread is wide: across 12 baseline runs the
+  paired gain ranged from +4.2 to +14.8 points, and 3 of 12 proposed nothing that beat the
+  incumbent. The recording commits one draw. Treat any single round as one draw.
+- **The prompt tells the analyst to consider factors that are not about sentiment.** It does not
+  mention sport or the workplace, but it is a nudge and the discovery rate depends on it: adding
+  an explicit list of *kinds* of factor (scope, exceptions, subject matter, register, thresholds)
+  took the rate from 3/12 to 4/12. Reported as a nudge, because it is one.
+- **One idea of ours made things worse.** We added a second agent that never sees the task, shown
+  only two groups of texts and asked what separates them, on the theory that the main analyst is
+  frame-locked by the scorecard it is given. It found the axis in 1 of 12 runs against 3 of 12 for
+  the plain loop, with a lower average gain. We had written the prediction down first (6 of 12),
+  which is the only reason it is reported here rather than quietly dropped.
+- **600 items is roughly ±1.5 points** on a paired comparison. Compare runs *paired* -- each
+  version against its own baseline on its own sample -- never raw accuracy across runs.
+- **Four runs were lost** to expired AWS credentials mid-study and are excluded; the denominators
+  above count attempts, not successes.
 - **The corpus is constructed, and its labels encode a factor that is not sentiment** (see
   above). It is a good test bed and a poor guide to how a messy real feedback set behaves.
 - **One run rewrote the holistic question as well as adding an element,** so the gain cannot be

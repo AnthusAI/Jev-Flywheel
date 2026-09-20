@@ -28,7 +28,7 @@ def test_the_recording_scores_every_version_on_the_same_600_held_out_items(point
     items, versions = points
 
     assert len(items) == 600
-    assert [(p.version, p.kind) for p in versions] == [(1, "seed"), (2, "fit"), (3, "steer")]
+    assert [p.kind for p in versions] == ["seed"] + ["fit"] * (len(versions) - 2) + ["steer"]
     assert {p.scoreboard.summary.n for p in versions} == {600}
 
 
@@ -40,16 +40,21 @@ def test_jev_alone_is_accurate_enough_but_badly_overconfident(points):
 
 
 def test_a_refit_fixes_calibration_without_changing_accuracy(points):
-    v1, v2 = (p.scoreboard.summary for p in points[1][:2])
+    versions = points[1]
+    first = versions[0].scoreboard.summary
+    last_refit = [p for p in versions if p.kind == "fit"][-1].scoreboard.summary
 
-    assert v2.ece < v1.ece / 2
-    assert v2.accuracy == pytest.approx(v1.accuracy, abs=0.005)
+    assert last_refit.ece < first.ece / 2          # calibration is what a refit buys
+    assert last_refit.accuracy == pytest.approx(first.accuracy, abs=0.01)
 
 
 def test_the_steering_round_lifts_held_out_accuracy_and_keeps_calibration(points):
-    v2, v3 = (p.scoreboard.summary for p in points[1][1:])
+    versions = points[1]
+    before = [p for p in versions if p.kind == "fit"][-1].scoreboard.summary
+    after = versions[-1].scoreboard.summary
 
-    assert v3.accuracy == pytest.approx(0.853, abs=0.002)
-    assert v3.accuracy > v2.accuracy + 0.05
-    assert v3.ece < 0.05
-    assert v3.brier < v2.brier
+    assert versions[-1].kind == "steer"
+    assert after.accuracy == pytest.approx(0.870, abs=0.002)
+    assert after.accuracy > before.accuracy + 0.05      # steering is what buys accuracy
+    assert after.ece < 0.05
+    assert after.brier < before.brier

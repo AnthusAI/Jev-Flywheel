@@ -88,8 +88,7 @@ def one_run(spec: str, seed: int, labels: int, sample: int, max_mismatches: int 
                                  "instructions": a.instructions})
         except ProposalError:
             pass
-    result["proposed"] = [{"key": e.get("key"), "instructions": e.get("instructions")}
-                          for e in proposed]
+    result["proposed"] = proposed      # full wording, type and criteria: judge by reading
     result["found_the_plant"] = names_the_plant(proposed)
     if not outcome.promoted:
         result["detail"] = {k: v for k, v in outcome.detail.items() if k != "root_cause"}
@@ -147,7 +146,9 @@ def main():
                 row = one_run(model, seed, args.labels, args.sample, args.max_mismatches,
                               args.arm)
             except Exception as error:  # noqa: BLE001 - one bad run must not sink the study
-                row = {"model": model, "seed": seed, "decision": "error",
+                # The arm MUST be recorded, or a failed run vanishes from the per-arm
+                # analysis and the reported n is silently smaller than the n attempted.
+                row = {"model": model, "seed": seed, "arm": args.arm, "decision": "error",
                        "error": f"{type(error).__name__}: {error}"[:300]}
                 traceback.print_exc()
             with args.out.open("a") as handle:
