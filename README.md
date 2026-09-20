@@ -1,6 +1,6 @@
 # Jev Flywheel
 
-> **Three years ago we planted a trap in our own dataset, and said so in public.** In a corpus
+> **A year ago we planted a trap in our own dataset, and said so in public.** In a corpus
 > built to look like a sentiment task, we made sports talk skew positive and workplace talk skew
 > negative. We used it to show that fine-tuning could absorb a bias like that into a model's
 > weights. It worked — and that was the problem, because weights cannot tell you what they
@@ -84,7 +84,8 @@ is worth nothing, which is the control that matters.
 So there is an answer key. That is unusual, and it is the point: you can ask whether the machine
 found the thing, instead of only whether the number went up.
 
-This is the third of three articles. The [first](https://anth.us/blog/fine-tuned-classification-with-confidence/)
+This is the third of three articles. The
+[first](https://anth.us/blog/fine-tuned-classification-with-confidence/) (September 2025)
 planted the pattern and fine-tuned a model to absorb it. The
 [second](https://anth.us/blog/can-you-trust-jev-confidence/) asked whether Jev's confidence can be
 trusted. This one asks whether a loop can name what the first one hid.
