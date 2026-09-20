@@ -1,17 +1,16 @@
 # Jev Flywheel
 
-> **A year ago we planted a trap in our own dataset, and said so in public.** In a corpus
-> built to look like a sentiment task, we made sports talk skew positive and workplace talk skew
-> negative. We used it to show that fine-tuning could absorb a bias like that into a model's
-> weights. It worked — and that was the problem, because weights cannot tell you what they
-> learned.
+> **The sentiment dataset in this repo has a deliberate bias in it.** When we built it a year ago
+> for an article about fine-tuning, we made sports talk skew positive and workplace talk skew
+> negative, so that fine-tuning would have a task-specific pattern to learn. It learned it.
 >
-> This repo is the other half of that experiment. It asks whether a feedback loop can take the
-> same planted trap and **say it out loud**, in a sentence a person can read and argue with.
+> A fine-tuned model can't tell you what it learned, though. So this repo asks a different
+> question: given feedback on its mistakes, can a system work out that the labels follow subject
+> matter rather than sentiment, and say so in words you can read?
 >
-> It can. About a quarter of the time, unprompted, worth +14 points of accuracy when it lands.
-> Getting to that number took three broken measurements and one clever idea of ours that made
-> things worse. All of it is below.
+> It can, about a quarter of the time, and it is worth +14 points of accuracy when it does.
+> Getting to that number took three broken measurements and one idea of ours that made things
+> worse. Both are below.
 
 ![Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time](images/flywheel.png)
 
@@ -39,7 +38,7 @@ analyst wrote:
 > labeled negative, even when the wording is purely neutral logistics or the sentiment is
 > deliberately hedged and mixed."*
 
-That is the trap, named. It proposed one element — `topic_domain`, asking whether a text is
+That is the bias, described. It proposed one element — `topic_domain`, asking whether a text is
 about sport, about the workplace, or neither — and held-out accuracy went from 0.765 to 0.870.
 
 ## Try it
@@ -62,7 +61,7 @@ deterministic, so it reproduces the same scorecards. To label something yourself
 .venv/bin/flywheel evaluate    # held-out accuracy, and agreement with you
 ```
 
-## What we planted, and why it matters
+## The bias in the data
 
 The corpus is a constructed 8,801-item sentiment set, in four tiers from strong to neutral. Its
 [dataset README](https://github.com/AnthusAI/Classification-with-Confidence) has said this from
@@ -80,10 +79,10 @@ sports cue against 19% of strong-negative. And it is genuinely predictive. Asked
 about?", Jev names a domain on 57% of neutral items, and on those the rule *sports → positive,
 workplace → negative* is 90.3% accurate. One element asking that question is worth **+9 points**
 over the refit baseline. An element asking a placebo question ("does the text contain a number?")
-is worth nothing, which is the control that matters.
+is worth nothing, which is the control for "any extra question would have helped".
 
-So there is an answer key. That is unusual, and it is the point: you can ask whether the machine
-found the thing, instead of only whether the number went up.
+So there is an answer key, which is unusual and useful: you can ask whether the system found the
+right thing, not just whether the number went up.
 
 `python scripts/audit_corpus.py` reproduces every claim in this section offline, including the
 per-tier skew and the request-cost fit. It also reports something worth knowing before reading
@@ -100,8 +99,8 @@ trusted. This one asks whether a loop can name what the first one hid.
 
 [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) takes some text and a set
 of typed questions — yes/no, choice, or a score on a rubric — and answers all of them **in one
-request**. That is the economic fact the whole design rests on: N questions cost one request,
-not N.
+request**. N questions cost one request, not N, and that is what the rest of the design is built
+on.
 
 Measured on the bundled answers (all 8,801 items, eight questions each): a request averages
 **502 input tokens**, and barely moves with the text — the shortest tenth of the corpus costs
@@ -182,7 +181,7 @@ three label seeds, 140 labels each:
 
 When it names the axis it is worth +13 to +15 points. When it misses, it still gains about +5 by
 decomposing sentiment instead — proposing things like "does this express an opinion, or only
-state a procedure?" Those are good features. They are simply not the trap.
+state a procedure?" Those are good features. They are simply not the bias we are looking for.
 
 Adding a checklist of *kinds* of factor to the prompt — scope, exceptions, subject matter,
 register, thresholds, without naming sport or the workplace — took it from 3 to 4 of 12. That is
@@ -230,13 +229,13 @@ demonstrated is the plumbing: propensities are recorded, so the fit can correct 
 policy does. That the policy earns its keep is not.
 
 **The corpus is constructed**, its labels encode a factor that is not sentiment, and the neutral
-tier is close to a coin flip whatever you ask. It is a good test bed precisely because the answer
-is known, and a poor guide to how a messy real feedback set behaves.
+tier is close to a coin flip whatever you ask. Knowing the answer makes it a useful test bed and
+a poor guide to how a messy real feedback set behaves.
 
 **600 held-out items is about ±1.5 points.** Do not rank the analyst models from this; the study
 is powered to show the effect exists, not to order four models within a few points.
 
-## Design decisions worth stealing
+## Design notes
 
 - **The agent proposes edits; code applies them.** The analyst returns a small JSON proposal (add,
   retire or reword elements) with nowhere to put a weight, so a language model is never in the
@@ -266,7 +265,7 @@ is powered to show the effect exists, not to order four models within a few poin
   unequal propensities, and the fit is weighted by their inverse: on the bundled corpus, at
   temperature 0.35 a run of 45 labels is worth 21 effective; at the shipped 0.60 it is worth 38.
   Select too keenly and you starve the fit below the floor at which it can fit anything at all.
-  Most active-learning write-ups never measure this.
+  We have not often seen this measured, and it changed a default here.
 - **The agent never sees the held-out split.** It gets out-of-fold numbers only. An agent that saw
   the scoreboard, even indirectly, would tune to it one round at a time.
 
@@ -293,20 +292,20 @@ flywheel record my-run/         # export your session so someone else can replay
 
 ## Where this goes
 
-The planted trap is the legible case of a general problem. Every written rubric is incomplete: it
+This bias is an easy case of a general problem. Every written rubric is incomplete: it
 says "Was the agent professional?" while the people applying it use dozens of conventions nobody
 wrote down — what counts as in scope, which exceptions the team honours, where a borderline sits.
 Those conventions are invisible until they show up as disagreements.
 
-That is what this loop is for. The trap is easy to check because we planted it; a real rubric's
-quirks are not, which is exactly why you want a machine that proposes them in writing and a human
-who can say *that one is policy, and that one is a bias we should remove*. The output is not only
-a better classifier — it is **a written version of the rubric your labelers are actually using**.
+That is what this loop is for. Our bias is easy to check because we know what it is; a real
+rubric's quirks are not, which is why it helps to have something that proposes them in writing
+and a person who can say *that one is policy, and that one we should remove*. The output is not
+only a better classifier — it is **a written version of the rubric your labelers are actually
+using**.
 
-Surfacing is what the machine does. Deciding is what the human does. This repo does not blur that,
-because the promotion gate rewards accuracy against the labels you have — which on this corpus
-means it will happily absorb the trap whether or not it names it. Naming it is what gives anyone
-the chance to refuse.
+The system proposes; a person decides. That division is not rhetorical: the promotion gate
+rewards accuracy against whatever labels you have, so on this corpus it will absorb the bias
+whether or not it describes it. Describing it is what gives anyone the chance to object.
 
 ## When you outgrow this
 
