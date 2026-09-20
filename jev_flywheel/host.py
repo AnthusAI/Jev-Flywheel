@@ -199,6 +199,12 @@ class FlywheelHost:
             [f.item_id for f in latest_feedback(
                 self.workspace.feedback(), self.score_name).values() if f.label is not None],
             candidate.questions())
+        # Evaluating needs answers only for the labeled items. *Serving* the candidate, to
+        # choose the next question or to score the held-out split, needs them for every
+        # item, and a reworded question makes every stored answer to it stale. The human
+        # should know both prices before approving.
+        serving = self.workspace.cache.plan(
+            [i.id for i in self.workspace.items], candidate.questions())
         self._proposal, self._candidate = proposal, candidate
         tokens = plan.requests * ESTIMATED_INPUT_TOKENS_PER_REQUEST
         return {
@@ -208,9 +214,10 @@ class FlywheelHost:
             "plan": {
                 "requests": plan.requests, "missing_answers": plan.missing_answers,
                 "estimated_input_tokens": tokens,
+                "serving_requests": serving.requests,
             },
             "summary_text": _check_text(diff, len(score.decision.features), budget,
-                                        plan.requests, tokens),
+                                        plan.requests, tokens, serving.requests),
         }
 
     # ---- evaluating it -----------------------------------------------------------
@@ -234,9 +241,22 @@ class FlywheelHost:
                 return {"status": "needs_spend", "requests": len(training.needs_answers),
                         "reason": "the candidate needs answers that are not cached, and "
                                   "this run is not allowed to call Jev"}
-            self._top_up(training.needs_answers, questions)
+            report = self._top_up(training.needs_answers, questions)
             training = build_training_set(
                 score, questions, self.workspace.cache, self.workspace.feedback())
+            # Fitting on whatever survived would quietly train on a fraction of the labels
+            # and report metrics as if it had them all. Say the top-up failed instead.
+            still_missing = len(training.needs_answers)
+            if still_missing > max(1, 0.2 * (training.n + still_missing)):
+                return {
+                    "status": "top_up_failed", "promote": False,
+                    "requested": report.requested, "failed": report.failures,
+                    "still_missing": still_missing,
+                    "reason": f"asking Jev for the new answers failed for {still_missing} of "
+                              f"{training.n + still_missing} labeled items"
+                              + (f" ({report.errors[0]})" if report.errors else "")
+                              + ". Nothing was fit. Check the API key and try again; answers "
+                                "already fetched are kept."}
 
         try:
             result = fit_head(training, score)
@@ -258,12 +278,12 @@ class FlywheelHost:
             "summary_text": _evaluation_text(result, comparison),
         }
 
-    def _top_up(self, item_ids: List[str], questions: Mapping[str, Any]) -> None:
+    def _top_up(self, item_ids: List[str], questions: Mapping[str, Any]):
         wanted = set(item_ids)
         items = [i for i in self.workspace.items if i.id in wanted]
         session = JevSession(client_factory=self.client_factory) if self.client_factory \
             else JevSession()
-        run_sync(self.workspace.cache.fill(session, items, questions))
+        return run_sync(self.workspace.cache.fill(session, items, questions))
 
     # ---- committing it -----------------------------------------------------------
 
@@ -286,7 +306,7 @@ class FlywheelHost:
 
 
 def _check_text(diff: Mapping[str, Any], n_features: int, budget: int, requests: int,
-                tokens: int) -> str:
+                tokens: int, serving_requests: int = 0) -> str:
     """The proposed change, in words, for the human deciding whether to approve it."""
     changes = []
     if diff["added"]:
@@ -300,9 +320,15 @@ def _check_text(diff: Mapping[str, Any], n_features: int, budget: int, requests:
     features = [f"+{f}" for f in diff["features_added"]] + [f"-{f}" for f in diff["features_removed"]]
     cost = (f"{requests} Jev requests (about {tokens:,} input tokens) to evaluate"
             if requests else "no new Jev requests: every answer is already cached")
-    return (f"Changes: {'; '.join(changes) or 'none'}\n"
+    text = (f"Changes: {'; '.join(changes) or 'none'}\n"
             f"Features: {' '.join(features) or 'unchanged'} ({n_features} of a budget of {budget})\n"
             f"Cost: {cost}")
+    if serving_requests > requests:
+        text += (f"\nServing it on every item (to pick questions and score the held-out "
+                 f"split) would need {serving_requests:,} requests in all"
+                 + ("; rewording the holistic question makes every stored answer to it stale"
+                    if diff.get("holistic_reworded") else ""))
+    return text
 
 
 def _evaluation_text(result: FitResult, comparison: Comparison) -> str:

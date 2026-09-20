@@ -49,6 +49,10 @@ How to think:
 - Use permutation_importance to decide what to keep. An element near zero is not helping.
   Ignore raw weights; they are on different scales and mislead.
 - Do not propose an element that merely restates one that exists.
+- Prefer adding or rewording ELEMENTS. Rewording the holistic (top-level) question makes
+  every stored answer to it stale for every item, which costs thousands of requests to
+  refresh, and it stops the comparison with the original question meaning anything. Only
+  do it if an element cannot capture the problem.
 - Each element is one question answered in the same single request, so writing one is cheap.
   But every new element spends part of the feature budget, and changing the question set
   costs a fresh pass over the labeled items. You get ONE proposal this round. Make it count.

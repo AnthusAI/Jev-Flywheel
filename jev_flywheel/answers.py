@@ -69,6 +69,8 @@ class FillReport:
     failures: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    # A few distinct failure messages, so "all 140 requests failed" can say why.
+    errors: List[str] = field(default_factory=list)
 
 
 class AnswerCache:
@@ -207,8 +209,11 @@ class AnswerCache:
             async with semaphore:
                 try:
                     result = await session.ask(item.text, gap)
-                except Exception:  # noqa: BLE001 - one bad item must not sink the run
+                except Exception as error:  # noqa: BLE001 - one bad item must not sink the run
                     report.failures += 1
+                    message = f"{type(error).__name__}: {error}"[:200]
+                    if message not in report.errors and len(report.errors) < 3:
+                        report.errors.append(message)
                 else:
                     for name, answer in result.answers.items():
                         if name in gap:

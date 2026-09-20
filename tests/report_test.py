@@ -149,3 +149,22 @@ def test_a_confusion_matrix_is_reported_against_the_reference_labels(workspace):
 
     assert labels == ["negative", "positive"]
     assert sum(sum(row) for row in matrix) == 200
+
+
+def test_the_scoreboard_reports_how_much_of_the_split_had_every_answer(workspace):
+    assert scoreboard(workspace, SCORE).coverage == 1.0
+
+
+def test_a_scorecard_asking_a_new_question_scores_with_partial_coverage_and_says_so(workspace):
+    from jev_flywheel.scorecard import Scorecard
+
+    config = workspace.scorecard().to_config()
+    config["scores"][0]["elements"] = [
+        {"key": "sarcasm", "question_type": "noul", "instructions": "Is it sarcastic?"}]
+    version = workspace.commit_scorecard(Scorecard.from_config(config), kind="steer")
+
+    board = scoreboard(workspace, SCORE, version=version)
+
+    # No item has an answer to the new question, so none is complete: the numbers
+    # understate the scorecard, and the report must be able to say by how much.
+    assert board.coverage == 0.0

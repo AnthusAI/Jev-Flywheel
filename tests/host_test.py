@@ -384,3 +384,61 @@ def test_run_sync_works_from_inside_a_running_event_loop():
         return run_sync(inner())
 
     assert asyncio.run(outer()) == 7
+
+
+# ---- a failed top-up must say so ---------------------------------------------------
+
+class Broken:
+    """Jev is unreachable: every request fails."""
+
+    async def system_one(self, *, state, questions):
+        raise RuntimeError("no API key configured")
+
+
+def test_a_failed_top_up_says_it_failed_instead_of_blaming_the_label_count(labeled):
+    # Regression: with the key missing, every request failed, the fit then saw zero
+    # labeled items, and the message read "0 effective labels, 30 more are needed".
+    host = host_for(labeled, allow_spend=True, client_factory=lambda: Broken())
+    host.check(reply(add_elements=[SARCASM]))
+
+    result = host.evaluate()
+
+    assert result["status"] == "top_up_failed"
+    assert not result["promote"]
+    assert result["failed"] == 160
+    assert "failed for 160 of 160" in result["reason"]
+    assert "no API key configured" in result["reason"]
+    assert "Nothing was fit" in result["reason"]
+
+
+def test_a_few_failed_requests_do_not_abort_the_evaluation(labeled):
+    class Flaky(Client):
+        async def system_one(self, *, state, questions):
+            if len(self.calls) in (3, 9):
+                self.calls.append(["boom"])
+                raise RuntimeError("transient")
+            return await super().system_one(state=state, questions=questions)
+
+    host = host_for(labeled, allow_spend=True, client_factory=lambda: Flaky(labeled))
+    host.check(reply(add_elements=[SARCASM]))
+
+    assert host.evaluate()["status"] == "fitted"
+
+
+# ---- serving cost is priced too, not just evaluation cost --------------------------
+
+def test_the_check_prices_serving_the_candidate_on_every_item_not_just_evaluating_it(labeled):
+    check = host_for(labeled).check(reply(add_elements=[SARCASM]))
+
+    plan = check["plan"]
+    assert plan["requests"] == 160                      # evaluation: labeled items only
+    assert plan["serving_requests"] == len(labeled.items)   # serving: every item
+    assert f"{len(labeled.items):,} requests in all" in check["summary_text"]
+
+
+def test_rewording_the_holistic_question_is_flagged_as_making_stored_answers_stale(labeled):
+    check = host_for(labeled).check(reply(
+        reword_elements=[{"key": "holistic", "instructions": "What is the real sentiment?"}]))
+
+    assert "stale" in check["summary_text"]
+    assert check["plan"]["serving_requests"] == len(labeled.items)

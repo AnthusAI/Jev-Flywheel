@@ -254,6 +254,11 @@ def evaluate(ctx, score_name, version):
                   f"{summary.mean_confidence:.3f}", f"{summary.overconfidence:+.3f}")
     console.print(table)
     console.print("By tier: " + "  ".join(f"{t} {a:.3f}" for t, a in board.by_tier.items()))
+    if board.coverage < 1.0:
+        console.print(
+            f"[yellow]Only {board.coverage:.0%} of these items have every answer this "
+            "scorecard asks for; the rest were served with missing features, so the numbers "
+            "above understate it. Fill them in with: flywheel topup --items test --yes[/yellow]")
 
     curve = alignment_curve(workspace, score_name)
     if curve:
@@ -302,12 +307,14 @@ def steer(ctx, score_name, provider, model, allow_spend, max_auto_requests, scri
 
 
 @cli.command()
-@click.option("--items", "which", type=click.Choice(["labeled", "pool", "all"]), default="labeled",
-              show_default=True, help="Which items to fill in answers for.")
+@click.option("--items", "which", type=click.Choice(["labeled", "pool", "test", "all"]),
+              default="labeled", show_default=True, help="Which items to fill in answers for.")
+@click.option("--limit", type=int, default=None,
+              help="Only a random sample of this many items (seeded), to keep a check cheap.")
 @click.option("--yes", is_flag=True, help="Spend the requests. Without it, only the price is shown.")
 @click.option("--concurrency", type=int, default=16, show_default=True)
 @click.pass_context
-def topup(ctx, which, yes, concurrency):
+def topup(ctx, which, limit, yes, concurrency):
     """Ask Jev for answers the current scorecard is missing. Prices it first.
 
     A new element costs one request per item that lacks it, carrying only the missing
@@ -318,7 +325,10 @@ def topup(ctx, which, yes, concurrency):
     questions = card.questions()
     labeled = set().union(*(workspace.labeled_ids(s.name) for s in card.scores))
     pool = {"labeled": [i for i in workspace.items if i.id in labeled],
-            "pool": workspace.split("pool"), "all": workspace.items}[which]
+            "pool": workspace.split("pool"), "test": workspace.split("test"),
+            "all": workspace.items}[which]
+    if limit and limit < len(pool):
+        pool = random.Random(0).sample(pool, limit)
     plan = workspace.cache.plan([i.id for i in pool], questions)
     click.echo(f"{len(pool)} items considered; {plan.requests} need a Jev request "
                f"({plan.missing_answers} missing answers).")

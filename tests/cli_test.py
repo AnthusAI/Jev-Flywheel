@@ -270,3 +270,23 @@ def test_steer_reports_a_proposal_of_no_change(labeled_home, home, tmp_path):
 
 def test_steer_is_listed_beside_the_other_commands(ready, home):
     assert "steer" in run(home, "--help").output
+
+
+def test_evaluate_warns_when_answers_are_missing_and_says_how_to_fill_them(ready, home):
+    add_an_element(ready)
+
+    result = run(home, "evaluate")
+
+    assert "have every answer" in " ".join(result.output.split())
+    assert "flywheel topup --items test" in " ".join(result.output.split())
+
+
+def test_topup_can_target_the_test_split_and_a_seeded_sample_of_it(ready, home):
+    add_an_element(ready)
+    client = Client()
+
+    result = run(home, "topup", "--items", "test", "--limit", "25", "--yes",
+                 obj={"client_factory": lambda: client})
+
+    assert "25 items considered" in result.output
+    assert len(client.calls) == 25

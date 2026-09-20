@@ -39,6 +39,9 @@ class Scoreboard:
     summary: Summary
     by_tier: Dict[str, float] = field(default_factory=dict)
     bins: List[Bin] = field(default_factory=list)
+    # Share of the split whose answers were all on file. Below 1 the scorecard was served
+    # with missing features, so its numbers understate what it would do given answers.
+    coverage: float = 1.0
 
     @property
     def accuracy(self) -> float:
@@ -57,7 +60,10 @@ def scoreboard(workspace: Workspace, score_name: str, card: Optional[Scorecard] 
     confidences: List[float] = []
     correct: List[int] = []
     tiers: Dict[str, List[int]] = {}
+    complete = 0
+    wanted = set(card.questions())
     for item in items:
+        complete += wanted <= set(answers[item.id])
         result = predict(score, answers[item.id])
         hit = int(agrees(result.value, item.reference_label))
         confidences.append(result.confidence or 0.0)
@@ -66,7 +72,8 @@ def scoreboard(workspace: Workspace, score_name: str, card: Optional[Scorecard] 
     return Scoreboard(
         version=version, split=split, summary=summarize(confidences, correct),
         by_tier={t: sum(v) / len(v) for t, v in sorted(tiers.items())},
-        bins=reliability_bins(confidences, correct))
+        bins=reliability_bins(confidences, correct),
+        coverage=complete / len(items) if items else 1.0)
 
 
 @dataclass
