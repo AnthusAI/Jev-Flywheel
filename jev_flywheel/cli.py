@@ -73,6 +73,9 @@ def _steer_options(function):
                      type=click.Choice(["bedrock", "openai"]), help="Which LLM provider."),
         click.option("--model", default="us.moonshotai.kimi-k3", show_default=True,
                      help="Model id. Kimi K3 on Bedrock is called through its inference profile."),
+        click.option("--region", default=None,
+                     help="AWS region for Bedrock. Not every model is in every region "
+                          "(Qwen3 Coder 480B: us-west-2, not us-east-1). Default: us-east-1."),
         click.option("--allow-spend", is_flag=True,
                      help="Let evaluating a proposal call Jev for missing answers "
                           "(needs TYPESAFE_API_KEY). Without it, a proposal that needs new "
@@ -88,8 +91,8 @@ def _steer_options(function):
     return function
 
 
-def _run_steering(ctx, workspace, score_name, provider, model, allow_spend, max_auto_requests,
-                  scripted):
+def _run_steering(ctx, workspace, score_name, provider, model, region, allow_spend,
+                  max_auto_requests, scripted):
     from dotenv import load_dotenv
     from jev_flywheel.steer import SteerError, run_steering
 
@@ -97,7 +100,7 @@ def _run_steering(ctx, workspace, score_name, provider, model, allow_spend, max_
     handler = (ctx.obj or {}).get("hitl_handler")   # tests inject one; otherwise interactive
     try:
         outcome = run_steering(
-            workspace, score_name, provider=provider, model=model, allow_spend=allow_spend,
+            workspace, score_name, provider=provider, model=model, region=region, allow_spend=allow_spend,
             client_factory=(ctx.obj or {}).get("client_factory"), hitl_handler=handler,
             mock_replies=[p.read_text() for p in scripted] if scripted else None,
             max_auto_requests=max_auto_requests)
@@ -161,13 +164,13 @@ def init(ctx, fixtures, force):
 @_steer_options
 @click.pass_context
 def label(ctx, score_name, count, editor, seed, no_refit, auto_steer, provider, model,
-          allow_spend, max_auto_requests, scripted):
+          region, allow_spend, max_auto_requests, scripted):
     """Answer questions one at a time: agree, disagree, or skip, with an optional comment."""
     workspace = _workspace(ctx)
     score_name = _score_name(workspace, score_name)
 
     def rethink(ws, name):
-        _print_outcome(_run_steering(ctx, ws, name, provider, model, allow_spend,
+        _print_outcome(_run_steering(ctx, ws, name, provider, model, region, allow_spend,
                                     max_auto_requests, scripted))
 
     session = label_console.run(
@@ -293,7 +296,7 @@ def history(ctx, score_name):
 @score_option
 @_steer_options
 @click.pass_context
-def steer(ctx, score_name, provider, model, allow_spend, max_auto_requests, scripted):
+def steer(ctx, score_name, provider, model, region, allow_spend, max_auto_requests, scripted):
     """One round of meta-cognition: a language model reads the disagreements and proposes edits.
 
     The Tactus procedure asks the model why the predictions are wrong, prices its proposal,
@@ -302,8 +305,8 @@ def steer(ctx, score_name, provider, model, allow_spend, max_auto_requests, scri
     """
     workspace = _workspace(ctx)
     score_name = _score_name(workspace, score_name)
-    _print_outcome(_run_steering(ctx, workspace, score_name, provider, model, allow_spend,
-                                 max_auto_requests, scripted))
+    _print_outcome(_run_steering(ctx, workspace, score_name, provider, model, region,
+                                 allow_spend, max_auto_requests, scripted))
 
 
 @cli.command()

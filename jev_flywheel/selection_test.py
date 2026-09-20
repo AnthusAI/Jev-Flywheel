@@ -92,21 +92,41 @@ def test_an_item_whose_own_inputs_disagree_scores_higher_on_conflict():
     assert got["split"].components["conflict"] > got["united"].components["conflict"]
 
 
-def test_an_item_where_every_answer_is_unsure_is_penalized_as_irreducible():
-    # The neutral tier: nothing to learn, because the label is arbitrary. Pure
-    # uncertainty sampling would walk straight into it.
+def test_an_item_where_every_answer_is_unsure_is_measured_as_fully_ambiguous():
     got = candidates_for({"murky": (0.5, 0.5, 0.5), "clear": (0.9, 0.9, 0.9)})
 
     assert got["murky"].components["ambiguity"] > got["clear"].components["ambiguity"]
     assert got["murky"].components["ambiguity"] == pytest.approx(1.0)
 
 
-def test_the_ambiguity_penalty_can_outweigh_raw_uncertainty():
-    # A coin-flip everywhere is maximally uncertain but also maximally ambiguous.
-    # A genuinely conflicted item, with confident-but-opposed answers, teaches more.
-    got = candidates_for({"murky": (0.5, 0.5, 0.5), "conflicted": (0.9, 0.95, 0.05)})
+def test_ambiguity_is_recorded_but_does_not_change_the_score_by_default():
+    # It was a penalty, on the theory that an all-unsure item is irreducibly ambiguous. That
+    # was false on the shipped corpus, whose "neutral" tier looks unlearnable under the
+    # starting questions but is ~90% recoverable from an undeclared factor. It is kept as a
+    # diagnostic so a future policy can use it with evidence.
+    assert SelectionPolicy().ambiguity == 0.0
 
-    assert got["conflicted"].score > got["murky"].score
+    got = candidates_for({"murky": (0.5, 0.5, 0.5), "clear": (0.9, 0.9, 0.9)})
+
+    assert got["murky"].components["ambiguity"] > got["clear"].components["ambiguity"]
+    assert got["murky"].score > got["clear"].score        # uncertainty still drives it
+
+
+def test_selection_keeps_most_of_the_effective_sample_it_is_given():
+    # Sharper picks mean more unequal propensities, and the fit is weighted by their inverse,
+    # so a policy can select so keenly that it starves the fit below the ladder's floor.
+    # This pins the trade-off: it may be retuned, but not silently.
+    import random as _random
+
+    from jev_flywheel.sampling import inverse_propensity_weights, kish_n_effective
+
+    got = candidates_for({f"i{k}": (0.5 + k / 120, 0.5 + k / 200, 0.5) for k in range(60)})
+    rng = _random.Random(0)
+    propensities = [choose(list(got.values()), rng).propensity for _ in range(40)]
+
+    retained = kish_n_effective(inverse_propensity_weights(propensities)) / 40
+
+    assert retained > 0.6, f"selection kept only {retained:.0%} of its effective sample"
 
 
 def test_answer_entropy_covers_every_question_type():

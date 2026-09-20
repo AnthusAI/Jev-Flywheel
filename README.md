@@ -110,11 +110,16 @@ so a scorecard and a feedback set made here move there as a port, not a rewrite.
 **Active selection.** Labels are the scarce resource, so the console does not show items in
 file order. It scores every unlabeled item on how much a label would teach: the head is unsure,
 the head and Jev's own answer disagree, the evidence pulls both ways, the item is far from
-anything already labeled. It *penalizes* items where every answer is unsure, because that is
-irreducible uncertainty. In this corpus it is the neutral tier, where labels are near-arbitrary
-and no model does better than chance, and pure uncertainty sampling walks the human straight
-into it. Selection is stochastic on purpose, and it records the probability each item was
-picked with, so the fit can undo the bias selection introduces.
+anything already labeled. Selection is stochastic on purpose, and it
+records the probability each item was picked with, so the fit can undo the bias it introduces.
+
+**Be skeptical of this part.** On the recorded run the tiers the labeler was shown
+(12.1/19.3/47.1/21.4%) are indistinguishable from the pool's own composition
+(11.1/17.5/48.6/22.7%) — at 140 labels, active selection did nothing measurable here. What is
+demonstrated is the *plumbing*: propensities are recorded, so the fit can correct for whatever
+the policy does. The policy earning its keep is unproven. An earlier version also penalized
+items whose answers were all unsure, on the theory that they were irreducibly ambiguous; that
+theory was wrong on this corpus, and the penalty is now recorded but not scored.
 
 **Refit and steering are different operations, so they have different triggers.** A refit takes
 milliseconds and only changes numbers, so it runs every few labels and is promoted only if it
@@ -200,9 +205,8 @@ Other things to hold in mind:
   +2.4 and +8.5 points, because Kimi K3 proposed different elements each time. The recording
   commits one of them. Expect variance, and treat any single round as one draw.
 - **600 items is roughly ±1.5 points** on a paired comparison.
-- **The corpus is constructed.** Labels are near-deterministic and the neutral tier has no
-  recoverable signal, which caps every model near 0.87 overall. It is a good test bed and a
-  poor guide to how a messy real feedback set behaves.
+- **The corpus is constructed, and its labels encode a factor that is not sentiment** (see
+  above). It is a good test bed and a poor guide to how a messy real feedback set behaves.
 - **One run rewrote the holistic question as well as adding an element,** so the gain cannot be
   attributed to the element alone. The analyst is now told to prefer elements, and the human is
   shown that rewording the holistic question makes every stored answer to it stale.
@@ -244,9 +248,8 @@ the industrial version of the same ideas, for when you need:
 - **Scale and availability**: many scorecards and scores, evaluation runs, background workers,
   a store that survives a laptop.
 - **Compliance**: multi-tenant accounts, audit trails, and controlled access to feedback.
-- **Richer models**: boosting overtakes the logistic head at roughly 500 labels on this corpus,
-  and the models beyond it (additive models, factorization machines, small networks, set
-  encoders) need somewhere to keep their weights.
+- **Richer models**: on a related experiment, gradient boosting overtook the logistic head at
+  roughly 500 labels. Anything past a handful of inline weights needs somewhere to keep them.
 - **A whole feedback workflow**: reviewers, vetted labels, and sampling by confusion cell.
 
 The [Anthus AI Solutions](https://anth.us) team builds and runs it. If this repo was useful and
@@ -270,7 +273,7 @@ procedures/steer_scorecard.tac   the steering loop, in Tactus
 fixtures/         8,801 items, cached Jev answers, the recorded run
 ```
 
-`make test` runs the specs (455, none needing a network or a key). The procedure's specs
+`make test` runs the specs (457, none needing a network or a key). The procedure's specs
 are pytest-driven rather than Tactus BDD, because they need the Python host module registered,
 which `tactus test` cannot do.
 

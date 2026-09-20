@@ -36,6 +36,20 @@ class SteerError(RuntimeError):
     """The steering round could not run. The message says why."""
 
 
+def apply_region(provider: str, region: Optional[str]) -> None:
+    """Point Bedrock at a region. Models are not offered everywhere: Qwen3 Coder 480B is in
+    us-west-2 and us-east-2 but not us-east-1, so the region is a per-model choice.
+
+    An explicit region wins; otherwise an already-configured one is kept; otherwise us-east-1.
+    """
+    if provider != "bedrock":
+        return
+    if region:
+        os.environ["AWS_DEFAULT_REGION"] = region
+    else:
+        os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+
+
 def render_source(*, provider: str = DEFAULT_PROVIDER, model: str = DEFAULT_MODEL,
                   max_tokens: int = DEFAULT_MAX_TOKENS, path: Path = PROCEDURE) -> str:
     """The procedure with its provider, model and token budget filled in."""
@@ -99,6 +113,7 @@ def run_steering(
     mock_replies: Optional[Sequence[str]] = None,
     max_auto_requests: int = 300,
     max_revisions: int = 1,
+    region: Optional[str] = None,
 ) -> SteerOutcome:
     """Run one round of meta-cognition and record it.
 
@@ -110,11 +125,12 @@ def run_steering(
         workspace, score_name, provider=provider, model=model, max_tokens=max_tokens,
         allow_spend=allow_spend, client_factory=client_factory, hitl_handler=hitl_handler,
         mock_replies=mock_replies, max_auto_requests=max_auto_requests,
-        max_revisions=max_revisions))
+        max_revisions=max_revisions, region=region))
 
 
 async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spend,
-               client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions):
+               client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions,
+               region=None):
     try:
         from tactus.adapters.memory import MemoryStorage
         from tactus.core.runtime import TactusRuntime
@@ -122,8 +138,8 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         raise SteerError(
             "steering needs Tactus. Install it with: pip install 'jev-flywheel[steer]'") from error
 
-    if provider == "bedrock" and not mock_replies:
-        os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+    if not mock_replies:
+        apply_region(provider, region)
     host = FlywheelHost(workspace, score_name, allow_spend=allow_spend,
                         client_factory=client_factory)
     if hitl_handler is None:

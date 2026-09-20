@@ -253,3 +253,26 @@ def test_steering_without_tactus_explains_how_to_install_it(labeled, monkeypatch
 
     with pytest.raises(SteerError, match=r"jev-flywheel\[steer\]"):
         run_steering(labeled, SCORE, hitl_handler=object(), mock_replies=[reply()])
+
+
+def test_a_bedrock_region_can_be_set_per_model_and_defaults_to_us_east_1(monkeypatch):
+    from jev_flywheel.steer import apply_region
+
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    apply_region("bedrock", None)
+    assert __import__("os").environ["AWS_DEFAULT_REGION"] == "us-east-1"
+
+    apply_region("bedrock", "us-west-2")          # e.g. Qwen3 Coder 480B is not in us-east-1
+    assert __import__("os").environ["AWS_DEFAULT_REGION"] == "us-west-2"
+
+    apply_region("bedrock", None)                 # an already-chosen region is kept
+    assert __import__("os").environ["AWS_DEFAULT_REGION"] == "us-west-2"
+
+
+def test_the_region_is_ignored_for_other_providers(monkeypatch):
+    from jev_flywheel.steer import apply_region
+
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    apply_region("openai", "us-west-2")
+
+    assert "AWS_DEFAULT_REGION" not in __import__("os").environ

@@ -17,12 +17,15 @@ Five signals, each cheap and each computed from what is already on hand:
   human comments most often name a factor nobody declared.
 * **Novelty** -- far from every item already labeled, so the human is not shown
   twenty near-duplicates.
-* **Ambiguity** (a *penalty*) -- every answer in the request is unsure. That is
-  irreducible uncertainty: the item is hard because the labels are arbitrary, not
-  because the model lacks a feature. Pure uncertainty sampling marches the human
-  straight into this region -- in the sentiment corpus, the neutral tier, where
-  every model sits near chance and the ceiling is about 0.87 overall. Chase
-  *reducible* uncertainty; down-weight the rest.
+* **Ambiguity** -- how unsure every answer in the request is. **Recorded, not scored**
+  (its weight is 0). It was originally a penalty, on the theory that an item whose
+  answers are all unsure is irreducibly ambiguous and cannot be learned. That theory
+  was wrong on the corpus we ship: its "neutral" tier looks unlearnable under the
+  starting question set, but its labels are in fact ~90% recoverable from a factor
+  nobody had declared (see the README). High ambiguity under the *current* questions
+  is evidence the question set is incomplete, not that the item is unlearnable -- two
+  different things, and exactly the items a steering round wants to hear about. It
+  stays in the record so a policy can use it later, with evidence.
 
 Selection is **stochastic** on purpose. The scores become a probability
 distribution (a softmax with a uniform exploration floor), an item is sampled from
@@ -55,9 +58,19 @@ class SelectionPolicy:
     disagreement: float = 1.0
     conflict: float = 1.0
     novelty: float = 0.5
-    ambiguity: float = 1.0       # subtracted
-    temperature: float = 0.35
-    explore: float = 0.10
+    ambiguity: float = 0.0       # recorded as a diagnostic; see the module docstring
+    # Temperature and the explore floor buy information per label at the cost of *effective*
+    # sample size: the sharper the picks, the more unequal the propensities, and the fit is
+    # weighted by their inverse. Measured on the shipped corpus, 45 labels are worth:
+    #     temperature 0.35, explore 0.10 -> 21.0 effective   (53% thrown away)
+    #     temperature 0.60, explore 0.15 -> 36.9 effective   (18% -- what we ship)
+    #     temperature 1.00, explore 0.25 -> 42.0 effective   (7%, but nearly random picks)
+    # Below about 30 effective labels the capability ladder cannot fit anything at all, so a
+    # policy that selects brilliantly and starves the fit is not a good policy. This is the
+    # trade-off active-learning write-ups usually leave unmeasured; inverse-propensity
+    # weighting is what makes it visible.
+    temperature: float = 0.60
+    explore: float = 0.15
 
 
 @dataclass

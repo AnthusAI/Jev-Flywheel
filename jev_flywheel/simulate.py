@@ -15,8 +15,15 @@ from jev_flywheel.workspace import Workspace
 
 
 def template_comment(question, truth: str) -> str:
-    tier = question.item.metadata.get("tier", "this")
-    return f"This is really {truth}; the wording is {tier} and it misleads."
+    """A deliberately uninformative disagreement.
+
+    It must not hint at *why*. An earlier version said "the wording is {tier} and it
+    misleads", which leaked the corpus's own tier name into the analyst's briefing and
+    pointed it at wording; the analyst then paraphrased that back as its diagnosis. A
+    simulated labeler has no insight to offer, and pretending otherwise measured the
+    template rather than the model.
+    """
+    return f"I disagree; the correct label is {truth}."
 
 
 def label_with_reference(
