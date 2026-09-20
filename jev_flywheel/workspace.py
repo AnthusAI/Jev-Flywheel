@@ -185,6 +185,9 @@ class Workspace:
         entry = {
             "version": version, "parent": parent, "kind": kind, "created_at": now(),
             "sha256": hashlib.sha256(text.encode()).hexdigest()[:16],
+            # How much feedback existed when this version was made, so a chart of
+            # quality against labels can place each version on its x axis.
+            "n_feedback": len(self.feedback()),
             "provenance": provenance or {},
         }
         with (self.scorecards_dir / "lineage.jsonl").open("a", encoding="utf-8") as handle:
