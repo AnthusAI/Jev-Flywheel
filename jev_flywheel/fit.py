@@ -32,8 +32,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from jev_flywheel.answers import AnswerCache
-from jev_flywheel.calibrate import OutOfFoldPredictions, apply_calibration, fit_calibration
-from jev_flywheel.evaluate import Summary, log_loss, summarize
+from jev_flywheel.calibrate import OutOfFoldPredictions, fit_calibration
+from jev_flywheel.evaluate import Summary, summarize
 from jev_flywheel.items import FeedbackItem, agrees, normalize_label
 from jev_flywheel.jev import fingerprint
 from jev_flywheel.ladder import (
@@ -340,24 +340,33 @@ def serve_summary(score: Score, questions: Mapping[str, Any], cache: AnswerCache
 
 
 def compare(candidate: FitResult, incumbent: Summary, *, min_brier_gain: float = 0.005,
-            min_accuracy_gain: float = 0.0) -> Comparison:
+            accuracy_tolerance: Optional[float] = None) -> Comparison:
     """Decide whether a candidate earns promotion.
 
-    The candidate's numbers are out-of-fold, so they are honest; the incumbent's
-    are direct. Brier is the primary criterion because it is a proper scoring rule
-    that rewards accuracy and calibration together, and accuracy must not regress
-    on top of it. A candidate that is merely better *calibrated* is still an
-    improvement -- that is half the point -- but the reasons say which it was.
+    The candidate's numbers are out-of-fold, so they are honest; the incumbent's are
+    direct. Brier is the primary criterion because it is a proper scoring rule that
+    rewards accuracy and calibration together. A candidate that is merely better
+    *calibrated* is still an improvement -- that is half the point -- and the reasons
+    say which it was.
+
+    Accuracy must not regress, but "not at all" would be the wrong bar. Accuracy is a
+    step function: at 90 effective labels one item is 1.1 points, so a difference
+    smaller than a couple of items is granularity, not evidence. The default
+    tolerance is therefore two effective items, ``2 / n_effective``, which shrinks as
+    labels accumulate and the comparison sharpens.
     """
     if not candidate.fitted or candidate.metrics is None:
         return Comparison(candidate.metrics or Summary(0, 0, 0, 0, 0), incumbent, False,
                           [candidate.reason or "no candidate was fitted"])
+    if accuracy_tolerance is None:
+        accuracy_tolerance = 2.0 / max(candidate.n_effective, 1.0)
     reasons: List[str] = []
     brier_gain = incumbent.brier - candidate.metrics.brier
-    accuracy_gain = candidate.metrics.accuracy - incumbent.accuracy
+    accuracy_change = candidate.metrics.accuracy - incumbent.accuracy
     if brier_gain < min_brier_gain:
         reasons.append(f"Brier improved by {brier_gain:+.4f}, below the {min_brier_gain} required")
-    if accuracy_gain < min_accuracy_gain:
-        reasons.append(f"accuracy changed by {accuracy_gain:+.4f}, below the "
-                       f"{min_accuracy_gain} required")
+    if accuracy_change < -accuracy_tolerance:
+        reasons.append(f"accuracy fell by {-accuracy_change:.4f}, more than the "
+                       f"{accuracy_tolerance:.4f} that {candidate.n_effective:.0f} effective "
+                       "labels can resolve")
     return Comparison(candidate.metrics, incumbent, not reasons, reasons)

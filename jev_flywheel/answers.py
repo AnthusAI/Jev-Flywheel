@@ -143,6 +143,25 @@ class AnswerCache:
                 found[name] = answer
         return found
 
+    def bulk_partial_answers(
+        self, item_ids: Iterable[str], questions: Mapping[str, Mapping[str, Any]],
+    ) -> Dict[str, Dict[str, dict]]:
+        """``partial_answers_for`` over many items, hashing each question only once.
+
+        Scoring the whole pool for every label would otherwise re-hash every
+        question body tens of thousands of times.
+        """
+        hashes = {name: question_hash(q) for name, q in questions.items()}
+        out: Dict[str, Dict[str, dict]] = {}
+        for item_id in item_ids:
+            found: Dict[str, dict] = {}
+            for name, qhash in hashes.items():
+                answer = self._answers.get((item_id, name, qhash))
+                if answer is not None:
+                    found[name] = answer
+            out[item_id] = found
+        return out
+
     def plan(self, item_ids: Iterable[str],
              questions: Mapping[str, Mapping[str, Any]]) -> Plan:
         """Price a top-up before paying for it."""

@@ -56,7 +56,8 @@ def _interpret(score: Score, answer: Mapping[str, Any]) -> tuple:
     raise ValueError(f"cannot interpret a {kind!r} answer")
 
 
-def predict(score: Score, answers: Mapping[str, Any]) -> ScoreResult:
+def predict(score: Score, answers: Mapping[str, Any],
+            features: Optional[Mapping[str, float]] = None) -> ScoreResult:
     """Score one item, given the answers to every question on the card.
 
     A missing element answer degrades gracefully -- its feature counts as zero and
@@ -74,7 +75,8 @@ def predict(score: Score, answers: Mapping[str, Any]) -> ScoreResult:
         value, confidence, detail = _interpret(score, answer)
         return ScoreResult(score.name, value, confidence, None, {"jev": detail})
 
-    features = score.feature_vector(answers)
+    if features is None:
+        features = score.feature_vector(answers)
     value, raw, detail = decide(features, decision.head())
     calibrated = apply_calibration(raw, decision.calibration)
     detail = {**detail, "raw_confidence": raw}

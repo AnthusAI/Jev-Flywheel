@@ -17,6 +17,23 @@ from jev_flywheel.models import REGISTRY, class_weights, declared_features
 TOP_CONTRIBUTIONS = 3
 
 
+def contributions(features: Mapping[str, float], head: Mapping, top: str,
+                  runner_up: str, weights=None) -> Dict[str, float]:
+    """How much each feature pushed the decision toward ``top`` and away from ``runner_up``.
+
+    A contribution is the difference in the two classes' weights times the feature's
+    value, so positive means "for the decision" and negative means "against it".
+    Active selection reads the whole vector to measure how much of the evidence
+    disagrees with the call the head made.
+    """
+    weights = weights or class_weights(head)
+    return {
+        name: (weights[top].get(name, 0.0) - weights[runner_up].get(name, 0.0))
+        * features.get(name, 0.0)
+        for name in declared_features(head, weights) if name in features
+    }
+
+
 def decide(features: Mapping[str, float], head: Mapping) -> Tuple[str, float, Dict[str, Any]]:
     """Return ``(value, confidence, detail)``, where confidence is P(value)."""
     probabilities = REGISTRY[head["model"]].predict_proba(features, head)
@@ -25,14 +42,11 @@ def decide(features: Mapping[str, float], head: Mapping) -> Tuple[str, float, Di
     top, runner_up = ranked[0], ranked[1]
 
     weights = class_weights(head)
-    declared = declared_features(head)
-    contributions = [
-        {"feature": name,
-         "contribution": (weights[top].get(name, 0.0) - weights[runner_up].get(name, 0.0))
-         * features.get(name, 0.0)}
-        for name in declared if name in features
-    ]
-    contributions.sort(key=lambda c: abs(c["contribution"]), reverse=True)
+    declared = declared_features(head, weights)
+    contributions_by_feature = contributions(features, head, top, runner_up, weights)
+    contributions_ranked = [{"feature": name, "contribution": value}
+                            for name, value in contributions_by_feature.items()]
+    contributions_ranked.sort(key=lambda c: abs(c["contribution"]), reverse=True)
 
     coverage = (sum(1 for name in declared if name in features) / len(declared)) if declared else 1.0
     band = float(head.get("abstain_band", 0.0))
@@ -41,7 +55,7 @@ def decide(features: Mapping[str, float], head: Mapping) -> Tuple[str, float, Di
         "model": head["model"],
         "probabilities": probabilities,
         "coverage": coverage,
-        "top_contributions": contributions[:TOP_CONTRIBUTIONS],
+        "top_contributions": contributions_ranked[:TOP_CONTRIBUTIONS],
         # A flag, never a change to the value. An abstaining item still gets an
         # answer; the flag says a human should look at it.
         "abstain": margin < band,

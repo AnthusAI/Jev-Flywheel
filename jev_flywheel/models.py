@@ -13,7 +13,7 @@ Adding an architecture is one function plus one registry entry. Because features
 are cached, comparing architectures costs no Jev calls.
 """
 import math
-from typing import Callable, Dict, List, Mapping, NamedTuple
+from typing import Callable, Dict, List, Mapping, NamedTuple, Optional
 
 INTERCEPT = "intercept"
 
@@ -35,10 +35,16 @@ def class_weights(head: Mapping) -> Dict[str, Dict[str, float]]:
     return {c: dict(weights.get(c, {})) for c in classes}
 
 
-def declared_features(head: Mapping) -> List[str]:
-    """Every feature name the weights mention, in first-seen order."""
+def declared_features(head: Mapping,
+                      weights_by_class: Optional[Mapping[str, Dict[str, float]]] = None) -> List[str]:
+    """Every feature name the weights mention, in first-seen order.
+
+    ``weights_by_class`` lets a caller that already expanded the weights pass them in
+    rather than have them rebuilt: expansion is cheap once and adds up when a whole
+    pool is scored.
+    """
     names: List[str] = []
-    for weights in class_weights(head).values():
+    for weights in (weights_by_class or class_weights(head)).values():
         for name in weights:
             if name != INTERCEPT and name not in names:
                 names.append(name)

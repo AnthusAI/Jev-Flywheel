@@ -502,3 +502,44 @@ def test_a_held_candidate_is_never_promoted():
 
     assert not comparison.promote
     assert "more are needed" in comparison.reasons[0]
+
+
+def _candidate(accuracy, brier, n_effective):
+    from jev_flywheel.evaluate import Summary
+    from jev_flywheel.fit import FitResult
+    from jev_flywheel.ladder import tier_for
+    return FitResult("fitted", tier_for(n_effective), int(n_effective), n_effective,
+                     metrics=Summary(int(n_effective), accuracy, 0.02, brier, accuracy))
+
+
+def test_a_one_item_dip_in_accuracy_is_noise_not_a_regression_at_small_samples():
+    # At 90 effective labels one item is 1.1 points. A better-calibrated candidate
+    # that is one item less accurate should still be promoted.
+    from jev_flywheel.evaluate import Summary
+
+    incumbent = Summary(90, accuracy=0.745, ece=0.17, brier=0.20, mean_confidence=0.9)
+
+    comparison = compare(_candidate(accuracy=0.733, brier=0.183, n_effective=90), incumbent)
+
+    assert comparison.promote, comparison.reasons
+
+
+def test_a_real_accuracy_regression_is_still_rejected_however_good_the_calibration():
+    from jev_flywheel.evaluate import Summary
+
+    incumbent = Summary(90, accuracy=0.80, ece=0.17, brier=0.20, mean_confidence=0.9)
+
+    comparison = compare(_candidate(accuracy=0.70, brier=0.15, n_effective=90), incumbent)
+
+    assert not comparison.promote
+    assert "accuracy fell" in comparison.reasons[0]
+
+
+def test_the_accuracy_tolerance_tightens_as_labels_accumulate():
+    from jev_flywheel.evaluate import Summary
+
+    incumbent = Summary(1000, accuracy=0.80, ece=0.1, brier=0.20, mean_confidence=0.8)
+    dip = _candidate(accuracy=0.788, brier=0.15, n_effective=1000)   # 1.2 points down
+
+    # Two effective items is 0.2 points at 1000 labels, so 1.2 points is real.
+    assert not compare(dip, incumbent).promote
