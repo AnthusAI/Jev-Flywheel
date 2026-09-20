@@ -80,6 +80,7 @@ class FlywheelHost:
         client_factory: Optional[Callable[[], Any]] = None,
         max_mismatches: int = 25,
         max_agreement_notes: int = 5,
+        max_labeled_sample: int = 40,
     ):
         self.workspace = workspace
         self.score_name = score_name
@@ -87,6 +88,7 @@ class FlywheelHost:
         self.client_factory = client_factory
         self.max_mismatches = max_mismatches
         self.max_agreement_notes = max_agreement_notes
+        self.max_labeled_sample = max_labeled_sample
         self._proposal: Optional[Proposal] = None
         self._candidate: Optional[Scorecard] = None
         self._fit: Optional[FitResult] = None
@@ -94,6 +96,7 @@ class FlywheelHost:
         self._applied_version: Optional[int] = None
         # The analyst's raw reply, kept so a round can be recorded and replayed exactly.
         self.last_reply: Optional[str] = None
+        self.last_discovery_reply: Optional[str] = None
 
     # ---- what the agent is shown -----------------------------------------------
 
@@ -132,8 +135,99 @@ class FlywheelHost:
             },
             "mismatches": mismatches,
             "commented_agreements": agreements,
+            "labeled_sample": self._labeled_sample(),
+            "blind_sample": self.blind_sample(),
             "element_inventory": inventory,
         }
+
+    def blind_sample(self, per_group: int = 40) -> Dict[str, Any]:
+        """Labeled texts with the task stripped out: Group A and Group B, nothing else.
+
+        The analyst that sees the scorecard is frame-locked by it -- told it is improving a
+        sentiment score, it proposes sentiment features, which is how a factor orthogonal to
+        sentiment stays invisible. This view removes the frame: no score name, no criteria, no
+        elements, no mention of what the groups mean. It is a pure induction task, which is
+        what "find the rule these labels follow" actually is.
+        """
+        records = [f for f in latest_feedback(self.workspace.feedback(), self.score_name).values()
+                   if f.label is not None]
+        groups: Dict[str, List[Any]] = {}
+        for record in records:
+            groups.setdefault(record.final_answer_value, []).append(record)
+        names = {label: f"Group {chr(65 + i)}" for i, label in enumerate(sorted(groups))}
+        out: Dict[str, List[str]] = {name: [] for name in names.values()}
+        for label, members in groups.items():
+            for record in members[-per_group:]:
+                out[names[label]].append(self.workspace.item(record.item_id).text)
+        return out
+
+    def _remember_discovery(self, reply: Any) -> None:
+        if reply:
+            self.last_discovery_reply = reply if isinstance(reply, str) else json.dumps(_plain(reply))
+
+    def check_combined(self, *replies: Any) -> Dict[str, Any]:
+        """Merge several proposals into one, then check it.
+
+        Candidates from the blind view and from the error analysis are pooled rather than
+        filtered by either. Screening them is nearly free -- every question rides in the same
+        request, so N candidates cost the same number of Jev requests as one -- and the fit,
+        not a frame-locked model, decides which survive.
+
+        The first reply is the analyst's and is required: if it will not parse, that is a
+        checkable failure the caller can ask it to repair. Later replies are the blind pass,
+        which is best-effort -- losing it costs some candidates, not the round.
+        """
+        if replies and replies[0]:
+            first = replies[0]
+            try:
+                parse_proposal(_plain(first) if not isinstance(first, str) else first)
+            except ProposalError as error:
+                self.last_reply = first if isinstance(first, str) else json.dumps(_plain(first))
+                return {"ok": False, "noop": False, "problems": [str(error)], "plan": None}
+        if len(replies) > 1:
+            self._remember_discovery(replies[1])
+        merged: Dict[str, Any] = {"root_cause": "", "add_elements": [],
+                                  "retire_elements": [], "reword_elements": []}
+        seen = set()
+        for reply in replies:
+            if not reply:
+                continue
+            try:
+                proposal = parse_proposal(_plain(reply) if not isinstance(reply, str) else reply)
+            except ProposalError:
+                continue                       # one unusable reply must not sink the round
+            for added in proposal.add:
+                if added.key not in seen:
+                    seen.add(added.key)
+                    merged["add_elements"].append({
+                        "key": added.key, "question_type": added.question_type,
+                        "instructions": added.instructions, "criteria": added.criteria})
+            merged["retire_elements"].extend(proposal.retire)
+            merged["reword_elements"].extend(
+                [{"key": r.key, "instructions": r.instructions} for r in proposal.reword])
+            if proposal.root_cause and not merged["root_cause"]:
+                merged["root_cause"] = proposal.root_cause
+        return self.check(merged)
+
+    def _labeled_sample(self) -> List[Dict[str, Any]]:
+        """A sample of labeled items and their labels, right or wrong, newest first.
+
+        The mismatch list answers "what are we getting wrong". It cannot answer "what
+        decides the label", because a regularity the scorecard already exploits produces no
+        errors to look at: on the corpus we ship, items about sport skew positive, and that
+        shows up in the mismatches as almost nothing, since those items are mostly already
+        right. An analyst shown only failures has a structural blind spot for base rates.
+        So it also gets a plain, balanced sample of the labeled data.
+        """
+        records = [f for f in latest_feedback(self.workspace.feedback(), self.score_name).values()
+                   if f.label is not None]
+        by_label: Dict[str, List[Any]] = {}
+        for record in records:
+            by_label.setdefault(record.final_answer_value, []).append(record)
+        per = max(self.max_labeled_sample // max(len(by_label), 1), 1)
+        picked = [r for group in by_label.values() for r in group[-per:]]
+        return [{"text": self.workspace.item(r.item_id).text, "human_label": r.final_answer_value}
+                for r in picked]
 
     def _feedback_examples(self, card: Scorecard, score, questions):
         latest = [f for f in latest_feedback(self.workspace.feedback(), self.score_name).values()

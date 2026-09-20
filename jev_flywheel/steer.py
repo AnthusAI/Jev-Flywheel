@@ -94,6 +94,8 @@ class SteerOutcome:
     decision: str
     detail: Dict[str, Any] = field(default_factory=dict)
     approvals_asked: List[str] = field(default_factory=list)
+    analyst_reply: Optional[str] = None
+    discovery_reply: Optional[str] = None
 
     @property
     def promoted(self) -> bool:
@@ -114,6 +116,9 @@ def run_steering(
     max_auto_requests: int = 300,
     max_revisions: int = 1,
     region: Optional[str] = None,
+    max_mismatches: int = 25,
+    discovery: bool = False,
+    taxonomy: bool = False,
 ) -> SteerOutcome:
     """Run one round of meta-cognition and record it.
 
@@ -125,12 +130,13 @@ def run_steering(
         workspace, score_name, provider=provider, model=model, max_tokens=max_tokens,
         allow_spend=allow_spend, client_factory=client_factory, hitl_handler=hitl_handler,
         mock_replies=mock_replies, max_auto_requests=max_auto_requests,
-        max_revisions=max_revisions, region=region))
+        max_revisions=max_revisions, region=region, max_mismatches=max_mismatches,
+        discovery=discovery, taxonomy=taxonomy))
 
 
 async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spend,
                client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions,
-               region=None):
+               region=None, max_mismatches=25, discovery=False, taxonomy=False):
     try:
         from tactus.adapters.memory import MemoryStorage
         from tactus.core.runtime import TactusRuntime
@@ -141,7 +147,7 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
     if not mock_replies:
         apply_region(provider, region)
     host = FlywheelHost(workspace, score_name, allow_spend=allow_spend,
-                        client_factory=client_factory)
+                        client_factory=client_factory, max_mismatches=max_mismatches)
     if hitl_handler is None:
         from tactus.adapters.cli_hitl import CLIHITLHandler
         hitl_handler = CLIHITLHandler()
@@ -151,6 +157,11 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         storage_backend=MemoryStorage(), hitl_handler=hitl_handler,
         source_file_path=str(PROCEDURE))
     runtime.register_python_module("flywheel", host)
+    if mock_replies is not None and discovery:
+        # The blind pass consumes a turn too, so a scripted round needs one reply per call.
+        mock_replies = list(mock_replies)
+        if len(mock_replies) == 1:
+            mock_replies = mock_replies * 2
     if mock_replies is not None:
         # Agents are created while the procedure is parsed, so mocking must be switched on
         # before that, and it takes a MockManager as well as the scripted turns. Without
@@ -162,11 +173,13 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         runtime.mock_manager = manager
         set_current_mock_manager(manager)
         runtime.mock_all_agents = True
-        runtime.external_agent_mocks = {"analyst": [{"message": r} for r in mock_replies]}
+        turns = [{"message": r} for r in mock_replies]
+        runtime.external_agent_mocks = {"analyst": turns, "scout": turns}
 
     result = await runtime.execute(
         render_source(provider=provider, model=model, max_tokens=max_tokens),
-        context={"max_auto_requests": max_auto_requests, "max_revisions": max_revisions},
+        context={"max_auto_requests": max_auto_requests, "max_revisions": max_revisions,
+                 "discovery": discovery, "taxonomy": taxonomy},
         format="lua")
     if not result.get("success"):
         raise SteerError(result.get("error") or "the steering procedure failed")
@@ -178,4 +191,5 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         new_version=detail.get("version"), root_cause=detail.get("root_cause"),
         analyst_reply=host.last_reply)
     return SteerOutcome(
-        decision, detail, list(getattr(hitl_handler, "asked", [])))
+        decision, detail, list(getattr(hitl_handler, "asked", [])), host.last_reply,
+        host.last_discovery_reply)

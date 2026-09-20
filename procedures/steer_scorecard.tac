@@ -42,6 +42,11 @@ predictions the human disagreed with along with their comments, and an inventory
 each current element matters.
 
 How to think:
+- Look at BOTH lists. The disagreements show what is going wrong; the labeled sample shows
+  what decides the label in the first place. Some factors are invisible in the disagreements
+  precisely because the scorecard already handles them -- look for what the positive and
+  negative examples have in common as groups, including things that are not about sentiment
+  at all, such as what the text is about.
 - Look for a pattern across the disagreements, not for a fix to each one. A comment that
   names a concept the current elements do not capture (sarcasm, hedging, a specific topic)
   is a missing element. A wrong prediction whose element answers were all confident and
@@ -80,6 +85,46 @@ coefficients or numbers of any kind: they are set by a fit, not by you.
 ]],
 }
 
+-- A second analyst that is never told what the task is. It sees two groups of texts and is
+-- asked what separates them. The framing matters: the analyst that can see the scorecard
+-- reliably proposes refinements of the criterion it was shown, which is how a factor
+-- orthogonal to that criterion stays invisible no matter how much evidence you add. This one
+-- has no criterion to be loyal to.
+scout = Agent {
+    provider = "{{PROVIDER}}",
+    model = "{{MODEL}}",
+    max_tokens = {{MAX_TOKENS}},
+    system_prompt = [[
+You are shown two groups of short texts, Group A and Group B. They were sorted by a rule you
+do not know. Your job is to work out what the rule might be.
+
+Look at the groups as wholes and ask what the members of one have in common that the members
+of the other do not. Consider ANY property: what the texts are about, their subject matter or
+setting, who or what they describe, their tone, their structure, their vocabulary, how
+strongly or faintly they put things, how long they are. Do not assume the rule is about any
+one kind of property, and do not assume it is the most obvious one -- a rule that is obvious
+from a handful of examples is usually not the rule that separates the whole set.
+
+Propose up to five questions that would best separate the groups. Each must be answerable
+from a single text on its own, by someone who has not seen the groups.
+
+Reply with ONE JSON object and nothing else:
+
+{
+  "observations": "what you noticed about the two groups, in two or three sentences",
+  "add_elements": [
+    {"key": "short_snake_case", "question_type": "noul", "instructions": "the question",
+     "criteria": null}
+  ]
+}
+
+question_type is "noul" (yes/no, criteria null), "choice" (criteria is a list of options) or
+"score" (criteria is an ordered list of levels). Propose several genuinely different
+questions rather than five variations on one idea: they cost nothing to try, and the ones
+that do not help will be discarded by measurement, not by argument.
+]],
+}
+
 -- The briefing as text for the model. Kept in Lua, where it can be read and changed.
 local function briefing_prompt(brief)
     return "CURRENT SCORECARD\n" .. brief.scorecard_yaml
@@ -88,10 +133,20 @@ local function briefing_prompt(brief)
         .. Json.encode(brief.mismatches)
         .. "\n\nCOMMENTS ON PREDICTIONS THE HUMAN AGREED WITH\n"
         .. Json.encode(brief.commented_agreements)
+        .. "\n\nA SAMPLE OF LABELED ITEMS, RIGHT OR WRONG, BALANCED BY LABEL. Read these for "
+        .. "regularities the error list cannot show: anything that decides the label but that "
+        .. "the scorecard already gets right produces no errors to look at.\n"
+        .. Json.encode(brief.labeled_sample)
         .. "\n\nHOW MUCH EACH ELEMENT MATTERS (permutation_importance is what to trust)\n"
         .. Json.encode(brief.element_inventory)
         .. "\n\nPropose your one round of edits now."
 end
+
+local TAXONOMY = [[
+
+Kinds of convention worth considering, as a checklist, not a hint: what counts as in scope;
+exceptions the labelers honour; the subject matter or setting of the text; its register or
+formality; where a threshold sits between one label and the next.]]
 
 -- An agent reply is plain text, or already-parsed data on some models. Hand the host a string.
 local function as_text(reply)
@@ -111,15 +166,32 @@ Procedure {
         -- costs nothing (nothing has been fit or asked of Jev), and is not a second
         -- proposal: the question set has not changed.
         max_revisions = field.number{default = 1},
+        -- Run the blind pass as well as the error analysis.
+        discovery = field.boolean{default = false},
+        -- Offer the error analyst a taxonomy of convention kinds. Recorded as its own arm
+        -- because naming the kinds is a nudge, and a nudge has to be disclosed.
+        taxonomy = field.boolean{default = false},
     },
     function(input)
         local brief = flywheel.briefing()
         local prompt = briefing_prompt(brief)
         Log.info("Steering round started", {labeled = brief.summary.n_labeled})
 
-        -- 1. One analysis, repaired at most `max_revisions` times if the host rejects it.
-        local reply = analyst({message = prompt})
-        local check = flywheel.check(as_text(reply))
+        -- 0. Optionally, look at the labels with no idea what the task is.
+        local scout_reply = nil
+        if input.discovery then
+            scout_reply = as_text(scout({message =
+                "Group A:\n" .. Json.encode(brief.blind_sample["Group A"])
+                .. "\n\nGroup B:\n" .. Json.encode(brief.blind_sample["Group B"])
+                .. "\n\nWhat separates these groups? Propose your questions now."}))
+            Log.info("Blind pass complete")
+        end
+
+        -- 1. The error analysis, repaired at most `max_revisions` times if the host rejects it.
+        local reply = analyst({message = prompt .. (input.taxonomy and TAXONOMY or "")})
+        -- Candidates from both passes are pooled, not filtered by either: they ride in one Jev
+        -- request, so trying five costs what trying one costs, and the fit decides.
+        local check = flywheel.check_combined(as_text(reply), scout_reply)
         local revisions = 0
         while (not check.ok) and revisions < input.max_revisions do
             revisions = revisions + 1
@@ -127,7 +199,7 @@ Procedure {
             reply = analyst({message = prompt
                 .. "\n\nYOUR PREVIOUS PROPOSAL WAS REJECTED:\n" .. check.problems[1]
                 .. "\n\nReply again with one corrected JSON object."})
-            check = flywheel.check(as_text(reply))
+            check = flywheel.check_combined(as_text(reply), scout_reply)
         end
         if not check.ok then
             return {decision = "invalid_proposal", problem = check.problems[1]}
