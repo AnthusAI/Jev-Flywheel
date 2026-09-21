@@ -283,6 +283,58 @@ importance 0.656 against 0.238 for the holistic sentiment answer. The scorecard 
 writing that subject matter decides these labels more than sentiment does, and every later run is
 scored against that claim.
 
+**8. And the request itself changes.** This is the part that makes the economics work, so it is
+worth seeing literally. Before, every item was scored with a request carrying one question:
+
+```json
+{"Sentiment": {"type": "choice",
+               "instructions": "What is the overall sentiment of this text?",
+               "criteria": {"positive": null, "negative": null}}}
+```
+
+After, the same single request carries two:
+
+```json
+{"Sentiment": {"type": "choice",
+               "instructions": "What is the overall sentiment of this text?",
+               "criteria": {"positive": null, "negative": null}},
+ "sentiment.topic_domain": {"type": "choice",
+               "instructions": "Which best describes the main subject of this text: sports,
+                                athletics, or recreational activities; business, workplace, or
+                                organizational operations; or something else?",
+               "criteria": {"sports_or_recreation": null, "business_or_workplace": null,
+                            "something_else": null}}}
+```
+
+Still one request per item. The element key is namespaced `sentiment.topic_domain` on the wire, so
+several scores can share a question set without colliding.
+
+Here is a held-out item that the second question fixes. The text is bland, procedural, and
+labeled negative:
+
+> *"The documents configured available this week."*
+
+```json
+{"Sentiment":               {"choice": "positive", "confidence": 0.94,
+                             "probabilities": {"positive": 0.97, "negative": 0.03}},
+ "sentiment.topic_domain":  {"choice": "business_or_workplace", "confidence": 0.89,
+                             "probabilities": {"business_or_workplace": 0.92,
+                                               "sports_or_recreation": 0.00,
+                                               "something_else": 0.08}}}
+```
+
+Jev still reads the sentiment as positive, and it is 94% sure. It is not wrong about the words —
+there is nothing negative in them. But the head now has a second number to weigh, and on these
+labels "this is workplace text" outweighs a confident reading of mild positivity:
+
+```
+v3, one question:   positive at 70%   (wrong)
+v4, two questions:  negative at 70%   (right)
+```
+
+Nothing about Jev changed. The same model, asked one more question in the same call, produced the
+evidence that flipped the answer.
+
 ## How often does it work?
 
 This is the number to judge the idea by, and it is not 100%.
