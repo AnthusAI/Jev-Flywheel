@@ -30,6 +30,8 @@ charts = ["matplotlib>=3.7"]
 # A local second engine. laya-mlx is an independent Apple-silicon port, not an official
 # release, and the guard leans on its helpers, so the version is pinned.
 laya = ["laya-mlx==0.1.0"]
+# A small local text classifier distilled from the calibrated head (scripts/distill_student.py).
+student = ["torch", "transformers"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "pyflakes"]
 
 [project.scripts]

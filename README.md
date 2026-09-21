@@ -8,12 +8,13 @@
 > question: given feedback on its mistakes, can a system work out that the labels follow subject
 > matter rather than sentiment, and say so in words you can read?
 >
-> It can, about a quarter of the time, and it is worth +14 points of accuracy when it does.
+> It can, about a quarter of the time, and it is worth about +12 points of accuracy when it does.
 >
 > Nothing inside Jev ever changes — no fine-tuning, no gradients, the same general model
 > throughout. What adapts is which questions get asked and how much each answer counts, and
 > that turns out to be enough: 87 labels spent re-weighting a fixed set of questions bought
-> +0.2 points, while 140 labels spent with one metacognitive step bought +10.5.
+> nothing (accuracy went 0.768 to 0.765), while 140 labels spent with one metacognitive step
+> bought +10.5 points.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/results-dark.png">
@@ -82,8 +83,8 @@ plainly:
 The skew runs well past the tier it was aimed at. By a simple keyword rule (ours, not the
 corpus's — `scripts/audit_corpus.py` reproduces it offline), 83% of strong-positive items carry a
 sports cue against 19% of strong-negative. And it is genuinely predictive. Asked "what is this text
-about?", Jev names a domain on 57% of neutral items, and on those the rule *sports → positive,
-workplace → negative* is 90.3% accurate. One element asking that question is worth **+9 points**
+about?", of the 184 neutral items we have a topic answer for, Jev names a domain on 115 (62%), and on
+those the rule *sports → positive, workplace → negative* is 90% accurate. One element asking that question is worth **+9 points**
 over the refit baseline. An element asking a placebo question ("does the text contain a number?")
 is worth nothing, which is the control for "any extra question would have helped".
 
@@ -231,8 +232,12 @@ a balanced 40-item sample of labeled items *whether we got them right or wrong*;
 elements ranked by permutation importance. The held-out split is not in there, and never is.
 
 The labeled sample matters more than it looks. An errors-only briefing hides anything the
-scorecard already handles: on this corpus sports items produce a 9% error rate against 73% for
-workplace items, so a list of mistakes is nearly all workplace text and the pattern is invisible.
+scorecard already handles, and it can be lopsided: in the neutral tier, texts with a sports cue
+are misjudged 13% of the time against 73% for texts with an office cue
+(`scripts/audit_corpus.py`), so a list of mistakes there is mostly workplace text. In this
+particular recording the 43 disagreements were not lopsided by Jev's own topic answer (19
+sports, 17 workplace, 7 neither), so the sample did less work here than it would on a skewed
+one.
 
 **3. One model call.** It reads that and replies with JSON. What it actually said:
 
@@ -394,7 +399,7 @@ This is the part that surprised us, and the recording contains a clean natural e
 
 | | labels | what changed | held-out accuracy |
 |---|---|---|---|
-| Refits alone | 87 | the weights | **+0.2 points** |
+| Refits alone | 87 | the weights | **−0.3 points** (0.768 to 0.765) |
 | One steering round | 140 | the question set | **+10.5 points** |
 
 Eighty-seven labels of ordinary supervised learning bought nothing, and that is not a failure of
@@ -430,23 +435,30 @@ three label seeds, 140 labels each:
 | | |
 |---|---|
 | Proposed an element naming the subject-matter axis | **3 of 12** |
-| Mean gain over the refit baseline, paired within each run | **+7.4 points** |
+| Mean gain over the best plain refit, paired within each run (9 runs that promoted) | **+7.4 points** |
 | Range | +4.2 to +14.8 points |
 | Proposed nothing that beat the incumbent | 3 of 12 |
 
-When it names the axis it is worth +13 to +15 points. When it misses, it still gains about +5 by
+"Naming the axis" is a hand judgement, made by reading each proposal, and it is published
+beside the runs in [`studies/arms_judged.json`](studies/arms_judged.json). An earlier version
+of this section used a keyword screen and got it wrong for four runs, including the two best;
+`scripts/audit_arms.py` prints the tallies from the records. Across all three arms, the eight
+promoted runs that named the axis gained +11.7 points on average (+8.0 to +14.8); the other
+seventeen gained +4.8 (+0.7 to +7.8). When it misses, it still gains about +5 by
 decomposing sentiment instead — proposing things like "does this express an opinion, or only
 state a procedure?" Those are good features. They are simply not the bias we are looking for.
 
 Adding a checklist of *kinds* of factor to the prompt — scope, exceptions, subject matter,
-register, thresholds, without naming sport or the workplace — took it from 3 to 4 of 12. That is
-a nudge, and it is reported as one.
+register, thresholds, without naming sport or the workplace — took it from 3 of 12 to 4 of the 10
+runs that completed (two Qwen runs failed on an API error). That is a nudge, and it is reported
+as one.
 
 **One design change made it worse.** We thought the analyst might be frame-locked: told it is
 improving a *sentiment* scorecard, it proposes sentiment features, which would explain why a
 factor orthogonal to sentiment goes unnoticed. So we added a second agent that never sees the
 task — two groups of texts, "Group A" and "Group B", and one question: what separates them? It
-found the axis in **1 of 12** runs against 3 of 12 for the plain loop, with a lower average gain.
+found the axis in **1 of the 10** runs that completed (two Qwen runs failed), against 3 of 12 for
+the plain loop, with a lower average gain (+5.9 against +7.4).
 The prediction was written down beforehand in
 [`studies/PREREGISTERED.md`](studies/PREREGISTERED.md) — 6 of 12 — which is why it is reported
 here. Removing the frame did not help.
@@ -537,6 +549,71 @@ python scripts/laya_bench.py            # latency, determinism, sibling-independ
 Both of the last two load the model: the replay asks Laya the proposed element itself rather
 than restoring it from Jev's answers.
 
+## Moving off the hosted model: a local student
+
+Everything so far pays for a hosted model on every item. The head sitting on top of it is the
+thing that carries the alignment, and it is a tiny function of a few answers. So there is a
+natural next step: use the calibrated head as a *teacher*, and train a small text classifier to
+imitate it, so that most items never leave your machine. [`scripts/distill_student.py`](scripts/distill_student.py)
+runs the whole process and can be repeated whenever the teacher improves:
+
+1. **Teacher.** The head fitted on the 140 recorded human labels (Jev's holistic answer, the seven
+   cached elements and the discovered topic element; the topic answers for the pool come from
+   Laya, because Jev's exist for 740 items only). It labels every pool item with a calibrated
+   probability. The teacher scores 0.890 on the held-out items.
+2. **Student.** A fine-tuned DistilBERT (`AutoModelForSequenceClassification`, 66M parameters)
+   that reads the raw text and nothing else, trained on 5,140 pool items. The 140 items a human
+   labeled are held out of its training.
+3. **Calibrate.** One temperature, fitted on those 140 human-labeled items the student never saw.
+4. **Evaluate** on the held-out items against the *human* label, never against the teacher's
+   alone, which would be circular.
+5. **Gate, per slice.** The student may serve a (tier, topic) slice only if it is within two points
+   of the teacher there, on at least 30 items.
+6. **Cascade.** The student answers when its calibrated confidence clears a threshold; the
+   teacher takes the rest.
+
+Three students, three seeds each, on the same 3,521 held-out items:
+
+| Student trained on | accuracy vs human | agrees with teacher | ECE raw → calibrated |
+|---|---|---|---|
+| the teacher's probabilities (soft) | **0.912** (0.911 to 0.913) | 0.940 | 0.038 → 0.033 |
+| the teacher's hard labels | 0.908 (0.906 to 0.911) | 0.930 | 0.064 → 0.030 |
+| the reference label of every pool item (ceiling) | 0.938 (0.937 to 0.940) | 0.896 | 0.026 → 0.019 |
+| *the teacher itself* | *0.890* | | |
+
+What this says, and what it does not:
+
+- **The student beat its teacher**, by about two points, having seen no human label except through
+  the teacher. That is not magic. The teacher is a linear head over a handful of answers; the student
+  reads the words, so it can pick up the sports-or-workplace cue directly, which is exactly the
+  planted bias. (That is our explanation; we did not test it separately.) On a messier corpus
+  do not expect a student to beat its teacher; expect it to approach it.
+- **Soft labels helped a little, not decisively** (0.912 against 0.908, about the size of the
+  seed spread). The clearer gain is calibration: soft targets need one temperature of 0.42, hard
+  targets 1.56, and both end near 0.03 ECE.
+- **It passes the gate on 10 of 11 slices in every seed and the eleventh in 2 of 3.** The one that
+  fails sometimes is neutral workplace text (0.727 against the teacher's 0.740, 150 items), a
+  slice both are near a coin flip on. The neutral-and-nothing-named slice, which no cue can
+  resolve, is 0.634 against the teacher's 0.594.
+- **The cascade does not help here**, and that is a real result: because the student is at
+  least as accurate as the teacher on almost every slice, deferring to the teacher only lowers
+  accuracy (0.911 at a threshold of 0.6, falling to 0.897 at 0.95, against 0.912 for the student
+  alone). A cascade earns its keep when the student is *weaker*; here you would ship the student
+  and use the teacher for monitoring and for relabeling when it changes.
+- **It is cheap.** Fine-tuning took about two minutes per model on an M1 Max, and one item at a
+  time takes 5.6 to 15 ms on its GPU (median per run; machine load was not measured, so read it as
+  rough), against 18 ms for Laya on one question and a network call for Jev.
+
+The caveats are the ones the rest of this README carries, plus two. The corpus is constructed
+and templated, which flatters a text classifier. And the labeler is simulated, so "the teacher's
+labels" and "the human label" come from the same oracle; with a real person the teacher's
+errors are the person's disagreements with the head, and a student inherits those. The 140
+labels the teacher was fitted on are the only place a human enters, which is the design, and
+also the reason the head's slice-level weaknesses have to be watched: a student cannot fix
+what its teacher gets wrong on a slice, only copy it. Results are in
+[`studies/distill.jsonl`](studies/distill.jsonl), one row per student and seed, including every
+slice and every cascade threshold.
+
 ## What this does not prove
 
 **The labeler is not a human.** It answers with the corpus's own reference label and its comments
@@ -545,16 +622,18 @@ a convention *encoded in the labels*. Whether a person's written comments surfac
 the claim the product actually rests on — is untested here, and `flywheel label` is how you would
 test it.
 
-**Active selection is unproven.** The 140 labels in the recording are distributed across tiers
-(12.1/19.3/47.1/21.4%) indistinguishably from the pool itself (11.1/17.5/48.6/22.7%). What is
-demonstrated is the plumbing: propensities are recorded, so the fit can correct for whatever the
+**Active selection is unproven.** The 140 labels in the recording are not distributed across
+tiers like the pool (10.7/6.4/55.0/27.9% against 11.1/17.5/48.6/22.7%; χ² p = 0.006): it drew
+few medium items and many weak and neutral ones. That is what an uncertainty-seeking policy
+should do, but it does mean the policy did something, and that a second recording could
+move the numbers. What is demonstrated is the plumbing: propensities are recorded, so the fit can correct for whatever the
 policy does. That the policy earns its keep is not.
 
 **The corpus is constructed**, its labels encode a factor that is not sentiment, and the neutral
 tier is close to a coin flip whatever you ask. Knowing the answer makes it a useful test bed and
 a poor guide to how a messy real feedback set behaves.
 
-**600 held-out items is about ±1.5 points.** Do not rank the analyst models from this; the study
+**600 held-out items is about ±1.4 points (one standard error; ±2.7 at 95%).** Do not rank the analyst models from this; the study
 is powered to show the effect exists, not to order four models within a few points. The same
 goes for the Laya comparison, which is a single run.
 
@@ -656,6 +735,7 @@ jev_flywheel/
   loop.py console.py cli.py workspace.py   the human-facing loop
   report.py charts.py recording.py   measurement, the figure, record and replay
   laya.py         a local second engine: the same questions, answered on your machine
+scripts/          the studies: audit_corpus, audit_arms, laya_*, learning_curve, distill_student
 procedures/steer_scorecard.tac   the steering loop, in Tactus
 diagrams/         the diagram sources (.d2); `make diagrams` renders them to images/
 fixtures/         8,801 items, cached Jev and Laya answers, the recorded run

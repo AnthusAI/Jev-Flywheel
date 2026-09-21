@@ -51,7 +51,9 @@ def names_the_plant(elements) -> bool:
 
     The earlier version required a sports word, so an element naming only the workplace pole
     could never score -- an asymmetry that manufactured a "0/12". The flag stays a screen:
-    `instructions` is recorded in full so the judgement can be made by reading.
+    `instructions` is recorded in full so the judgement can be made by reading. It is a poor one
+    (it misjudged 4 of the 32 valid arms runs, including the two best), so the numbers the README
+    reports come from `studies/arms_judged.json`, read by a person; see `scripts/audit_arms.py`.
     """
     for e in elements:
         text = f"{e.get('key','')} {e.get('instructions','')}".lower()

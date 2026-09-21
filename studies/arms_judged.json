@@ -1,0 +1,13 @@
+{
+  "about": "Hand judgement, by reading each run's proposed instructions (and its own root_cause), of whether the analyst proposed an element that asks what the text is *about* (either pole: sports or workplace). This replaces the keyword screen in scripts/analyst_variance.py, which misjudged 4 of 32 valid runs. Made by one reader who knew the answer, unblinded; disagree with it in a pull request. Runs not listed are judged false.",
+  "named_the_axis": [
+    {"arm": "d0", "model": "us.moonshotai.kimi-k3", "seed": 2, "element": "sports_fitness_topic"},
+    {"arm": "d0", "model": "us.moonshotai.kimi-k3", "seed": 3, "element": "subject_domain"},
+    {"arm": "d0", "model": "moonshotai.kimi-k2.5", "seed": 1, "element": "sports_athletic_context"},
+    {"arm": "d1", "model": "us.moonshotai.kimi-k3", "seed": 3, "element": "subject_domain"},
+    {"arm": "d2", "model": "us.moonshotai.kimi-k3", "seed": 2, "element": "subject_domain"},
+    {"arm": "d2", "model": "us.moonshotai.kimi-k3", "seed": 3, "element": "about_sports_or_fitness"},
+    {"arm": "d2", "model": "moonshotai.kimi-k2.5", "seed": 1, "element": "is_sports_related"},
+    {"arm": "d2", "model": "moonshotai.kimi-k2.5", "seed": 3, "element": "is_sports_context"}
+  ]
+}
