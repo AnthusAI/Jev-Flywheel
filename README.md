@@ -9,7 +9,7 @@ ordinary English, and gained about ten points of accuracy from 140 human labels.
 
 This repo is a runnable research demo: a recorded run, the numbers it produced, and the method
 that produced them. It is not a product, and it is not only a write-up — `make demo` replays the
-whole recorded run offline in three commands, with no keys, no network and no model, and the same
+whole recorded run offline, with no keys, no network and no model, and the same
 tool can be pointed at your own labels. It is for people who score text against a rubric and
 would like the rubric's unwritten parts found for them. One thing to know before the numbers: the
 dataset here was built with a known bias in it and the "labeler" is a script, so what is
@@ -58,7 +58,7 @@ comments would surface real conventions is the one this repo cannot test.
 | If you want | Read |
 |---|---|
 | the headline numbers from the recorded run | [The result](#the-result) |
-| to run it yourself, offline, in three commands | [Try it](#try-it) |
+| to run it yourself: three stages, each one command | [Try it](#try-it) |
 | the planted bias, and how to check it | [The bias in the data](#the-bias-in-the-data) |
 | how Jev, questions, factors and the fitted model fit together | [The machine](#the-machine) |
 | how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
@@ -118,16 +118,71 @@ about sport, about the workplace, or neither — and held-out accuracy went from
 
 ## Try it
 
+This repo does three things, one after another, and each has its own command. You do not need to
+read the rest of this README to run them, and **none of them needs a Jev key**: the answers Jev
+gave when the run was recorded are in `fixtures/`.
+
+| | What it shows | Command | What it needs | What you see |
+|---|---|---|---|---|
+| **1** | The flywheel with Jev: labels and an AI analyst improve a scorecard | `make demo` | nothing beyond `make install`; about 10 seconds | a table of scorecard versions and a redrawn figure |
+| **2** | The same thing with a free local model (Laya) answering instead of Jev | `make laya` | Apple silicon; downloads the 843 MB Laya model | the same table, once per engine |
+| **3** | The result from 1 used to train a small local BERT classifier, so Jev is no longer needed | `make student` | Apple silicon; about 1.2 GB of downloads; a few minutes to prepare and train | each student's accuracy against the human labels |
+
 ```bash
 git clone https://github.com/AnthusAI/Jev-Flywheel && cd Jev-Flywheel
-make install     # a virtualenv with everything, including Tactus
-make demo        # replay the recorded run offline and redraw the figure
+make install     # once: a virtualenv with everything for stage 1, including Tactus
+make demo        # stage 1
 ```
 
-`make demo` needs no keys, no network, no model and no person. It rebuilds a workspace from the
-committed fixtures, replays 140 recorded judgements, and re-runs each recorded refit and steering
-round — including the language model's exact reply and the labeler's decision. Fitting is
-deterministic, so it reproduces the same scorecards. To label something yourself:
+`make` on its own prints this list.
+
+### What `make demo` is doing
+
+It is a **replay**, not a live run. The repo contains a recording of one session: 140 judgements
+from a scripted labeler ("agree", or "disagree, the right answer is negative"), the points at
+which the system refit itself, and one round in which an AI analyst read the disagreements and
+proposed a new question. `make demo` rebuilds a workspace from the 8,801-item corpus in
+`fixtures/`, feeds it those 140 judgements, and re-runs each refit and the steering round using
+the recorded analyst reply. Nothing is sent to Jev, to a language model or over the network, and
+fitting is deterministic, so you get the same scorecards the recording produced.
+
+What you should see:
+
+```
+after 37 labels: refit promoted -> v2
+after 87 labels: refit promoted -> v3
+after 140 labels: steering promoted -> v4
+
+version  how    after N labels  accuracy    ECE  Brier
+v1       seed               0     0.768   0.151  0.188
+v2       fit               37     0.763   0.112  0.177
+v3       fit               87     0.765   0.030  0.164
+v4       steer            140     0.870   0.030  0.093
+```
+
+Each row is a version of the scorecard, all scored on the same 600 held-out items. The `fit`
+rows only re-weight the questions already being asked, and accuracy does not move. The `steer`
+row is the analyst's new question ("what is this text about?"), and accuracy goes from 0.765 to
+0.870. That jump is the whole claim; the rest of this README is about why it happens and how much
+to believe it. It also redraws the figure at the top, at `images/results.png`.
+
+### Stages 2 and 3
+
+`make laya` replays the *same* 140 labels twice, once with Jev's recorded answers and once with a
+local Laya model answering every question on your machine, and prints both lineages side by side
+(also written to `var/laya_paired.jsonl`). It is [The same layer on a local model](#the-same-layer-on-a-local-model),
+runnable.
+
+`make student` asks Laya one extra question about every item (a few minutes), builds the teacher
+from the recorded labels, and fine-tunes DistilBERT on the teacher's verdicts, then scores it
+against the human labels on held-out items. Training one seed takes about six minutes on an M1 Max, after the few minutes of preparation;
+the README's table uses three. It is
+[Moving off the hosted model](#moving-off-the-hosted-model-a-local-student), runnable. Stages 2
+and 3 write into `var/` and never touch the committed results in `studies/`.
+
+### Using your own labels
+
+To label something yourself, instead of replaying the recording:
 
 ```bash
 .venv/bin/flywheel init        # a workspace from the bundled 8,801-item corpus; offline
@@ -135,6 +190,9 @@ deterministic, so it reproduces the same scorecards. To label something yourself
 .venv/bin/flywheel status      # what the system thinks is worth doing next
 .venv/bin/flywheel evaluate    # held-out accuracy, and agreement with you
 ```
+
+Running a steering round of your own needs a language model for the analyst (and Jev, unless you
+use Laya): see [Going live](#going-live).
 
 ## The bias in the data
 
@@ -598,11 +656,57 @@ more mildly (1.000 to 0.953). And the refit at 37 labels made Laya's calibration
 in a 600-item sample are small, so they are things to check on the full 3,521 items rather than
 results.
 
-**What this does not show.** The factor was *transferred*: the analyst wrote it after reading
-Jev's disagreements, and we asked Laya the resulting question. Whether a loop running on Laya
-would find the sports-and-workplace factor by itself has not been measured. Everything about
-Laya here is one run, not repeated across seeds, and the labeler in that recording is the
-simulated one.
+**What the replay does not show.** The factor was *transferred*: the analyst wrote it after
+reading Jev's disagreements, and we asked Laya the resulting question. That is one run, with the
+simulated labeler. The next section asks whether a loop running on Laya finds it by itself.
+
+### Laya's own loop, with more rounds and more labels
+
+The recorded run stops after one steering round at 140 labels because it was scripted that way.
+[`scripts/laya_rounds.py`](scripts/laya_rounds.py) lets the method run longer, with no Jev answers
+at all: Laya answers every question, including each one the analyst proposes, and the analyst
+(Kimi K3) steers. Labels grow 140, 300, 500, 800, with one steering round after each. Three
+seeds, exploratory: **this was not pre-registered**, and it uses more labels and rounds than the
+Jev runs above, so the two are not a like-for-like comparison.
+
+| held-out accuracy, 600 items | 0 labels | 140 | 300 | 500 | 800 |
+|---|---|---|---|---|---|
+| seed 1 | 0.722 | 0.718 | 0.767 | 0.805 | **0.812** |
+| seed 2 | 0.722 | 0.718 | 0.737 | 0.833 | **0.818** |
+| seed 3 | 0.722 | 0.698 | 0.725 | 0.782 | **0.800** |
+
+(Each column is the newest version that existed by that many labels. In no seed did the first
+steering round, at 140 labels, promote a new element. On all 3,521 held-out items the 800-label results are 0.812,
+0.821 and 0.794; ECE falls from 0.103 to 0.015, 0.011 and 0.026.)
+
+- **It found the factor in all three seeds.** Reading the proposals, each seed asked what the
+  text is *about*: seed 1 proposed `topic_sports` at 140 labels (rejected on the metrics) and
+  `sports_topic` at 300, then `business_topic`; seed 2 asked "what is the main subject matter"
+  at 500; seed 3 proposed `sports_topic` and `admin_procedure_topic` at 500. Against about a
+  quarter of the time for the plain one-round Jev loop, that is a large difference, and the
+  our guess is that the reason is not the engine: by 300 to 500 labels there are far more disagreements to
+  read, and each round is the analyst's second or third look. Three seeds and one analyst model
+  do not say more than that.
+- **More rounds and 800 labels bought about what one transferred element bought at 140.** Laya
+  with Jev's `topic_domain` element scored 0.802; Laya's own loop ends at 0.800 to 0.818. Neither
+  gets near the 0.870 Jev reaches, and the free learning curve suggests this question set is the
+  limit, not the labels: Laya with the seven cached elements and a topic element reaches about
+  0.85 given every pool label.
+- **Accuracy does not rise monotonically.** Seed 2 fell from 0.833 to 0.818 in its last round,
+  where the analyst reworded an element it had already added. A version promoted on out-of-fold
+  metrics can still lose a little on new items. Seed 1's refit at 33 labels scored 0.562, the
+  majority-class rate: a prior-only head that the gate promoted on its out-of-fold metrics (its ECE
+  was lower), though it was no more accurate. Both are leads, not findings.
+
+Running this exposed two faults in this repo's own harness, both fixed. One round was lost because
+the analyst wrote a 282-token instruction and Laya keeps 186 of them, so the engine refused every
+request after the analyst call had been spent; the host now checks a proposal against the
+engine's limits and sends an over-long one back for a rewrite, and records the reason when a
+round cannot be evaluated. And the first scores of some earlier versions were wrong, because a
+later round had reworded an element and only the final wording's answers had been fetched; each
+version is now scored with its own questions. The data in [`studies/laya_rounds.jsonl`](studies/laya_rounds.jsonl)
+is the corrected run; [`studies/laya_rounds_before_fix.jsonl`](studies/laya_rounds_before_fix.jsonl)
+keeps the first attempt at seed 2 that hit the limit.
 
 To reproduce it you need the `laya` and `steer` extras and about 843 MB of weights, which
 download on first use (Apple silicon):
