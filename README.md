@@ -125,8 +125,8 @@ gave when the run was recorded are in `fixtures/`.
 | | What it shows | Command | What it needs | What you see |
 |---|---|---|---|---|
 | **1** | The flywheel with Jev: labels and an AI analyst improve a scorecard | `make demo` | nothing beyond `make install`; about 10 seconds | a table of scorecard versions and a redrawn figure |
-| **2** | The same thing with a free local model (Laya) answering instead of Jev | `make laya` | Apple silicon; downloads the 843 MB Laya model | the same table, once per engine |
-| **3** | The result from 1 used to train a small local BERT classifier, so Jev is no longer needed | `make student` | Apple silicon; about 1.2 GB of downloads; a few minutes to prepare and train | each student's accuracy against the human labels |
+| **2** | The same thing with a free local model (Laya) answering instead of Jev | `make laya` | Apple silicon; downloads the 843 MB Laya model; about 2 minutes once it is downloaded | the same table, once per engine |
+| **3** | The result from 1 used to train a small local BERT classifier, so Jev is no longer needed | `make student` | Apple silicon; about 1.2 GB of downloads; about 11 minutes after that | each student's accuracy against the human labels |
 
 ```bash
 git clone https://github.com/AnthusAI/Jev-Flywheel && cd Jev-Flywheel
@@ -170,13 +170,15 @@ to believe it. It also redraws the figure at the top, at `images/results.png`.
 
 `make laya` replays the *same* 140 labels twice, once with Jev's recorded answers and once with a
 local Laya model answering every question on your machine, and prints both lineages side by side
-(also written to `var/laya_paired.jsonl`). It is [The same layer on a local model](#the-same-layer-on-a-local-model),
+(also written to `var/laya_paired.jsonl`). The last `paper-600` row of each should read 0.870 for Jev
+and 0.802 for Laya, both on the same 600 held-out items. It is [The same layer on a local model](#the-same-layer-on-a-local-model),
 runnable.
 
 `make student` asks Laya one extra question about every item (a few minutes), builds the teacher
 from the recorded labels, and fine-tunes DistilBERT on the teacher's verdicts, then scores it
-against the human labels on held-out items. Training one seed takes about six minutes on an M1 Max, after the few minutes of preparation;
-the README's table uses three. It is
+against the human labels on held-out items. The whole thing took about 11 minutes on an M1 Max from a fresh clone, not counting downloads (4
+of them asking Laya, 6 training); you should see three lines, roughly 0.91 (soft labels), 0.91 (hard labels) and 0.94
+(the ceiling), against a teacher at 0.89. The README's table uses three seeds; this runs one. It is
 [Moving off the hosted model](#moving-off-the-hosted-model-a-local-student), runnable. Stages 2
 and 3 write into `var/` and never touch the committed results in `studies/`.
 
