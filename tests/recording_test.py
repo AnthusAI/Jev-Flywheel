@@ -139,7 +139,7 @@ def test_the_figure_is_written_from_the_replayed_session(session, fixtures, tmp_
     _, recording = session
     replayed = replay(recording, tmp_path / "replayed", fixtures)
 
-    png = save_chart(replayed, SCORE, tmp_path / "flywheel.png")
+    png = save_chart(replayed, SCORE, tmp_path / "results.png")
 
     assert png.exists() and png.stat().st_size > 10_000
 

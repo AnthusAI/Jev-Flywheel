@@ -36,5 +36,5 @@ copied from Plexus's Evaluation and must not drift, or metrics silently go to ze
 ```bash
 make install    # venv with the steer, charts and dev extras
 make test       # the specs
-make demo       # offline replay of the recorded run, redraws images/flywheel.png
+make demo       # offline replay of the recorded run, redraws images/results.png
 ```

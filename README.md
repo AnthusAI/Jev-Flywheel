@@ -12,7 +12,7 @@
 > Getting to that number took three broken measurements and one idea of ours that made things
 > worse. Both are below.
 
-![Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time](images/flywheel.png)
+![Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time](images/results.png)
 
 ## The result
 
@@ -119,6 +119,14 @@ is not.**
 | **Decision** | The model: features in, a value and a confidence out. Its weights live in the YAML, readable. |
 | **Scorecard** | One YAML file for every score, mirroring Jev's one-request architecture. |
 
+![Architecture: an item goes to Jev in one request carrying every question; the typed answers become named features; a decision head turns those into a value and a calibrated confidence. One scorecard.yaml supplies both the questions and the weights.](images/architecture.svg)
+
+One file configures both halves. `scorecard.yaml` says which questions to send *and* how much
+each answer counts, which is what makes a scorecard a single reviewable artifact rather than a
+prompt plus a model checkpoint.
+
+![Economics: ordinary prompting sends N calls for N questions, each carrying the text again; Jev sends one call carrying every question. Measured on this corpus, 502 input tokens per request.](images/economics.svg)
+
 ```yaml
 - name: Sentiment
   question_type: choice
@@ -138,18 +146,30 @@ is not.**
     calibration: {method: temperature, temperature: 1.31, ...}
 ```
 
+### Factors and decisions
+
+An **element** is a question. Its answer becomes one or more **factors** — named numbers, by a
+fixed rule with no fitted parameters. The **decision** weighs those factors and returns a verdict.
+Elements are evidence; only the decision is a verdict. Here is one real held-out item all the way
+through, using the weights the recorded run actually fit:
+
+![Anatomy of one decision: the item goes to Jev, which answers two questions; each answer becomes centred log-ratio factors; each factor is multiplied by a fitted weight; the sum goes through a softmax and calibration to produce the verdict.](images/anatomy.svg)
+
+Jev reads the sentiment as positive and is 94% sure. That reading contributes +1.67 toward
+positive. But the two domain factors contribute −1.85 and −1.23, and the verdict flips. No single
+answer decides; the weights decide, and you can read them.
+
 The vocabulary (item, feedback item, element, feature, decision, label sources, the label
 normalization rules) is deliberately the same as [Plexus](https://github.com/AnthusAI/Plexus)'s,
 so a scorecard and a feedback set made here move there as a port rather than a rewrite.
 
 ## The loop
 
-```
-  pick the item a label       you agree or disagree,       refit the head (cheap, often)
-  would teach the most  ───►  and say why, if you like ───►  and when the errors have a shape
-  (active selection)                                        better questions could fix,
-                                                            a steering round (Tactus)
-```
+![The flywheel: the scorecard drives scoring, the console asks about one item, you agree or disagree, feedback accumulates, and two paths lead back to the scorecard — a fast free refit that changes the weights, and a slower steering round that changes the questions.](images/flywheel.svg)
+
+Two paths lead back to the scorecard and they are not interchangeable. A refit re-weighs answers
+you already have; it cannot add information that is not in them. Only a steering round changes
+what Jev is asked.
 
 **Refit and steering have different economics, so they have different triggers.** A refit takes
 milliseconds and only changes numbers, so it runs every few labels and is promoted only if it
@@ -485,9 +505,15 @@ jev_flywheel/
   loop.py console.py cli.py workspace.py   the human-facing loop
   report.py charts.py recording.py   measurement, the figure, record and replay
 procedures/steer_scorecard.tac   the steering loop, in Tactus
+diagrams/         the diagram sources (.d2); `make diagrams` renders them to images/
 fixtures/         8,801 items, cached Jev answers, the recorded run
 studies/          the experiment records, including the pre-registration
 ```
+
+The diagrams are [d2](https://d2lang.com) sources rendered to SVG and committed, so reading the
+repo needs no diagram tooling; `make diagrams` re-renders them and needs `d2`. Each SVG carries a
+`prefers-color-scheme` rule, so one file serves light and dark mode — which only works because
+the sources set no explicit colours and let the theme choose.
 
 `make test` runs the specs (458, none needing a network or a key). The procedure's specs are
 pytest-driven rather than Tactus BDD, because they need the Python host module registered, which

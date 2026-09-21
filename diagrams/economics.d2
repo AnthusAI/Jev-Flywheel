@@ -1,0 +1,37 @@
+# Why decomposition is affordable here and is not with ordinary prompting.
+direction: right
+
+ordinary: {
+  label: "Ordinary prompting"
+  label.near: top-left
+
+  q1: {label: "call 1\ntext + \"is it positive?\""}
+  q2: {label: "call 2\ntext + \"is it sarcastic?\""}
+  q3: {label: "call 3\ntext + \"what is it about?\""}
+  dots: {label: "…"; shape: text}
+  cost: {label: "N questions\n= N calls"; shape: oval}
+  q1 -> cost
+  q2 -> cost
+  q3 -> cost
+  dots -> cost
+}
+
+jev: {
+  label: "Jev"
+  label.near: top-left
+
+  one: {
+    label: "ONE call\ntext + every question at once\n\nSentiment · topic_domain · …"
+    shape: queue
+  }
+  cost: {label: "N questions\n= 1 call"; shape: oval}
+  one -> cost
+}
+
+measured: {
+  label: "Measured on this corpus, 8,801 items\n\n502 input tokens per request, eight questions\ntokens ≈ 0.14 × characters + 488\n\nthe shortest tenth costs 495, the longest 510"
+  shape: text
+}
+
+ordinary.cost -> measured: "" {style.opacity: 0}
+jev.cost -> measured: "" {style.opacity: 0}

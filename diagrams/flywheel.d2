@@ -1,0 +1,36 @@
+# The loop. Two paths lead back to the scorecard, at very different speeds and
+# costs, and only one of them changes what Jev is asked.
+direction: down
+
+card: {
+  label: "scorecard.yaml\nthe questions AND the weights"
+  shape: page
+  style.multiple: true
+}
+
+score: {label: "Score items\none Jev request each"; shape: hexagon}
+console: {label: "The console asks about ONE item —\nthe one a label would teach most"}
+human: {label: "You agree or disagree,\nwith an optional comment"; shape: person}
+store: {label: "Feedback accumulates"; shape: cylinder}
+
+refit: {
+  label: "REFIT\nseconds · free · every few labels\nre-weigh the answers we already have"
+}
+
+steer: {
+  label: "STEER\none LLM call · sometimes a Jev pass\nwhen refits stop helping, ask a better question"
+}
+
+card -> score
+score -> console -> human -> store
+store -> refit
+store -> steer
+
+refit -> card: "new WEIGHTS,\nif it beats the incumbent out of fold" {style.stroke-width: 2}
+steer -> card: "a new QUESTION,\nif it wins AND you approve it" {style.stroke-width: 2}
+
+note: {
+  label: "Only the outer path changes what Jev is asked.\nThe inner one cannot add information that is not already in the answers."
+  shape: text
+  near: bottom-center
+}

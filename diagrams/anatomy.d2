@@ -1,0 +1,48 @@
+# Where factors come from and where they go. Every number here is real: it is the
+# held-out item worked through in the README's steering walkthrough.
+direction: down
+
+item: {
+  label: "\"The documents configured\navailable this week.\"\n\ntrue label: negative"
+  shape: page
+}
+
+answers: {
+  label: "What Jev answered — one request"
+  label.near: top-left
+  style.stroke-dash: 3
+  holistic: {label: "Sentiment  (choice)\npositive 0.97 · negative 0.03"}
+  domain: {label: "topic_domain  (choice)\nbusiness 0.92 · else 0.08 · sports 0.00"}
+}
+
+factors: {
+  label: "FACTORS — the evidence"
+  label.near: top-left
+
+  f1: {label: "self.holistic.clr.positive\n+1.738  ×  0.961\n= +1.67 toward positive"}
+  f2: {label: "topic_domain.clr.business\n+2.321  ×  −0.797\n= −1.85 toward negative"}
+  f3: {label: "topic_domain.clr.sports\n−2.200  ×  0.561\n= −1.23 toward negative"}
+}
+
+decision: {
+  label: "DECISION — the verdict"
+  label.near: top-left
+  sum: {label: "intercept 0.692\n+1.67 − 1.85 − 1.23\n= −0.72"}
+  out: {label: "negative\n70% confident"; shape: oval}
+  sum -> out: "softmax,\nthen calibrate"
+}
+
+item -> answers.holistic
+item -> answers.domain
+answers.holistic -> factors.f1
+answers.domain -> factors.f2
+answers.domain -> factors.f3
+factors.f1 -> decision.sum
+factors.f2 -> decision.sum
+factors.f3 -> decision.sum
+
+note: {
+  label: "Jev reads the sentiment as positive and is 94% sure of it.\nThe two domain factors together outweigh that reading."
+  shape: text
+  near: bottom-center
+}

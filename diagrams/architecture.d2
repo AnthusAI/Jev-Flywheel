@@ -1,0 +1,36 @@
+# Where our model sits relative to Jev. Colours come from the theme, not from
+# this file, so one SVG serves both light and dark mode.
+direction: down
+
+item: {
+  label: "One item"
+  shape: page
+}
+
+jev: {
+  label: "Jev"
+  style.stroke-dash: 3
+  req: {label: "every question, together\nnoul · choice · score"; shape: queue}
+  ans: {label: "every answer, together\nwith probabilities"; shape: queue}
+  req -> ans: "one request per item"
+}
+
+features: {label: "Feature extraction\ndeterministic, no fitted parameters"}
+
+config: {
+  label: "scorecard.yaml"
+  shape: page
+  style.multiple: true
+}
+
+head: {label: "Decision head\nlogistic weights, fit from your feedback"}
+
+out: {label: "value + calibrated confidence + explanation"; shape: oval}
+
+item -> jev.req
+jev.ans -> features: "typed answers"
+features -> head: "named numbers"
+head -> out
+
+config -> jev.req: "the questions" {style.stroke-dash: 4}
+config -> head: "the weights" {style.stroke-dash: 4}
