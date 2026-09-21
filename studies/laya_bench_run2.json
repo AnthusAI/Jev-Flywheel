@@ -1,0 +1,87 @@
+{
+  "checkpoint": "aac6fef/laya-mlx",
+  "machine_load_1min": 4.4,
+  "quiet": false,
+  "runtime": "laya-mlx (independent MLX port, not an official release)",
+  "marginal_cost": [
+    {
+      "questions": 1,
+      "median_ms": 18.36,
+      "p95_ms": 23.06
+    },
+    {
+      "questions": 2,
+      "median_ms": 25.81,
+      "p95_ms": 32.35
+    },
+    {
+      "questions": 3,
+      "median_ms": 34.16,
+      "p95_ms": 40.29
+    },
+    {
+      "questions": 4,
+      "median_ms": 43.06,
+      "p95_ms": 49.3
+    },
+    {
+      "questions": 5,
+      "median_ms": 54.27,
+      "p95_ms": 60.59
+    },
+    {
+      "questions": 6,
+      "median_ms": 60.23,
+      "p95_ms": 67.36
+    },
+    {
+      "questions": 7,
+      "median_ms": 68.57,
+      "p95_ms": 296.31
+    },
+    {
+      "questions": 8,
+      "median_ms": 75.43,
+      "p95_ms": 88.0
+    },
+    {
+      "questions": 9,
+      "median_ms": 85.46,
+      "p95_ms": 93.59
+    },
+    {
+      "questions": 10,
+      "median_ms": 86.86,
+      "p95_ms": 102.13
+    },
+    {
+      "questions": 11,
+      "median_ms": 99.28,
+      "p95_ms": 109.34
+    },
+    {
+      "questions": 12,
+      "median_ms": 101.77,
+      "p95_ms": 292.21
+    }
+  ],
+  "deterministic_in_process": true,
+  "deterministic_across_processes": true,
+  "sibling_independence": {
+    "items": 150,
+    "comparisons": 1200,
+    "exactly_equal": 1137,
+    "share_exactly_equal": 0.9475,
+    "max_abs_diff": 0.0049000000000000155,
+    "p99_abs_diff": 0.0007000000000000339,
+    "mean_abs_diff": 2.6e-05,
+    "max_abs_diff_when_only_the_order_changes": 0.0
+  },
+  "window_headroom": {
+    "items": 8801,
+    "longest_item_chars": 349,
+    "max_state_tokens": 48,
+    "mean_state_tokens": 15.3,
+    "tightest_room_across_the_eight_questions": 475
+  }
+}

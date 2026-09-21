@@ -623,10 +623,10 @@ rewards being confident *and* right, and Laya is right less often.
 
 - **Asking more questions costs differently.** Jev reads the item once and the questions ride
   along, so an extra element costs a few input tokens. Laya encodes the item once *per
-  question*, so an extra element costs another forward pass: roughly 8 to 9 ms each on this
-  machine (18 ms for one question, 82 for eight, 106 for twelve). Those timings were taken while
-  the machine was not quiet — 1-minute load 6.4, over the script's own 2.0 threshold — so treat
-  them as an upper bound. It is still free and local, which is why elements stay cheap, but the
+  question*, so an extra element costs another forward pass: roughly 8 ms each on this
+  machine (18 ms for one question, 75 to 82 for eight, 102 to 106 for twelve, across two runs).
+  Both runs were taken while the machine was not quiet — 1-minute load 4.4 and 6.4, over the
+  script's own 2.0 threshold — so treat them as upper bounds. It is still free and local, which is why elements stay cheap, but the
   reason is different.
 - **The per-question answer cache is safe here.** The cache assumes an answer does not depend
   on which other questions rode in the same request. On Laya, the largest difference we saw

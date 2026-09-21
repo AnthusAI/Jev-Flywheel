@@ -46,6 +46,13 @@ Every arm is reported whatever it shows, including this file's predictions again
 outcome. The detector is a keyword screen; each proposal's full wording is recorded so the
 judgement is made by reading.
 
+> **Addendum, 2026-09-21.** The screen was wrong for 4 of the 32 valid runs, including the two
+> best (it flagged a run for the word "subject" in "its subject", and missed `subject_domain`
+> and `is_sports_related`). The judgement by reading was then made and is published in
+> [`arms_judged.json`](arms_judged.json); `scripts/audit_arms.py` prints the tallies from it.
+> Those, not the screen's flags, are what the README reports. The predictions above are
+> unchanged.
+
 ---
 
 # Pre-registration: the same layer on Laya (a local 421M encoder)
@@ -85,6 +92,10 @@ proportionally more, and still not fully close the gap.
 - **Marginal cost of a question.** Already measured while building the adapter, so this is a
   record and not a prediction: 18.3 ms for one question and 55.8 ms for eight on this M1 Max
   (~3x for 8x the questions), against Jev where an extra question is a few input tokens.
+  *[Addendum, 2026-09-21: superseded, do not quote the 55.8 ms. It was an ad hoc reading taken
+  while the adapter was being built; its machine load and method were not recorded, and it is
+  not reproduced by `scripts/laya_bench.py`, which measured 82 ms for eight (see Outcome) and
+  is the record. The one-question figures agree (18.3 and 18.0 ms).]*
 - **Sibling-independence.** The tempting claim is that Laya answers each question as its own row,
   so an answer cannot depend on which other questions were asked, and the per-question answer
   cache is sound by construction. **I predict that is not quite true**: rows are padded to a common
@@ -163,3 +174,19 @@ Latency, on a machine that was **not quiet** (1-minute load average 6.4, over th
 threshold; a background indexer and others were running): 1 question about 18 ms, 8 about
 82 ms, 12 about 106 ms, so roughly 8 ms per added question. Provisional; rerun on a quiet
 machine before it is quoted anywhere.
+
+## Addendum (2026-09-21): what was measured afterwards
+
+- **Whether Laya's own loop finds the factor** (left open above) was measured:
+  `scripts/laya_rounds.py`, three seeds, labels 140 to 800, four steering rounds each, Laya
+  answering every question and Kimi K3 steering. It was **not pre-registered**, so it is
+  exploratory and reported as such in the README. By reading the proposals, each seed proposed
+  an element about the text's subject matter, between 140 and 500 labels. Results are in
+  `laya_rounds.jsonl`.
+- **Latency, a second run** (`laya_bench_run2.json`, machine load 4.4, still over the 2.0
+  threshold, so still not a benchmark). One question 18.4 ms, eight 75.4 ms, twelve 101.8 ms,
+  against 18.0 / 82.5 / 105.9 ms at load 6.4: about 8 ms per added question in both. Neither
+  reproduces the early 55.8 ms for eight. Determinism (in and across processes) and
+  sibling-independence (largest difference 0.0049, 94.75% exactly equal) came out identical in
+  both runs. What remains unmeasured is latency on a truly idle machine, which the owner has
+  said is not worth pursuing; read the figures as upper bounds.
