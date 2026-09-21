@@ -453,6 +453,90 @@ here. Removing the frame did not help.
 
 Every run's record, including each proposal's exact wording, is in [`studies/`](studies/).
 
+## The same layer on a local model
+
+Everything above used Jev. Nothing above the engine adapter knows which engine answered, so we
+ran the same layer on [Laya](https://huggingface.co/convaiinnovations/laya): a 421M-parameter,
+Apache-2.0 encoder that answers the same three kinds of typed question (`noul`, `choice`,
+`score`) on your own machine, for free, with a 512-token window. We ran it through
+[`laya-mlx`](https://pypi.org/project/laya-mlx/), an independent Apple-silicon port rather than
+an official release, on an M1 Max.
+
+We replayed the *same* recording against both engines: the same 140 labels, the same 21 refit
+points, the same analyst proposal (`topic_domain`), the same 600 held-out items. Only the
+engine that answers the questions changes.
+
+| | Jev | Laya |
+|---|---|---|
+| Engine alone | 0.768 | 0.722 |
+| Last refit the gate promoted | 0.765 (87 labels) | 0.730 (52 labels) |
+| After steering, 140 labels | **0.870** | **0.802** |
+| Calibration error (ECE), alone → after | 0.151 → 0.030 | 0.107 → 0.015 |
+| Brier score, alone → after | 0.188 → 0.093 | 0.189 → 0.130 |
+
+On all 3,521 held-out items, which Laya can afford because it is free, it goes from 0.716 to
+0.806.
+
+**The layer works on a weak local model, and it does not close the gap.** Laya gains 8 points
+and its calibration error drops from 0.107 to 0.015, as Jev's did. But the two engines were
+4.7 points apart alone and are 6.8 apart with the layer. We had predicted the opposite — that
+the weaker engine would gain more from a topic factor — and were wrong: the steering step was
+worth +7.2 points to Laya and +10.5 to Jev. That step is each lineage's last promoted refit
+against its steered version, and the gate promoted those refits at different label counts
+(Laya's at 52, Jev's at 87), so the two step sizes do not start from the same place. The
+predictions, and what happened to each, are in
+[`studies/PREREGISTERED.md`](studies/PREREGISTERED.md).
+
+We had Laya down as the over-confident one, too, and that was the second wrong call: raw, its
+ECE is 0.107 against Jev's 0.151 on the same items. Both end well calibrated. We have not
+measured how much of an ECE difference 600 items produce by chance, so we are not reading Laya's
+lower number as a win. The Brier scores are the clearer split and they favour Jev — Brier
+rewards being confident *and* right, and Laya is right less often.
+
+**What the second engine changes about the design:**
+
+- **Asking more questions costs differently.** Jev reads the item once and the questions ride
+  along, so an extra element costs a few input tokens. Laya encodes the item once *per
+  question*, so an extra element costs another forward pass: roughly 8 to 9 ms each on this
+  machine (18 ms for one question, 82 for eight, 106 for twelve). Those timings were taken while
+  the machine was not quiet — 1-minute load 6.4, over the script's own 2.0 threshold — so treat
+  them as an upper bound. It is still free and local, which is why elements stay cheap, but the
+  reason is different.
+- **The per-question answer cache is safe here.** The cache assumes an answer does not depend
+  on which other questions rode in the same request. On Laya, the largest difference we saw
+  between a question asked alone and asked with seven others was 0.005 in probability, and
+  1,137 of 1,200 comparisons were identical. Reordering the questions changed nothing at all.
+  Identical requests give identical answers, in one process or across processes.
+- **The 512-token window is not a problem on this corpus, but it must be enforced.** The
+  longest item is 48 tokens and leaves 475 to spare. Laya cuts overlong input silently and
+  returns an answer computed on part of it, so the adapter counts first and refuses.
+
+**Two leads, not findings:** steering cost Laya its *medium* tier (0.991 down to 0.840) while
+the weak (0.671 to 0.787) and neutral (0.483 to 0.703) tiers improved; Jev shows the same shape
+more mildly (1.000 to 0.953). And the refit at 37 labels made Laya's calibration worse (ECE
+0.107 to 0.153) before later refits recovered it. Both come out of one run, and the tier cells
+in a 600-item sample are small, so they are things to check on the full 3,521 items rather than
+results.
+
+**What this does not show.** The factor was *transferred*: the analyst wrote it after reading
+Jev's disagreements, and we asked Laya the resulting question. Whether a loop running on Laya
+would find the sports-and-workplace factor by itself has not been measured. Everything about
+Laya here is one run, not repeated across seeds, and the labeler in that recording is the
+simulated one.
+
+To reproduce it you need the `laya` and `steer` extras and about 843 MB of weights, which
+download on first use (Apple silicon):
+
+```bash
+pip install -e '.[laya,steer]'
+python scripts/build_laya_fixtures.py   # optional: regenerates the committed Laya answers
+python scripts/laya_paired.py           # the replay above; writes studies/laya_paired.jsonl
+python scripts/laya_bench.py            # latency, determinism, sibling-independence
+```
+
+Both of the last two load the model: the replay asks Laya the proposed element itself rather
+than restoring it from Jev's answers.
+
 ## What this does not prove
 
 **The labeler is not a human.** It answers with the corpus's own reference label and its comments
@@ -471,7 +555,8 @@ tier is close to a coin flip whatever you ask. Knowing the answer makes it a use
 a poor guide to how a messy real feedback set behaves.
 
 **600 held-out items is about ±1.5 points.** Do not rank the analyst models from this; the study
-is powered to show the effect exists, not to order four models within a few points.
+is powered to show the effect exists, not to order four models within a few points. The same
+goes for the Laya comparison, which is a single run.
 
 ## Design notes
 
@@ -489,7 +574,8 @@ is powered to show the effect exists, not to order four models within a few poin
   are clipped at 0.01 because Jev's tails are not calibrated and its answers are not perfectly
   stable between identical runs (measured at roughly 1% in
   [earlier work](https://anth.us/blog/can-you-trust-jev-confidence/) on this corpus, not
-  re-measured here).
+  re-measured here). That noise is Jev's: Laya gives identical answers to identical requests, so
+  on that engine the clip protects only against overconfident tails.
 - **Missing features are zero when serving and an error when training.** In log-odds space zero
   means "no evidence", so a degraded request degrades gracefully. But training on imputed rows
   biases a new element's weight toward zero, and then the optimizer retires its own good proposal.
@@ -569,9 +655,10 @@ jev_flywheel/
   proposal.py host.py steer.py inventory.py   the analyst, its proposals, the Tactus runner
   loop.py console.py cli.py workspace.py   the human-facing loop
   report.py charts.py recording.py   measurement, the figure, record and replay
+  laya.py         a local second engine: the same questions, answered on your machine
 procedures/steer_scorecard.tac   the steering loop, in Tactus
 diagrams/         the diagram sources (.d2); `make diagrams` renders them to images/
-fixtures/         8,801 items, cached Jev answers, the recorded run
+fixtures/         8,801 items, cached Jev and Laya answers, the recorded run
 studies/          the experiment records, including the pre-registration
 ```
 
@@ -588,7 +675,7 @@ pair is the same two hues re-stepped for a dark surface, and both pairs were che
 colour-vision separation and for contrast against the exact canvas they are drawn on. Inverting
 a light palette is what produces unreadable dark charts.
 
-`make test` runs the specs (458, none needing a network or a key). The procedure's specs are
+`make test` runs the specs (475, none needing a network or a key). The procedure's specs are
 pytest-driven rather than Tactus BDD, because they need the Python host module registered, which
 `tactus test` cannot do.
 

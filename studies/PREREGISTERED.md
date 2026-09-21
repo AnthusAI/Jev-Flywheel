@@ -140,7 +140,7 @@ What the two wrong calls say:
 
 - **The layer helped the weaker engine less, not more.** My reasoning was that a topic factor
   substitutes for the sentiment judgement Laya does poorly. The gap between the engines
-  *widened* from 4.6 points raw to 6.8 with the layer. On this evidence the layer does not close
+  *widened* from 4.7 points raw to 6.8 with the layer. On this evidence the layer does not close
   the gap; it lifts both engines and leaves the weaker one behind. The recorded proposal was
   written by an analyst reading **Jev's** disagreements, so this measures whether a factor
   *transfers*, not whether Laya's own loop would find it. That second measurement has not been made.
