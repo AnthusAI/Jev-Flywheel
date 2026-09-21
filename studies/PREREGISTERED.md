@@ -115,3 +115,51 @@ proportionally more, and still not fully close the gap.
 Every row above is reported against its prediction whatever it shows. The Jev numbers are from
 the existing runs and are not re-run. Laya answers are generated once, locally, and kept beside
 Jev's, so any later comparison can be re-derived from the two fixtures.
+
+## Outcome (recorded 2026-09-21; the paired replay and the engine benchmark)
+
+Raw data: `studies/laya_paired.jsonl`, `studies/laya_bench.json`, `fixtures/answers-laya.jsonl.gz`.
+The Jev rows reproduce the README's table exactly (0.768 / 0.763 / 0.765 / 0.870), which is the
+check that the replay machinery and the Laya rows are comparable. The Laya numbers below are on
+the same 600 held-out items; "full test" is all 3,521, affordable only because Laya is free.
+
+| measurement | predicted | observed | verdict |
+|---|---|---|---|
+| raw Laya holistic accuracy | 0.66 (0.55-0.75) | **0.722** (600) / 0.716 (3,521) | in range, above my point estimate |
+| raw Laya holistic ECE | > 0.15 | **0.107** (600) / 0.103 (3,521) | **wrong**: in my range, but not over-confident by the margin I called |
+| Laya + fitted head | 0.72 (0.66-0.80) | 0.730 (600) / 0.725 (3,521) | right |
+| Laya + head + subject-matter element | 0.80 (0.72-0.86) | **0.802** (600) / 0.806 (3,521) | right |
+| Jev-with-layer minus Laya-with-layer | 4-8 pts | **6.8 pts** (0.870 vs 0.802) | right |
+| the element helps Laya *more* than Jev | yes, by 2+ pts | Laya **+7.2**, Jev **+10.5** (the steering step) | **falsified** |
+| sibling-independence: max abs diff | > 0 and < 0.01 | **0.0049**; 94.75% of 1,200 comparisons exactly equal | right |
+| order of the questions | (not predicted) | **0.0 exactly** | new fact: order never matters |
+| determinism, in and across processes | identical | identical | right |
+| corpus fits the window | yes | longest item 48 tokens, 475 to spare | right |
+
+What the two wrong calls say:
+
+- **The layer helped the weaker engine less, not more.** My reasoning was that a topic factor
+  substitutes for the sentiment judgement Laya does poorly. The gap between the engines
+  *widened* from 4.6 points raw to 6.8 with the layer. On this evidence the layer does not close
+  the gap; it lifts both engines and leaves the weaker one behind. The recorded proposal was
+  written by an analyst reading **Jev's** disagreements, so this measures whether a factor
+  *transfers*, not whether Laya's own loop would find it. That second measurement has not been made.
+- **Raw Laya is better calibrated than I assumed** (ECE 0.10 against Jev's 0.15 on the same items),
+  which is not what its authors' benchmark suggested. laya-mlx ships the calibration
+  temperatures with the checkpoint, so this is the shipped model and not a refit.
+
+Things I did not predict and would not have called:
+
+- **Steering costs Laya its medium tier**: 0.991 before, 0.840 after, while weak (0.671 to 0.787)
+  and neutral (0.483 to 0.703) improve. Jev shows the same shape more mildly (1.000 to 0.953).
+  The promotion gate accepted this because overall accuracy rose. Per-tier cells here are small
+  (a few dozen to a couple of hundred items in a 600 sample), so this is a lead to check on
+  the full 3,521 and not yet a finding.
+- **A refit made Laya's calibration worse before it made it better**: ECE 0.107 at v1, 0.153 at
+  v2 (37 labels, promoted), 0.095 at v3. The Jev lineage never regressed on ECE. Selection
+  gated on out-of-fold metrics, and the held-out scoreboard disagreed at n = 37.
+
+Latency, on a machine that was **not quiet** (1-minute load average 6.8, over the script's 2.0
+threshold; a background indexer and others were running): 1 question about 17 ms, 8 about
+82 ms, 12 about 106 ms, so roughly 8 ms per added question. Provisional; rerun on a quiet
+machine before it is quoted anywhere.
