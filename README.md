@@ -9,8 +9,11 @@
 > matter rather than sentiment, and say so in words you can read?
 >
 > It can, about a quarter of the time, and it is worth +14 points of accuracy when it does.
-> Getting to that number took three broken measurements and one idea of ours that made things
-> worse. Both are below.
+>
+> Nothing inside Jev ever changes — no fine-tuning, no gradients, the same general model
+> throughout. What adapts is which questions get asked and how much each answer counts, and
+> that turns out to be enough: 87 labels spent re-weighting a fixed set of questions bought
+> +0.2 points, while 140 labels spent with one metacognitive step bought +10.5.
 
 ![Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time](images/results.png)
 
@@ -354,6 +357,65 @@ v4, two questions:  negative at 70%   (right)
 
 Nothing about Jev changed. The same model, asked one more question in the same call, produced the
 evidence that flipped the answer.
+
+## Fine-tuning's effect, without fine-tuning anything
+
+Nothing inside Jev ever changes. Its weights are identical before and after — we verified that
+the sentiment answer for a given item is byte-for-byte the same object across a steering round,
+because the answer cache is keyed per question and we never even re-asked. Jev is a general
+model that has never seen your labels and never will.
+
+And yet the system's behaviour aligns to your data, and keeps aligning as more feedback arrives.
+The adaptation lives in the two small things wrapped around the frozen model: **which questions
+get asked**, and **how much each answer counts**.
+
+![The frozen Jev sits inside a boundary marked "what adapts to your data", alongside a metacognitive loop that changes the question set and a decision head with four fitted numbers. Your feedback feeds both.](images/self-aligning.svg)
+
+Notice where the valence lives. The proposed question is neutral — *"Which best describes the
+main subject of this text: sports…; business…; or something else?"* — and contains no hint that
+one answer is good and the other bad. Jev is never told. The entire content of "sport reads
+positive here, workplace reads negative" is two fitted coefficients:
+
+```yaml
+topic_domain.clr.sports_or_recreation:  +0.561
+topic_domain.clr.business_or_workplace: -0.797
+```
+
+Jev **observes**; the head **judges**. A general model can tell you what a text is about far more
+reliably than it can guess what your team means by a label, and those are different jobs. Keeping
+them in different artifacts is what makes the second one inspectable.
+
+### Why so few labels go so far
+
+This is the part that surprised us, and the recording contains a clean natural experiment for it.
+
+| | labels | what changed | held-out accuracy |
+|---|---|---|---|
+| Refits alone | 87 | the weights | **+0.2 points** |
+| One steering round | 140 | the question set | **+10.5 points** |
+
+Eighty-seven labels of ordinary supervised learning bought nothing, and that is not a failure of
+the fitting. Supervised learning searches for the best weights **within a fixed space of
+features**. If the pattern that decides your labels cannot be expressed in the questions you are
+already asking, no quantity of labels will find it — you converge, accurately, on the best
+available wrong answer. (What the refits did buy was calibration: ECE 0.151 to 0.030. Worth
+having, but not accuracy.)
+
+The metacognitive step does something different in kind. It reads the mistakes, reasons about
+what they have in common, and proposes a question that **changes the space itself**. After it, the
+head is fitting four numbers instead of two — and those four are over the right features.
+
+That is why a few hundred labels can go so far here. The system is not trying to learn a
+labelling function from scratch out of 140 examples; it is using a model that already understands
+English to do the perception, and spending your scarce labels on the much smaller question of
+what those perceptions are worth. A step that expands the hypothesis space is worth more, per
+label, than any amount of optimizing inside a space that cannot represent the answer.
+
+**What we have not measured** is this against fine-tuning on the same budget. The architectural
+reason to expect an advantage is clear — 140 examples is thin for moving millions of parameters,
+and a fine-tuned model cannot tell you what it learned — but we have not run that comparison
+here, and the earlier article's fine-tune used a far larger training set. Treat the comparison as
+a reason to expect something, not as a result.
 
 ## How often does it work?
 

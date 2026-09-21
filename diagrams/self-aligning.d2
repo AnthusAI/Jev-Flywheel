@@ -1,0 +1,48 @@
+# The fine-tuning EFFECT without fine-tuning anything. Jev's weights never change;
+# what adapts is the system around it.
+direction: down
+
+labels: {
+  label: "Your feedback\na few hundred labels"
+  shape: cylinder
+}
+
+system: {
+  label: "What adapts to your data"
+  label.near: top-left
+  style.stroke-dash: 3
+
+  loop: {
+    label: "Metacognitive loop\nreads the mistakes and proposes\na question nobody had thought to ask"
+  }
+
+  questions: {
+    label: "The question set"
+    shape: page
+  }
+
+  jev: {
+    label: "JEV — FROZEN\n\na general model, never trained,\nnever shown your labels,\nweights identical before and after"
+    style.stroke-width: 3
+  }
+
+  head: {
+    label: "Decision head\n4 fitted numbers"
+  }
+
+  loop -> questions: "changes what we ask"
+  questions -> jev: "one request per item"
+  jev -> head: "typed answers"
+}
+
+out: {label: "Behaviour aligned to YOUR labels"; shape: oval}
+
+labels -> system.loop: "what did we get wrong,\nand why?"
+labels -> system.head: "how much should\neach answer count?"
+system.head -> out
+
+note: {
+  label: "87 labels spent re-weighting a fixed question set: +0.2 points.\n140 labels spent with one metacognitive step: +10.5 points.\nSame kind of labels. The loop changes what can be learned, not just how well."
+  shape: text
+  near: bottom-center
+}
