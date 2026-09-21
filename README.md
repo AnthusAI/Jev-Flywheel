@@ -581,9 +581,11 @@ repo needs no diagram tooling; `make diagrams` re-renders them and needs `d2`. E
 the sources set no explicit colours and let the theme choose.
 
 The results chart is matplotlib, which cannot embed a media query, so it is rendered twice and
-offered through a `<picture>` element. Its two colour schemes are *selected*, not derived: the
-dark series colours are the same two hues re-stepped for a dark surface, and both sets were
-checked for colour-vision separation and for contrast against the surface they sit on. Inverting
+offered through a `<picture>` element. Its canvases and ink are d2's own, read out of the
+rendered SVGs and pinned by a spec, so the chart and the diagrams sit in one palette rather than
+putting a warm black beside a cool one. The series colours are *selected*, not derived: the dark
+pair is the same two hues re-stepped for a dark surface, and both pairs were checked for
+colour-vision separation and for contrast against the exact canvas they are drawn on. Inverting
 a light palette is what produces unreadable dark charts.
 
 `make test` runs the specs (458, none needing a network or a key). The procedure's specs are

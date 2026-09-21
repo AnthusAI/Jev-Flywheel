@@ -26,10 +26,14 @@ from jev_flywheel.workspace import Workspace
 class Theme(NamedTuple):
     """Surface, ink and series colours for one colour scheme.
 
-    Both schemes are *selected*, not derived: the dark series colours are the same two hues
-    re-stepped for a dark surface, and both sets were checked for colour-vision separation and
-    contrast against the surface they are drawn on. Flipping a light palette to dark by
-    inverting it is what produces unreadable charts.
+    Surfaces and ink match the d2 diagrams exactly, so the README does not mix a warm black
+    chart with cool black diagrams: these are d2's own light canvas and its Dark Mauve
+    (Catppuccin Mocha) canvas, read out of the rendered SVGs.
+
+    The series colours are *selected*, not derived: the dark pair is the same two hues
+    re-stepped for a dark surface, and both pairs were checked for colour-vision separation and
+    for contrast against the exact canvas they are drawn on. Inverting a light palette is what
+    produces unreadable dark charts.
     """
 
     surface: str
@@ -40,9 +44,10 @@ class Theme(NamedTuple):
     orange: str     # categorical slot 2: Jev's own answer, the baseline
 
 
-LIGHT = Theme(surface="#fcfcfb", ink="#0b0b0b", ink_secondary="#52514e", grid="#e6e5e1",
+# Canvas and ink are d2's, so the chart and the diagrams sit in the same palette.
+LIGHT = Theme(surface="#FFFFFF", ink="#0A0F25", ink_secondary="#676C7E", grid="#DEE1EB",
               blue="#2a78d6", orange="#eb6834")
-DARK = Theme(surface="#1a1a19", ink="#ffffff", ink_secondary="#c3c2b7", grid="#38372f",
+DARK = Theme(surface="#1E1E2E", ink="#CDD6F4", ink_secondary="#BAC2DE", grid="#45475A",
              blue="#3987e5", orange="#d95926")
 
 

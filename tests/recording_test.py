@@ -184,3 +184,22 @@ def test_a_caller_can_ask_for_one_scheme_only(session, fixtures, tmp_path):
     light = save_chart(replayed, SCORE, tmp_path / "solo.png", both_schemes=False)
 
     assert light.exists() and not dark_path(light).exists()
+
+
+def test_the_chart_and_the_diagrams_share_one_palette():
+    """A warm-black chart beside cool-black diagrams looks like a mistake, because it is one.
+
+    The canvases and ink here are read from d2's own themes, so this pins them together: if a
+    diagram theme changes, this fails rather than the README quietly going two-toned.
+    """
+    from pathlib import Path
+
+    from jev_flywheel.charts import DARK, LIGHT
+
+    svg = (Path(__file__).resolve().parents[1] / "images" / "flywheel.svg").read_text()
+    light_block, _, dark_block = svg.partition("prefers-color-scheme")
+
+    assert "--color-canvas-default:#FFFFFF" in light_block
+    assert LIGHT.surface == "#FFFFFF" and LIGHT.ink == "#0A0F25"
+    assert "--color-canvas-default:#1E1E2E" in dark_block
+    assert DARK.surface == "#1E1E2E" and DARK.ink == "#CDD6F4"
