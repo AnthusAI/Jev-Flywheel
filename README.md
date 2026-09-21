@@ -1,5 +1,73 @@
 # Jev Flywheel
 
+A hosted model is asked a short list of plain questions about each piece of text, and a small
+readable model on top turns those answers into a verdict. When the verdict disagrees with a
+person, nothing about the hosted model is retrained: the system either changes how much each
+answer counts, or works out a new question worth asking and adds it. On a dataset whose labels
+secretly follow subject matter rather than sentiment, the loop figured that out, said so in
+ordinary English, and gained about ten points of accuracy from 140 human labels.
+
+This repo is a runnable research demo: a recorded run, the numbers it produced, and the method
+that produced them. It is not a product, and it is not only a write-up — `make demo` replays the
+whole recorded run offline in three commands, with no keys, no network and no model, and the same
+tool can be pointed at your own labels. It is for people who score text against a rubric and
+would like the rubric's unwritten parts found for them. One thing to know before the numbers: the
+dataset here was built with a known bias in it and the "labeler" is a script, so what is
+demonstrated is the machinery and the measurement, not yet that this works on real human feedback.
+
+## Background
+
+[Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev) is a hosted model that
+answers *typed questions* about a piece of text. There are three kinds: `noul` (yes or no),
+`choice` (one of several named options), and `score` (a rating against a rubric). You send the
+text and all the questions in one request, and get back a value and a confidence for each. It is
+not asked to write prose, and it is not asked to make your judgement call — it is asked what it
+observes. [The machine](#the-machine) covers how that is wired up here, and
+[Factors and decisions](#factors-and-decisions) walks one real item all the way through.
+
+The judgement call belongs to a rubric: "Is this text positive or negative?", "Was the agent
+professional?" A rubric is a written document, and the people applying it fill the gaps with
+conventions nobody wrote down — what counts as in scope, which exceptions the team honours, where
+a borderline case sits. Those conventions are invisible until someone disagrees with a score.
+
+## Why
+
+Because the unwritten part is where automated scoring goes wrong, and because the usual remedy is
+poor. Fine-tuning on more labels is expensive, wants far more labels than a review team produces,
+and leaves you with weights that cannot tell you what they learned — the first article in this
+series fine-tuned a model on exactly this dataset, and the model absorbed the hidden pattern
+without ever being able to name it.
+
+This repo tries the other order. The hosted model is frozen; nothing inside it ever changes. What
+adapts is the two small things wrapped around it — which questions get asked, and how much each
+answer counts — and both of those are plain text in one YAML file you can read and edit. So when
+the system adapts to your labels, the adaptation is legible: it arrives as a new question in
+English, and a handful of numbers. A person approves it or refuses it. The output is not only a
+better classifier but a written version of the rubric your labelers are actually using.
+
+What this repo does not do is prove that works on people. The corpus is constructed, its bias was
+planted deliberately, and the labeler in the recording is a script that answers with the corpus's
+own reference label and leaves uninformative comments. That makes it a good test bed — there is an
+answer key, so you can ask whether the system found the *right* thing and not just whether the
+number went up — and a poor guide to a messy real feedback set. The claim that a person's written
+comments would surface real conventions is the one this repo cannot test.
+[What this does not prove](#what-this-does-not-prove) is the full list, and it is not short.
+
+## What is in here
+
+| If you want | Read |
+|---|---|
+| the headline numbers from the recorded run | [The result](#the-result) |
+| to run it yourself, offline, in three commands | [Try it](#try-it) |
+| the planted bias, and how to check it | [The bias in the data](#the-bias-in-the-data) |
+| how Jev, questions, factors and the fitted model fit together | [The machine](#the-machine) |
+| how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
+| why this behaves like fine-tuning without any fine-tuning | [Fine-tuning's effect](#fine-tunings-effect-without-fine-tuning-anything) |
+| how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
+| the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
+| getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
+| the caveats, in full | [What this does not prove](#what-this-does-not-prove) |
+
 > **The sentiment dataset in this repo has a deliberate bias in it.** When we built it a year ago
 > for an article about fine-tuning, we made sports talk skew positive and workplace talk skew
 > negative, so that fine-tuning would have a task-specific pattern to learn. It learned it.
