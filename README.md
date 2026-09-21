@@ -5,15 +5,40 @@ readable model on top turns those answers into a verdict. When the verdict disag
 person, nothing about the hosted model is retrained: the system either changes how much each
 answer counts, or works out a new question worth asking and adds it. On a dataset whose labels
 secretly follow subject matter rather than sentiment, the loop figured that out, said so in
-ordinary English, and gained about ten points of accuracy from 140 human labels.
+ordinary English, and gained about ten points of accuracy from 140 human labels. It does that
+about a quarter of the time, and it is worth about +12 points of accuracy when it does.
 
 This repo is a runnable research demo: a recorded run, the numbers it produced, and the method
 that produced them. It is not a product, and it is not only a write-up — `make demo` replays the
 whole recorded run offline, with no keys, no network and no model, and the same
 tool can be pointed at your own labels. It is for people who score text against a rubric and
-would like the rubric's unwritten parts found for them. One thing to know before the numbers: the
-dataset here was built with a known bias in it and the "labeler" is a script, so what is
-demonstrated is the machinery and the measurement, not yet that this works on real human feedback.
+would like the rubric's unwritten parts found for them.
+
+One thing to know before the numbers: the dataset here was built with a known bias in it and the
+"labeler" is a script, so what is demonstrated is the machinery and the measurement, not yet that
+this works on real human feedback. [What this does not prove](#what-this-does-not-prove) is the
+full list, and it is not short.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/results-dark.png">
+  <img alt="Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time" src="images/results.png">
+</picture>
+
+## What is in here
+
+| If you want | Read |
+|---|---|
+| the headline numbers from the recorded run | [The result](#the-result) |
+| to run it yourself: three stages, each one command | [Try it](#try-it) |
+| the planted bias, and how to check it | [The bias in the data](#the-bias-in-the-data) |
+| how Jev, questions, factors and the fitted model fit together | [The machine](#the-machine) |
+| how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
+| why this behaves like fine-tuning without any fine-tuning | [Fine-tuning's effect](#fine-tunings-effect-without-fine-tuning-anything) |
+| how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
+| the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
+| getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
+| the caveats, in full | [What this does not prove](#what-this-does-not-prove) |
+| the design decisions, and the failure each one prevents | [Design notes](#design-notes) |
 
 ## Background
 
@@ -44,50 +69,6 @@ answer counts — and both of those are plain text in one YAML file you can read
 the system adapts to your labels, the adaptation is legible: it arrives as a new question in
 English, and a handful of numbers. A person approves it or refuses it. The output is not only a
 better classifier but a written version of the rubric your labelers are actually using.
-
-What this repo does not do is prove that works on people. The corpus is constructed, its bias was
-planted deliberately, and the labeler in the recording is a script that answers with the corpus's
-own reference label and leaves uninformative comments. That makes it a good test bed — there is an
-answer key, so you can ask whether the system found the *right* thing and not just whether the
-number went up — and a poor guide to a messy real feedback set. The claim that a person's written
-comments would surface real conventions is the one this repo cannot test.
-[What this does not prove](#what-this-does-not-prove) is the full list, and it is not short.
-
-## What is in here
-
-| If you want | Read |
-|---|---|
-| the headline numbers from the recorded run | [The result](#the-result) |
-| to run it yourself: three stages, each one command | [Try it](#try-it) |
-| the planted bias, and how to check it | [The bias in the data](#the-bias-in-the-data) |
-| how Jev, questions, factors and the fitted model fit together | [The machine](#the-machine) |
-| how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
-| why this behaves like fine-tuning without any fine-tuning | [Fine-tuning's effect](#fine-tunings-effect-without-fine-tuning-anything) |
-| how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
-| the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
-| getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
-| the caveats, in full | [What this does not prove](#what-this-does-not-prove) |
-
-> **The sentiment dataset in this repo has a deliberate bias in it.** When we built it a year ago
-> for an article about fine-tuning, we made sports talk skew positive and workplace talk skew
-> negative, so that fine-tuning would have a task-specific pattern to learn. It learned it.
->
-> A fine-tuned model can't tell you what it learned, though. So this repo asks a different
-> question: given feedback on its mistakes, can a system work out that the labels follow subject
-> matter rather than sentiment, and say so in words you can read?
->
-> It can, about a quarter of the time, and it is worth about +12 points of accuracy when it does.
->
-> Nothing inside Jev ever changes — no fine-tuning, no gradients, the same general model
-> throughout. What adapts is which questions get asked and how much each answer counts, and
-> that turns out to be enough: 87 labels spent re-weighting a fixed set of questions bought
-> nothing (accuracy went 0.768 to 0.765), while 140 labels spent with one metacognitive step
-> bought +10.5 points.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/results-dark.png">
-  <img alt="Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time" src="images/results.png">
-</picture>
 
 ## The result
 
@@ -197,6 +178,11 @@ Running a steering round of your own needs a language model for the analyst (and
 use Laya): see [Going live](#going-live).
 
 ## The bias in the data
+
+The bias is ours, and it was deliberate. When we built this corpus a year ago for an article about
+fine-tuning, we made sports talk skew positive and workplace talk skew negative so that
+fine-tuning would have a task-specific pattern to learn. It learned it, and could not say what it
+had learned; that is the gap this repo pokes at.
 
 The corpus is a constructed 8,801-item sentiment set, in four tiers from strong to neutral. Its
 [dataset README](https://github.com/AnthusAI/Classification-with-Confidence) has said this from
@@ -660,7 +646,7 @@ results.
 
 **What the replay does not show.** The factor was *transferred*: the analyst wrote it after
 reading Jev's disagreements, and we asked Laya the resulting question. That is one run, with the
-simulated labeler. The next section asks whether a loop running on Laya finds it by itself.
+simulated labeler. The next subsection asks whether a loop running on Laya finds it by itself.
 
 ### Laya's own loop, with more rounds and more labels
 
@@ -685,8 +671,8 @@ steering round, at 140 labels, promote a new element. On all 3,521 held-out item
   text is *about*: seed 1 proposed `topic_sports` at 140 labels (rejected on the metrics) and
   `sports_topic` at 300, then `business_topic`; seed 2 asked "what is the main subject matter"
   at 500; seed 3 proposed `sports_topic` and `admin_procedure_topic` at 500. Against about a
-  quarter of the time for the plain one-round Jev loop, that is a large difference, and the
-  our guess is that the reason is not the engine: by 300 to 500 labels there are far more disagreements to
+  quarter of the time for the plain one-round Jev loop, that is a large difference, and our guess
+  is that the reason is not the engine: by 300 to 500 labels there are far more disagreements to
   read, and each round is the analyst's second or third look. Three seeds and one analyst model
   do not say more than that.
 - **More rounds and 800 labels bought about what one transferred element bought at 140.** Laya
@@ -710,26 +696,34 @@ version is now scored with its own questions. The data in [`studies/laya_rounds.
 is the corrected run; [`studies/laya_rounds_before_fix.jsonl`](studies/laya_rounds_before_fix.jsonl)
 keeps the first attempt at seed 2 that hit the limit.
 
-To reproduce it you need the `laya` and `steer` extras and about 843 MB of weights, which
-download on first use (Apple silicon):
+To reproduce anything in this chapter you need the `laya` and `steer` extras and about 843 MB of
+weights, which download on first use (Apple silicon). `make laya` runs the paired replay for you;
+the rest are scripts:
 
 ```bash
 pip install -e '.[laya,steer]'
-python scripts/build_laya_fixtures.py   # optional: regenerates the committed Laya answers
-python scripts/laya_paired.py           # the replay above; writes studies/laya_paired.jsonl
-python scripts/laya_bench.py            # latency, determinism, sibling-independence
+python scripts/build_laya_fixtures.py         # optional: regenerates the committed Laya answers
+python scripts/laya_paired.py                 # the paired replay; writes studies/laya_paired.jsonl
+python scripts/laya_bench.py                  # latency, determinism, sibling-independence
+python scripts/laya_rounds.py --seeds 1 2 3   # the multi-round study; needs a Bedrock analyst
 ```
 
-Both of the last two load the model: the replay asks Laya the proposed element itself rather
-than restoring it from Jev's answers.
+Each of them loads the model: the replay asks Laya the proposed element itself rather than
+restoring it from Jev's answers. Only the last spends anything, and only on the analyst — one or
+two Bedrock calls per round, and no Jev calls at all.
 
 ## Moving off the hosted model: a local student
 
 Everything so far pays for a hosted model on every item. The head sitting on top of it is the
 thing that carries the alignment, and it is a tiny function of a few answers. So there is a
 natural next step: use the calibrated head as a *teacher*, and train a small text classifier to
-imitate it, so that most items never leave your machine. [`scripts/distill_student.py`](scripts/distill_student.py)
-runs the whole process and can be repeated whenever the teacher improves:
+imitate it, so that most items never leave your machine. Distilling a teacher into a small
+classifier is a general technique with a sibling project of its own —
+[text-classifier-distillation](https://github.com/AnthusAI/text-classifier-distillation), compared
+with this chapter [at the end of it](#how-this-relates-to-text-classifier-distillation) — and what
+is particular here is where the teacher's labels come from.
+[`scripts/distill_student.py`](scripts/distill_student.py) runs the whole process and can be
+repeated whenever the teacher improves:
 
 1. **Teacher.** The head fitted on the 140 recorded human labels (Jev's holistic answer, the seven
    cached elements and the discovered topic element; the topic answers for the pool come from
@@ -787,6 +781,37 @@ also the reason the head's slice-level weaknesses have to be watched: a student 
 what its teacher gets wrong on a slice, only copy it. Results are in
 [`studies/distill.jsonl`](studies/distill.jsonl), one row per student and seed, including every
 slice and every cascade threshold.
+
+### How this relates to text-classifier-distillation
+
+[text-classifier-distillation](https://github.com/AnthusAI/text-classifier-distillation) is the
+general version of the second half of this chapter — train a student, then serve it — and a more
+finished one. You write your
+classification tasks as prompts in a YAML file; an LLM (GPT-4o-mini) *generates* a training set
+from a positive and a negative instruction per task, with a review pass over what it generated;
+one MobileBERT encoder is trained on SageMaker with a small binary head per task, so several tasks
+answer in one forward pass; and CDK deploys it as a serverless endpoint. Its README reports about
+270 ms a request against 1.5 to 3 seconds for the teacher LLM. That is the path from a distilled
+model to something you can call in production, and this repo has no such path.
+
+The two meet from opposite ends. That project starts from a prompt you wrote and invents a
+curriculum for it. This one starts from a labeling function that has been *corrected against human
+disagreements* — producing and improving the teacher is the whole job of the flywheel — and distils
+it over real text that already exists. Its README is candid about the risk in the inventing half,
+naming shortcut learning (the "Clever Hans" effect, where the student learns a surface artifact of
+the generator rather than the meaning) and recommending you graduate from *generating* data to
+*curating* it: feed the teacher real text and have it label that. The chapter above is an instance
+of that curated path — and the warning still reaches it from the other side, because templated
+text flatters a text classifier for some of the same reasons generated text does. That is the
+first of the two caveats above, and it is why the student's two points over its teacher should
+not be read as a general result.
+
+What this chapter adds to the general method is the deciding-whether-to-ship part, which that
+project's README does not describe: soft targets taken from a calibrated teacher, one temperature
+fitted on the human labels the student never saw, a per-slice gate against the *human* label, and
+a cascade back to the teacher. Those are what tell you *where* a student may serve, and they earn
+their keep when the teacher is a small fitted head with known weak slices rather than a large
+general model.
 
 ## What this does not prove
 
@@ -869,16 +894,11 @@ flywheel record my-run/         # export your session so someone else can replay
 
 ## Where this goes
 
-This bias is an easy case of a general problem. Every written rubric is incomplete: it
-says "Was the agent professional?" while the people applying it use dozens of conventions nobody
-wrote down — what counts as in scope, which exceptions the team honours, where a borderline sits.
-Those conventions are invisible until they show up as disagreements.
-
-That is what this loop is for. Our bias is easy to check because we know what it is; a real
-rubric's quirks are not, which is why it helps to have something that proposes them in writing
-and a person who can say *that one is policy, and that one we should remove*. The output is not
-only a better classifier — it is **a written version of the rubric your labelers are actually
-using**.
+This bias is an easy case of a general problem: every written rubric is incomplete, and the
+conventions that fill its gaps stay invisible until they show up as disagreements. Our bias is
+easy to check because we know what it is. A real rubric's quirks are not, which is why it helps to
+have something that proposes them in writing, and a person who can say *that one is policy, and
+that one we should remove*.
 
 The system proposes; a person decides. That division is not rhetorical: the promotion gate
 rewards accuracy against whatever labels you have, so on this corpus it will absorb the bias
@@ -893,6 +913,12 @@ multi-tenant accounts and audit trails, richer models once you have the labels t
 a full reviewer workflow with vetted labels and sampling by confusion cell. The
 [Anthus AI Solutions](https://anth.us) team builds and runs it. If this was useful and you want to
 take it further, get in touch.
+
+For the distillation route specifically — a small classifier of your own behind a deployed
+endpoint, rather than a script on a laptop —
+[text-classifier-distillation](https://github.com/AnthusAI/text-classifier-distillation) is the
+tool for the second half, and [a local student](#moving-off-the-hosted-model-a-local-student)
+says how the two fit together.
 
 ## Layout
 
@@ -929,7 +955,7 @@ pair is the same two hues re-stepped for a dark surface, and both pairs were che
 colour-vision separation and for contrast against the exact canvas they are drawn on. Inverting
 a light palette is what produces unreadable dark charts.
 
-`make test` runs the specs (475, none needing a network or a key). The procedure's specs are
+`make test` runs the specs (480, none needing a network or a key). The procedure's specs are
 pytest-driven rather than Tactus BDD, because they need the Python host module registered, which
 `tactus test` cannot do.
 
