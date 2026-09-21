@@ -15,7 +15,10 @@
 > that turns out to be enough: 87 labels spent re-weighting a fixed set of questions bought
 > +0.2 points, while 140 labels spent with one metacognitive step bought +10.5.
 
-![Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time](images/results.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/results-dark.png">
+  <img alt="Four panels: held-out accuracy and calibration error by scorecard version, a reliability diagram, and agreement with the labeler over time" src="images/results.png">
+</picture>
 
 ## The result
 
@@ -576,6 +579,12 @@ The diagrams are [d2](https://d2lang.com) sources rendered to SVG and committed,
 repo needs no diagram tooling; `make diagrams` re-renders them and needs `d2`. Each SVG carries a
 `prefers-color-scheme` rule, so one file serves light and dark mode — which only works because
 the sources set no explicit colours and let the theme choose.
+
+The results chart is matplotlib, which cannot embed a media query, so it is rendered twice and
+offered through a `<picture>` element. Its two colour schemes are *selected*, not derived: the
+dark series colours are the same two hues re-stepped for a dark surface, and both sets were
+checked for colour-vision separation and for contrast against the surface they sit on. Inverting
+a light palette is what produces unreadable dark charts.
 
 `make test` runs the specs (458, none needing a network or a key). The procedure's specs are
 pytest-driven rather than Tactus BDD, because they need the Python host module registered, which

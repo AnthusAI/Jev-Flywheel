@@ -156,3 +156,31 @@ def test_the_cli_replays_a_recording_and_prints_the_lineage(session, fixtures, t
     assert result.exit_code == 0, result.output
     assert "Test session" in result.output
     assert "v1" in result.output and "v3" in result.output and "steer" in result.output
+
+
+def test_the_chart_is_written_in_both_colour_schemes(session, fixtures, tmp_path):
+    """A README <picture> offers both, so one must never be regenerated without the other."""
+    pytest.importorskip("matplotlib")
+    from jev_flywheel.charts import DARK, LIGHT, dark_path, save_chart
+
+    _, recording = session
+    replayed = replay(recording, tmp_path / "replayed", fixtures)
+
+    light = save_chart(replayed, SCORE, tmp_path / "results.png")
+
+    assert light.exists() and dark_path(light).exists()
+    assert light.stat().st_size > 10_000 and dark_path(light).stat().st_size > 10_000
+    # Selected, not inverted: the dark scheme is its own set of steps.
+    assert DARK.blue != LIGHT.blue and DARK.surface != LIGHT.surface
+
+
+def test_a_caller_can_ask_for_one_scheme_only(session, fixtures, tmp_path):
+    pytest.importorskip("matplotlib")
+    from jev_flywheel.charts import dark_path, save_chart
+
+    _, recording = session
+    replayed = replay(recording, tmp_path / "replayed", fixtures)
+
+    light = save_chart(replayed, SCORE, tmp_path / "solo.png", both_schemes=False)
+
+    assert light.exists() and not dark_path(light).exists()
