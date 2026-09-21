@@ -33,6 +33,9 @@ from jev_flywheel.scorecard import Scorecard
 from jev_flywheel.workspace import Workspace
 
 FORMAT = 1
+# The engine whose answers a recording's extra_answers hold. Restoring them into a workspace for
+# any other engine would put one model's answers under another's name.
+RECORDED_ENGINE = "jev"
 # Only these outcomes leave a trace worth replaying. A round that stopped at its price, or
 # failed to reach Jev, changed nothing and depended on the network.
 REPLAYABLE_DECISIONS = {"promoted", "rejected_by_human", "rejected_by_metrics",
@@ -105,12 +108,20 @@ def load(directory: Path) -> Dict[str, Any]:
 def replay(
     directory: Path, workspace_dir: Path, fixtures: Path, *,
     on_step: Optional[Callable[[str], None]] = None,
+    answers: str = "answers.jsonl.gz", engine: str = "jev",
+    client_factory: Optional[Callable[[], Any]] = None,
 ) -> Workspace:
     """Rebuild the recorded session in a fresh workspace, offline.
 
     Labels are fed back in their original order, and each recorded step runs when the
     label count it followed is reached. The steering steps use the recorded analyst
     reply and the recorded human decision, so no model and no person is consulted.
+
+    Replaying against a *different engine* keeps the labels, the refit points and the analyst's
+    recorded proposal, and changes only who answers the questions: pass that engine's
+    ``answers`` extract, its ``engine`` name and a ``client_factory``. The recording's extra
+    answers were the recording engine's, so they are not restored -- the new engine answers the
+    proposed elements itself, which is what makes the comparison a comparison.
     """
     from jev_flywheel.steer import ScriptedApprover, run_steering
 
@@ -118,10 +129,10 @@ def replay(
     script = load(directory)
     say = on_step or (lambda message: None)
     score_name = script["score"]
-    workspace = Workspace.init(workspace_dir, fixtures, force=True)
+    workspace = Workspace.init(workspace_dir, fixtures, force=True, answers=answers, engine=engine)
 
     extra = directory / "extra_answers.jsonl.gz"
-    if extra.exists():
+    if extra.exists() and engine == RECORDED_ENGINE:
         with gzip.open(extra, "rt", encoding="utf-8") as handle:
             for line in handle:
                 row = json.loads(line)
@@ -144,7 +155,8 @@ def replay(
                 outcome = run_steering(
                     workspace, score_name, model=step.get("model") or "recorded",
                     mock_replies=[step["analyst_reply"]],
-                    hitl_handler=ScriptedApprover(default=bool(step["approve"])))
+                    hitl_handler=ScriptedApprover(default=bool(step["approve"])),
+                    client_factory=client_factory, allow_spend=client_factory is not None)
                 say(f"after {workspace.n_labeled(score_name)} labels: steering "
                     f"{outcome.decision}"
                     + (f" -> v{outcome.detail.get('version')}" if outcome.promoted else ""))

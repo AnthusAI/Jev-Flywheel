@@ -203,3 +203,40 @@ def test_the_chart_and_the_diagrams_share_one_palette():
     assert LIGHT.surface == "#FFFFFF" and LIGHT.ink == "#0A0F25"
     assert "--color-canvas-default:#1E1E2E" in dark_block
     assert DARK.surface == "#1E1E2E" and DARK.ink == "#CDD6F4"
+
+
+def test_replaying_against_another_engine_does_not_restore_the_recording_engines_answers(
+        session, fixtures, tmp_path):
+    """The recording's extra answers are the recording engine's. Under a different engine they
+    would sit beside that engine's own answers to the same question, mixing two models in one
+    workspace."""
+    import gzip
+    import json
+
+    class OtherClient(Client):
+        async def system_one(self, *, state, questions):
+            response = await super().system_one(state=state, questions=questions)
+            response.model = "other-engine"
+            return response
+
+    def models(workspace):
+        return {json.loads(line)["model"]
+                for line in workspace.answers_path.read_text().splitlines()}
+
+    _, recording = session
+    source = Workspace.init(tmp_path / "src", fixtures)
+    rows = [json.loads(line) for line in gzip.open(fixtures / "answers.jsonl.gz", "rt")]
+    for row in rows:
+        row["model"] = "other-engine"
+    with gzip.open(fixtures / "answers-other.jsonl.gz", "wt") as handle:
+        handle.write("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    other = replay(recording, tmp_path / "other", fixtures, answers="answers-other.jsonl.gz",
+                   engine="other", client_factory=lambda: OtherClient(source))
+    # The control: as the recording's own engine, the same replay DOES restore them, so the
+    # assertion below can tell the two apart.
+    same = replay(recording, tmp_path / "same", fixtures)
+
+    assert other.engine == "other"
+    assert models(other) == {"other-engine"}, f"another engine's answers leaked: {models(other)}"
+    assert "jev-test" in models(same)

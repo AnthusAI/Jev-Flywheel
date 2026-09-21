@@ -86,6 +86,28 @@ def test_the_cached_answers_are_imported_so_the_seed_scorecard_serves_immediatel
     assert result.confidence == pytest.approx(0.9, abs=1e-6)
 
 
+def test_a_workspace_says_which_engine_answers_it_and_defaults_to_jev(workspace):
+    assert workspace.engine == "jev"
+    workspace.manifest_path.unlink()          # a workspace made before engines existed
+    assert workspace.engine == "jev"
+
+
+def test_a_workspace_can_be_seeded_from_another_engines_answers(tmp_path, fixtures):
+    laya = [{"id": f"i{n}", "model": "laya:test", "answers": {
+        "Sentiment": {"type": "choice", "choice": "negative", "confidence": 0.6,
+                      "probabilities": {"positive": 0.4, "negative": 0.6}},
+        "sentiment.praise": {"type": "noul", "noul": 0.2}}} for n in range(3)]
+    with gzip.open(fixtures / "answers-laya.jsonl.gz", "wt") as handle:
+        handle.write("\n".join(json.dumps(a) for a in laya) + "\n")
+
+    other = Workspace.init(tmp_path / "laya", fixtures, answers="answers-laya.jsonl.gz",
+                           engine="laya")
+
+    assert other.engine == "laya"
+    assert other.cache.model == "laya:test"
+    assert other.predict("i0", "Sentiment").value == "negative"     # not Jev's "positive"
+
+
 def test_the_corpus_splits_are_available_by_name(workspace):
     assert [i.id for i in workspace.split("pool")] == ["i0", "i1"]
     assert [i.id for i in workspace.split("test")] == ["i2"]

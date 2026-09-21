@@ -5,8 +5,9 @@ place, so a run is auditable and replayable: every label, every scorecard versio
 every fit and rethink stays on the record, and the chart in the README is produced
 from that record rather than from anything kept in memory.
 
+    workspace.json       which engine answers here ("jev" if absent, so older workspaces load)
     items.jsonl          the corpus (immutable input)
-    answers.jsonl        cached Jev answers, keyed per question
+    answers.jsonl        cached engine answers, keyed per question
     feedback.jsonl       every human judgement, in the order it was given
     events.jsonl         every fit and rethink attempt, with its outcome
     scorecards/
@@ -45,6 +46,21 @@ class Workspace:
     # ---- paths ----------------------------------------------------------------
 
     @property
+    def manifest_path(self) -> Path:
+        return self.root / "workspace.json"
+
+    @property
+    def engine(self) -> str:
+        """Which engine's answers this workspace holds: ``jev`` unless it says otherwise.
+
+        One workspace, one engine. Mixing them would put two models' answers to the same
+        question under one key, so comparison happens between workspaces, never inside one.
+        """
+        if self.manifest_path.exists():
+            return json.loads(self.manifest_path.read_text()).get("engine", "jev")
+        return "jev"
+
+    @property
     def items_path(self) -> Path:
         return self.root / "items.jsonl"
 
@@ -78,12 +94,15 @@ class Workspace:
     # ---- creation -------------------------------------------------------------
 
     @classmethod
-    def init(cls, root: Path, fixtures: Path, *, force: bool = False) -> "Workspace":
+    def init(cls, root: Path, fixtures: Path, *, force: bool = False,
+             answers: str = "answers.jsonl.gz", engine: str = "jev") -> "Workspace":
         """Create a workspace from the committed fixtures.
 
-        Imports the cached Jev answers under the reference scorecard's question
-        bodies, which are the ones they were collected with, and seeds version 1 of
-        the scorecard from the fixtures. No network is involved.
+        Imports the cached answers under the reference scorecard's question bodies, which
+        are the ones they were collected with, and seeds version 1 of the scorecard from
+        the fixtures. No network is involved. ``answers`` names which extract to import
+        (``answers-laya.jsonl.gz`` for the local engine) and ``engine`` is recorded so the
+        workspace says whose answers it holds.
         """
         workspace = cls(root)
         if workspace.exists and not force:
@@ -98,8 +117,10 @@ class Workspace:
         reference = Scorecard.from_yaml(
             (Path(fixtures) / "scorecards" / "reference_full.yaml").read_text())
         import_answers_jsonl(
-            Path(fixtures) / "answers.jsonl.gz", reference.questions(),
+            Path(fixtures) / answers, reference.questions(),
             AnswerCache(workspace.answers_path))
+        workspace.manifest_path.write_text(
+            json.dumps({"engine": engine, "answers": answers}, indent=2) + "\n")
         seed = Scorecard.from_yaml((Path(fixtures) / "scorecards" / "v1.yaml").read_text())
         workspace.commit_scorecard(seed, kind="seed", provenance={"source": "fixtures/v1.yaml"})
         return workspace
