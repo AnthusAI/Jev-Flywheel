@@ -189,6 +189,7 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
     workspace.log_event(
         "rethink", score_name, decision=decision, model=model,
         new_version=detail.get("version"), root_cause=detail.get("root_cause"),
+        status=detail.get("status"), reason=detail.get("reason"),
         analyst_reply=host.last_reply)
     return SteerOutcome(
         decision, detail, list(getattr(hitl_handler, "asked", [])), host.last_reply,

@@ -228,7 +228,7 @@ Procedure {
                     root_cause = check.root_cause}
         end
         if evaluation.status ~= "fitted" then
-            return {decision = "not_evaluable", reason = evaluation.reason,
+            return {decision = "not_evaluable", status = evaluation.status, reason = evaluation.reason,
                     root_cause = check.root_cause}
         end
         if not evaluation.promote then

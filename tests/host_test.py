@@ -442,3 +442,51 @@ def test_rewording_the_holistic_question_is_flagged_as_making_stored_answers_sta
 
     assert "stale" in check["summary_text"]
     assert check["plan"]["serving_requests"] == len(labeled.items)
+
+
+# ---- an engine with limits says so before anything is asked -------------------------
+
+class Limited(Client):
+    """An engine that cannot answer a question longer than ``limit`` characters."""
+
+    limit = 120
+
+    def check_questions(self, questions, state):
+        for name, q in questions.items():
+            if len(q.get("instructions", "")) > self.limit:
+                raise RuntimeError(
+                    f"question {name!r} instructions are too long for this engine")
+
+
+LONG = {"key": "long_winded", "question_type": "noul",
+        "instructions": "Does the text, read carefully and in full, express " + "something " * 20}
+
+
+def test_a_proposal_the_engine_cannot_answer_is_sent_back_before_anything_is_asked(labeled):
+    client = Limited(labeled)
+    host = host_for(labeled, allow_spend=True, client_factory=lambda: client)
+
+    checked = host.check(reply(add_elements=[LONG]))
+
+    assert not checked["ok"]
+    assert "too long for this engine" in checked["problems"][0]
+    assert client.calls == []                       # nothing was asked; this was free
+
+
+def test_a_proposal_the_engine_can_answer_passes_the_same_check(labeled):
+    host = host_for(labeled, allow_spend=True, client_factory=lambda: Limited(labeled))
+
+    assert host.check(reply(add_elements=[SARCASM]))["ok"]
+
+
+def test_a_failed_local_top_up_does_not_blame_an_api_key(labeled):
+    labeled.manifest_path.write_text(json.dumps({"engine": "laya", "answers": "answers.jsonl.gz"}))
+    host = host_for(labeled, allow_spend=True, client_factory=lambda: Broken())
+    host.check(reply(add_elements=[SARCASM]))
+
+    result = host.evaluate()
+
+    assert result["status"] == "top_up_failed"
+    assert "Check the API key" not in result["reason"]
+    assert "no API key configured" in result["reason"]      # the engine's own error is kept
+    assert "failed for 160 of 160" in result["reason"]

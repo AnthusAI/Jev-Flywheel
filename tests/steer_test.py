@@ -276,3 +276,17 @@ def test_the_region_is_ignored_for_other_providers(monkeypatch):
     apply_region("openai", "us-west-2")
 
     assert "AWS_DEFAULT_REGION" not in __import__("os").environ
+
+
+def test_an_evaluation_that_could_not_run_records_why_in_the_event(labeled):
+    class Broken2(Client):
+        async def system_one(self, *, state, questions):
+            raise RuntimeError("engine fell over")
+
+    outcome, _, _ = steer(labeled, [reply(add_elements=[SARCASM])], client=Broken2(labeled))
+
+    event = labeled.events("rethink")[-1]
+    assert outcome.decision == "not_evaluable"
+    assert event["decision"] == "not_evaluable"
+    assert event["status"] == "top_up_failed"
+    assert "engine fell over" in event["reason"]

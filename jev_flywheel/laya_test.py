@@ -123,3 +123,15 @@ def test_a_request_records_what_a_local_engine_spends(agent):
                                           "b": {"type": "noul", "instructions": "??"}}))
     assert client.stats.calls == 1 and client.stats.rows == 2
     assert client.stats.input_tokens == 40 and len(client.stats.latencies_ms) == 1
+
+
+def test_the_steering_host_can_ask_whether_questions_fit_before_spending_a_round(agent):
+    client = LayaClient(agent=FakeAgent(agent))
+    fine = {"q": {"type": "noul", "instructions": "Does the text express praise?"}}
+    wordy = {"q": {"type": "choice", "instructions": "Is the opener hedged? " * 60,
+                   "criteria": {"positive": None, "negative": None, "none": None}}}
+
+    client.check_questions(fine, "a short item")                       # no error
+    with pytest.raises(LayaBudgetError, match="instructions are"):
+        client.check_questions(wordy, "a short item")
+    assert client._agent.calls == []                                    # nothing was answered

@@ -194,6 +194,20 @@ class LayaClient:
     def model_name(self) -> str:
         return f"laya:{self.checkpoint}"
 
+    def check_questions(self, questions: Mapping[str, Mapping[str, Any]], state: Any) -> None:
+        """Raise ``LayaError`` if these questions could not be answered faithfully for ``state``.
+
+        Free and local. The steering host calls it on a proposal, with the corpus's longest
+        item as the state, so an over-long instruction is sent back to the analyst to shorten
+        instead of failing an evaluation after the round has been spent. Runs on the worker
+        thread, which is the one that owns the model.
+        """
+        def run():
+            agent = self._load()
+            check_budget(agent, to_laya_state(state),
+                         {n: to_laya_question(q) for n, q in questions.items()})
+        self._pool.submit(run).result()
+
     def warm(self) -> None:
         """Load the checkpoint now, so the first request does not pay for it."""
         self._pool.submit(self._load).result()

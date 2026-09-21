@@ -289,6 +289,8 @@ class FlywheelHost:
             problems.append(
                 f"{len(score.decision.features)} features exceeds the budget of {budget} that "
                 f"about {eligible:.0f} labels supports. Retire an element, or add fewer.")
+        if not problems:
+            problems += self._engine_problems(candidate)
         if problems:
             return {"ok": False, "noop": noop, "problems": problems, "plan": None, "diff": diff}
 
@@ -344,16 +346,20 @@ class FlywheelHost:
             # Fitting on whatever survived would quietly train on a fraction of the labels
             # and report metrics as if it had them all. Say the top-up failed instead.
             still_missing = len(training.needs_answers)
+            local = self.workspace.engine != "jev"
             if still_missing > max(1, 0.2 * (training.n + still_missing)):
                 return {
                     "status": "top_up_failed", "promote": False,
                     "requested": report.requested, "failed": report.failures,
                     "still_missing": still_missing,
-                    "reason": f"asking Jev for the new answers failed for {still_missing} of "
+                    "reason": f"asking {'the engine' if local else 'Jev'} for the new "
+                              f"answers failed for {still_missing} of "
                               f"{training.n + still_missing} labeled items"
                               + (f" ({report.errors[0]})" if report.errors else "")
-                              + ". Nothing was fit. Check the API key and try again; answers "
-                                "already fetched are kept."}
+                              + ". Nothing was fit. "
+                              + ("Fix the cause and try again; " if local
+                                 else "Check the API key and try again; ")
+                              + "answers already fetched are kept."}
 
         try:
             result = fit_head(training, score)
@@ -374,6 +380,26 @@ class FlywheelHost:
             "incumbent": _metrics(comparison.incumbent),
             "summary_text": _evaluation_text(result, comparison),
         }
+
+    def _engine_problems(self, candidate: Scorecard) -> List[str]:
+        """What the answering engine says it cannot answer, found before anything is asked.
+
+        An engine with hard limits (Laya truncates silently, so it refuses instead) can expose
+        ``check_questions(questions, state)``. Its refusal goes back to the analyst as a problem
+        to repair, like any other invalid proposal, instead of surfacing as a failed evaluation
+        after the round is spent. The longest item is the worst case for the state budget.
+        """
+        if self.client_factory is None:
+            return []
+        check = getattr(self.client_factory(), "check_questions", None)
+        if check is None or not self.workspace.items:
+            return []
+        longest = max(self.workspace.items, key=lambda i: len(i.text)).text
+        try:
+            check(candidate.questions(), longest)
+        except Exception as error:  # noqa: BLE001 - the engine's own refusal, verbatim
+            return [f"{error}. Rewrite that question so this engine can answer it."]
+        return []
 
     def _top_up(self, item_ids: List[str], questions: Mapping[str, Any]):
         wanted = set(item_ids)
