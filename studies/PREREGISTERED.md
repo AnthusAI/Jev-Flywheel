@@ -159,7 +159,7 @@ Things I did not predict and would not have called:
   v2 (37 labels, promoted), 0.095 at v3. The Jev lineage never regressed on ECE. Selection
   gated on out-of-fold metrics, and the held-out scoreboard disagreed at n = 37.
 
-Latency, on a machine that was **not quiet** (1-minute load average 6.8, over the script's 2.0
-threshold; a background indexer and others were running): 1 question about 17 ms, 8 about
+Latency, on a machine that was **not quiet** (1-minute load average 6.4, over the script's 2.0
+threshold; a background indexer and others were running): 1 question about 18 ms, 8 about
 82 ms, 12 about 106 ms, so roughly 8 ms per added question. Provisional; rerun on a quiet
 machine before it is quoted anywhere.
