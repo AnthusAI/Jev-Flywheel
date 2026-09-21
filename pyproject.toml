@@ -27,6 +27,9 @@ dependencies = [
 # `pip install 'jev-flywheel[steer]'` is enough.
 steer = ["tactus>=0.52.0", "typer", "boto3", "botocore[crt]"]
 charts = ["matplotlib>=3.7"]
+# A local second engine. laya-mlx is an independent Apple-silicon port, not an official
+# release, and the guard leans on its helpers, so the version is pinned.
+laya = ["laya-mlx==0.1.0"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "pyflakes"]
 
 [project.scripts]
