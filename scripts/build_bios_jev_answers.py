@@ -37,10 +37,10 @@ from jev_flywheel.scorecard import Scorecard
 
 
 async def run(fixtures: Path, out: Path, partial: Path, limit: int | None, price_only: bool,
-              concurrency: int) -> None:
+              concurrency: int, items_path: Path | None = None) -> None:
     card = Scorecard.from_yaml((fixtures / "scorecards" / "reference_full.yaml").read_text())
     questions = card.questions()
-    items = load_items(fixtures / "items.jsonl")
+    items = load_items(items_path or fixtures / "items.jsonl")
     if limit:
         items = items[:limit]
 
@@ -105,6 +105,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--fixtures", type=Path, default=Path("fixtures/bios"))
+    parser.add_argument("--items", type=Path, default=None,
+                        help="items file to answer (default: <fixtures>/items.jsonl)")
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--partial", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)
@@ -115,7 +117,8 @@ def main() -> None:
     out = args.out or args.fixtures / "answers.jsonl.gz"
     partial = args.partial or Path("var") / f"{args.fixtures.name}-jev-answers.partial.jsonl"
     load_dotenv()
-    asyncio.run(run(args.fixtures, out, partial, args.limit, args.price_only, args.concurrency))
+    asyncio.run(run(args.fixtures, out, partial, args.limit, args.price_only, args.concurrency,
+                    args.items))
 
 
 if __name__ == "__main__":
