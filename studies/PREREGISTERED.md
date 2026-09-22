@@ -984,3 +984,70 @@ seed are as stated; no fitted head; no mitigation arms. Jev: exactly 4,924 reque
 first, hard cap 5,200. Both engines are treated identically and reported side by side with
 floors and intervals in one table. A stated age is a proxy for age as a decision-maker would
 perceive it, and the write-up says so.
+
+## Outcome
+
+Run 2026-09-22. 1,231 of the 2,000 held-out bios were eligible (640 surgeon, 591 physician),
+matching the pre-registration exactly -- 769 excluded (no subject pronoun, a year before 2000,
+or a stated duration of ten or more years). Jev: 4,924 requests sent (1,925,820 input tokens,
+184,228 output tokens, 0 failures), under the 5,200 cap and priced first; full log in
+`studies/bios_age_spend.md`. Laya: 4,924 answers, free, local, 0 failures.
+
+### Predictions against what happened
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| Laya floor (34v35, 61v62) | under 1.5% flips | 0.49% and 0.65% | confirmed |
+| Laya age flip rate (34v61) | 4%, >=2x its floor | 0.97% (~1.7-2.0x floor) | contradicted -- rate is well under the predicted 4%, and the range (1.5%-10%) is missed on the low side |
+| Laya direction (older called "surgeon") | >=65% | 83.3% (10 of 12 flips) | confirmed |
+| Laya mean shift, 61 minus 34 | +2 points | +0.69 points, interval excluding zero | direction confirmed, magnitude well under the predicted +2 (still inside the -1 to +5 not-surprised range) |
+| Jev floor | under 0.5% | 0.89% (34v35) and 0.57% (61v62) | contradicted -- the 34v35 floor exceeds 0.5% (both are inside the 0.1%-1.5% not-surprised range) |
+| Jev age flip rate | 1%, within 1.5x its floor | 1.30% | rate confirmed; ratio to floor is 1.46x against the 34v35 floor but 2.28x against the 61v62 floor -- mixed, not clearly "within 1.5x" |
+| Jev mean shift | within 0.5 points, interval including zero | +0.07 points, interval [-0.08, +0.23] | confirmed |
+
+None of the four "what would change what I believe" triggers fired outright: Laya's age rate
+is above its own floor's interval on the low end but the two overlap; the older version is
+called "surgeon" (not "physician") more often for both engines; Jev's age rate exceeds its
+floor but the intervals overlap, so "clearly exceeds" is not supported; and no floor for
+either engine reaches 3%.
+
+### Both engines, side by side (percentage points; 95% bootstrap intervals, 1,000 resamples, seed 0)
+
+| | Jev | Laya |
+|---|---:|---:|
+| n eligible bios | 1,231 | 1,231 |
+| accuracy, 34 / 35 / 61 / 62 | 79.77 / 79.53 / 79.12 / 79.53 | 66.94 / 66.94 / 67.42 / 67.10 |
+| floor flip, 34 vs 35 [CI] | 0.89 [0.41, 1.46] | 0.49 [0.16, 0.97] |
+| floor shift, 34 vs 35 [CI] | -0.06 [-0.16, 0.03] | 0.04 [-0.05, 0.12] |
+| floor flip, 61 vs 62 [CI] | 0.57 [0.24, 0.97] | 0.65 [0.24, 1.14] |
+| floor shift, 61 vs 62 [CI] | -0.00 [-0.11, 0.10] | -0.52 [-0.64, -0.39] |
+| age flip, 34 vs 61 [CI] | 1.30 [0.73, 1.95] | 0.97 [0.49, 1.54] |
+| age shift, 61 minus 34 [CI] | 0.07 [-0.08, 0.23] | 0.69 [0.53, 0.87] |
+| n bios flipped, 34 vs 61 | 16 of 1,231 | 12 of 1,231 |
+| direction (older called "surgeon", of flips) | 50.0% | 83.3% |
+| excluded (of 2,000 held-out) | 769 | 769 |
+
+By bio gender (male n=934, female n=297 of the 1,231 eligible, both engines): Jev's age flip
+rate is 1.28% for male bios and 1.35% for female bios (direction 50% both); Laya's is 1.07%
+male / 0.67% female, with direction 80% male and 100% female (2 of 2 flips) -- the female
+count is too small to read much into. Full rows, including the by-gender breakdown, are in
+`studies/bios_age.jsonl`.
+
+Jev looks close to invariant to the inserted age, as it was on gender and race: its 34-vs-61
+shift is 0.07 points with an interval that includes zero, and its flip rate, while numerically
+above both floors, sits inside intervals that overlap them. Laya moves more: a 0.69-point
+shift with an interval that excludes zero, and a flip-rate interval that mostly clears its own
+34-vs-35 floor, in the predicted direction -- the older version is called "surgeon" more often.
+But the predicted size was wrong by roughly a factor of three (0.69 points observed against a
++2 point prediction; 0.97% flips against a 4% prediction), so the effect is real but smaller
+than the reasoning in the pre-registration expected. One number stands out and was not
+predicted: Laya's own 61-vs-62 floor has a shift of -0.52 points with an interval that
+excludes zero ([-0.64, -0.39]) -- a one-year change that should be pure re-tokenising noise
+instead reads as a small, systematic pull toward "physician" for Laya specifically at the
+higher end of the age range, which the 34-vs-35 floor does not show (+0.04 points, interval
+including zero). That asymmetry is not explained by anything in this design and is reported
+as an open question rather than folded into the age-effect number.
+
+A stated age is a proxy for age as a decision-maker would perceive it, not age itself, and
+this study measures only whether the text of a bio moves an engine's verdict when that proxy
+changes.
