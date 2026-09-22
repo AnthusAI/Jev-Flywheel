@@ -1474,3 +1474,84 @@ cuts, above the line but with an interval that reaches it; small at the verdict 
 at the shortlist. The scenario is constructed (a real corpus, a real question, an invented
 employer, the simplest possible screener); it is a component of what ranking tools do, not a
 ranking tool.
+
+---
+
+# Pre-registration: the learning loop on the pair that matters
+
+Written 2026-09-23, before any loop arm ran on the paralegal/attorney pair. The loop arms
+above were all run on surgeon/physician, the pair the first study chose before the four-pair
+test showed paralegal/attorney to be the worst case (Laya 17.85% flips; a four-fifths ratio of
+0.48 on a top-500 shortlist) and the shortlist scenario made it the article's opening. The
+mitigation has to be shown where the harm is. This repeats the core arms there.
+
+## The swap rule, amended before this study
+
+Two artefacts the gender study disclosed are fixed here and used for everything from this
+section on: "women's/men's health|medicine|hospital|clinic|center" is protected from the swap
+(medical content, not the person's gender; 0.3% of bios), and Miss, Sir and Madam are added
+to the table (under 0.2%). `jev_flywheel/counterfactual.py`, specs alongside. The earlier
+studies' twins were made with the old rule and their numbers stand as recorded; regenerating
+those twins is listed as pre-press housekeeping.
+
+## Arms (paralegal vs attorney; positive class "attorney")
+
+Corpus: the 1,000 + 1,000 held-out bios and twins already answered by both engines
+(`fixtures/bios_pairs/paralegal_attorney/`), plus a **pool** of 2,000 + 2,000 bios sampled
+from the train split (seed 1, disjoint from the held-out sample) for the loop to label from.
+The pool needs the engines' answers to the v1 question: Laya free; Jev 4,000 requests, priced
+first. Twins are regenerated for the held-out set with the amended rule (Laya free; Jev
+2,000 requests) so every number in this section uses one rule; the old-rule numbers are kept
+alongside for the record.
+
+- **L0, J0** -- the engines alone, on the amended twins (the old-rule numbers are 17.85% and
+  3.9%).
+- **L1, J1** -- the flywheel as it stands: 140 labels from the simulated labeler, the refit
+  policy, one steering round; seeds 1-3.
+- **L2, J2** -- the same with the 2% invariance gate; seeds 1-3.
+- **Baseline** -- twin averaging on the L1 head.
+- **The shortlist, re-run** for every arm: four-fifths ratio at top 500 and the counterfactual
+  counts, so the mitigation is reported in the article's own currency, not only as a flip
+  rate.
+- **LF** -- Laya fine-tuned on the L1 seed-1 labels, 3 seeds, if the GPU is free after the
+  surgeon-pair LF finishes; otherwise deferred and said so.
+
+The L3-L6 diagnosis (the fitted head cannot remove a sensitivity that lives in its one
+strong feature; only the feature set can change) is engine-level and is not repeated here.
+
+## Predictions, recorded in advance
+
+| measurement | Laya | Jev |
+|---|---|---|
+| L0/J0 flip rate on the amended twins | **17.5%** (within a point of the old rule) | **3.9%** (same) |
+| L1 accuracy vs engine alone (0.721 / 0.854) | **+5 points** | **+2 points** |
+| L1 flip rate | **at or above** the engine alone, as on the surgeon pair | at or above |
+| L2: proposals passing the gate | **none, in at least 2 of 3 seeds** | **at least one, in at least 2 of 3 seeds** |
+| L2 flip rate | **unchanged or worse** (collapses to a refit) | **roughly halved**, about 2% |
+| L2 four-fifths ratio at top 500 (engine alone 0.48 / 0.85) | **under 0.6** | **above 0.9** |
+| Twin-averaging baseline, four-fifths ratio | **above 0.8**: what remains is content, not pronouns | above 0.9 |
+| LF flip rate vs L0 | **higher** | -- |
+
+Reasoning: the surgeon-pair result was that the gate works on the engine whose evidence
+answers are invariant (Jev) and cannot on the one whose answers all carry gender (Laya). If
+that is a property of the engines and not of the pair, it should reproduce here, on a pair
+where the stakes are legible in a shortlist. The baseline prediction is the interesting one:
+if averaging the twins lifts Laya's ratio above 0.8, then the whole adverse impact on this
+pair is pronouns, and a deployer has a cheap fix for this cue; if it stays under, the bios'
+content carries the rest and the fix has to be the engine.
+
+## What would change what I believe
+
+- **Laya's L2 passes evidence questions here.** Then its gender reading is pair-specific,
+  and the surgeon-pair conclusion is too strong.
+- **Jev's L2 does not halve the flip rate here.** Then the surgeon-pair success was specific
+  to that pair, and the recommendation weakens to "measure".
+- **The baseline leaves Laya under 0.8.** Then redaction-style fixes cannot rescue this
+  engine on this decision.
+
+## Reporting rule
+
+Everything reported against these predictions, both engines side by side, flip rates and
+shortlist ratios in one table, proposals by wording. Jev spend: 4,000 pool + 2,000 twins +
+steering top-ups (≤140 + ≤140 per proposal, 4,000 to serve a promoted element), priced first
+and logged; hard cap 24,000 for this section.

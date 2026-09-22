@@ -41,7 +41,8 @@ _PAIRS: Dict[str, str] = {
     "husband": "wife", "wife": "husband",
     "son": "daughter", "daughter": "son",
     "brother": "sister", "sister": "brother",
-    "mr": "ms", "ms": "mr", "mrs": "mr",
+    "mr": "ms", "ms": "mr", "mrs": "mr", "miss": "mr",
+    "sir": "madam", "madam": "sir",
     "boy": "girl", "girl": "boy",
     "male": "female", "female": "male",
     "gentleman": "lady", "lady": "gentleman",
@@ -59,6 +60,10 @@ _OBJECT_FOLLOWERS = {
 }
 
 _TOKEN = re.compile(r"[A-Za-z]+|[^A-Za-z]+")
+
+# Phrases whose gendered word is medical content, not the person's gender: a gynaecologist's
+# bio is about women whatever the doctor's gender. Tokens inside these spans are left alone.
+_PROTECTED = re.compile(r"\b(?:wo)?men'?s (?:health|medicine|hospital|clinic|center|centre)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -83,13 +88,22 @@ def swap_gender(text: str) -> Swap:
     and ``his``; swapping twice is therefore not guaranteed to return the original text.
     """
     tokens: List[str] = _TOKEN.findall(text)
+    protected = set()
+    position = 0
+    spans = [m.span() for m in _PROTECTED.finditer(text)]
+    for i, token in enumerate(tokens):
+        if any(start <= position < end for start, end in spans):
+            protected.add(i)
+        position += len(token)
     out: List[str] = []
     swapped = her_resolved = 0
     words: List[Tuple[int, str]] = [(i, t) for i, t in enumerate(tokens) if t[:1].isalpha()]
     next_word = {i: words[k + 1][1] for k, (i, _) in enumerate(words) if k + 1 < len(words)}
     for i, token in enumerate(tokens):
         lower = token.lower()
-        if lower == "her":
+        if i in protected:
+            out.append(token)
+        elif lower == "her":
             her_resolved += 1
             following = next_word.get(i, "").lower()
             ends_clause = i + 1 >= len(tokens) or not tokens[i + 1].isspace() or following == ""

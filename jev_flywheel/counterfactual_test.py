@@ -61,6 +61,15 @@ def test_substrings_of_words_are_not_swapped():
     assert swap_gender(text).text == text
 
 
+def test_medical_content_phrases_are_not_swapped():
+    swap = swap_gender("She directs the Women's Health clinic and her men's health research.")
+    assert swap.text == "He directs the Women's Health clinic and his men's health research."
+
+
+def test_miss_sir_and_madam_are_swapped():
+    assert swap_gender("Miss Jones and Sir John").text == "Mr Jones and Madam John"
+
+
 def test_swap_count_is_reported():
     assert swap_gender("He and his wife").swapped == 3
 
