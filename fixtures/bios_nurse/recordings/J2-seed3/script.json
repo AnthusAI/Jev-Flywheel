@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_nurse J2, seed 3",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic feature cannot express 'the text states no profession at all,' so on credential-free texts it falls back to topical medical vocabulary and guesses physician. This is worst on bare NPI registry listings (5 of the 14 errors, all actually nurse, all predicted physician with high confidence) and on bios where the only physician mentioned is someone else (spouse, quoted author) or where expertise is described without any degree or title. Giving the fit an explicit stated-credentials signal (with a none_stated option) plus a detector for content-free registry listings attacks both clusters directly.\", \"add_elements\": [{\"key\": \"stated_credentials\", \"question_type\": \"choice\", \"instructions\": \"Does the text explicitly state this person's own clinical qualification, degree, license, certification, or job title, and if so, which kind: 'physician_type' for things like a medical degree, medical school, residency, board certification, or physician assistant, 'nurse_type' for things like RN, nurse practitioner, nursing school, or a nursing degree, or 'none_stated' if the text gives no explicit qualification for this person?\", \"criteria\": {\"physician_type\": null, \"nurse_type\": null, \"none_stated\": null}}, {\"key\": \"bare_registry_listing\", \"question_type\": \"noul\", \"instructions\": \"Is the text only a directory or registry listing that gives identifying and contact details (such as a name, NPI number, practice address, or phone number) without describing the person's training, work, or background?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_nurse J2, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 34,
+      "op": "refit"
+    },
+    {
+      "after_labels": 39,
+      "op": "refit"
+    },
+    {
+      "after_labels": 44,
+      "op": "refit"
+    },
+    {
+      "after_labels": 49,
+      "op": "refit"
+    },
+    {
+      "after_labels": 54,
+      "op": "refit"
+    },
+    {
+      "after_labels": 59,
+      "op": "refit"
+    },
+    {
+      "after_labels": 64,
+      "op": "refit"
+    },
+    {
+      "after_labels": 69,
+      "op": "refit"
+    },
+    {
+      "after_labels": 74,
+      "op": "refit"
+    },
+    {
+      "after_labels": 79,
+      "op": "refit"
+    },
+    {
+      "after_labels": 84,
+      "op": "refit"
+    },
+    {
+      "after_labels": 89,
+      "op": "refit"
+    },
+    {
+      "after_labels": 94,
+      "op": "refit"
+    },
+    {
+      "after_labels": 99,
+      "op": "refit"
+    },
+    {
+      "after_labels": 104,
+      "op": "refit"
+    },
+    {
+      "after_labels": 109,
+      "op": "refit"
+    },
+    {
+      "after_labels": 114,
+      "op": "refit"
+    },
+    {
+      "after_labels": 119,
+      "op": "refit"
+    },
+    {
+      "after_labels": 124,
+      "op": "refit"
+    },
+    {
+      "after_labels": 129,
+      "op": "refit"
+    },
+    {
+      "after_labels": 134,
+      "op": "refit"
+    },
+    {
+      "after_labels": 139,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic judgment, and two recurring text patterns fool it. First, physician-assistant bios (PA degrees, PA programs, 'PHYSICIAN ASSISTANT' experience) are pulled toward nurse even though the labels consistently treat PAs as physicians; second, formulaic NPI-registry listings that state no specialty, degree, or credentials are read as physician but are consistently nurses. Several remaining disagreements (a fictional hitman, an ultramarathon runner, a practice manager, a yoga organizer) carry no occupation signal in the text at all, so they are label noise no element can fix.\", \"add_elements\": [{\"key\": \"physician_assistant_mentioned\", \"question_type\": \"noul\", \"instructions\": \"Does the text say that this person is a physician assistant (PA), or mention a physician assistant degree, training program, certification, or professional society?\", \"criteria\": null}, {\"key\": \"physician_title_or_degree\", \"question_type\": \"noul\", \"instructions\": \"Does the text refer to this person as \\\"Dr.\\\" or state that they hold a medical degree such as an MD, DO, or MBBS, attended medical school, or completed a medical residency?\", \"criteria\": null}, {\"key\": \"registry_listing_only\", \"question_type\": \"noul\", \"instructions\": \"Is this text only a professional registry or directory listing, giving details such as an NPI number, a practice address, and a phone number, without stating the person's medical specialty, education, or credentials?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}
