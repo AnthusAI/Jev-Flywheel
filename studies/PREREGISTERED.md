@@ -1555,3 +1555,161 @@ Everything reported against these predictions, both engines side by side, flip r
 shortlist ratios in one table, proposals by wording. Jev spend: 4,000 pool + 2,000 twins +
 steering top-ups (≤140 + ≤140 per proposal, 4,000 to serve a promoted element), priced first
 and logged; hard cap 24,000 for this section.
+
+> **Deviations, 2026-09-22** (recorded as the arms ran; nothing above -- the predictions, the
+> arms, the sample, or the gate -- is altered).
+>
+> - **The pool could not reach 2,000 + 2,000.** Paralegal is the smallest class in the whole
+>   corpus (about 1,150 rows in the entire train split), and the pre-registration's own
+>   held-out sample (`fixtures/bios_pairs/paralegal_attorney/`) already used 1,000 of them.
+>   `scripts/build_bios_attorney_fixtures.py` drew the pool with the pre-registered seed 1,
+>   checked disjoint from the held-out ids, and got **2,000 attorney + 146 paralegal** (2,146
+>   total, not 4,000) -- every remaining train-split paralegal row not already held out. This
+>   is a corpus constraint, not a sampling bug, and is recorded rather than worked around by
+>   loosening disjointness or reusing held-out rows. Jev spend for this step was 2,148 requests
+>   (2,146 pool + 2 held-out twins whose text changed under the amended swap rule -- of 2,000
+>   regenerated, only these 2 differed; see `studies/bios_attorney_spend.md`), not the
+>   pre-registered 4,000 + 2,000 = 6,000.
+> - **J1's held-out accuracy is far below J0's, on all three seeds, including the seed where
+>   nothing was promoted -- diagnosed before running any more arms.** J1 accuracy: seed 1
+>   0.787, seed 2 0.8055, seed 3 0.756, against J0's 0.854 (predicted: **+2 points**, i.e.
+>   about 0.874). Seed 3 promoted no element (`rejected_by_metrics` at n=140) and its active
+>   scorecard was version 2 from an earlier **plain refit** at n=70 (also just the one holistic
+>   feature, no new question) -- so the accuracy loss is not explained by anything a steering
+>   round proposed; it is in the refit itself. Three checks, as asked:
+>   - **(a) Fitted intercept/weight vs. v1's (0, 2.0).** v1 (fixed, reproduces the raw engine
+>     exactly): `intercept=0, self.holistic.clr.attorney=2.0` (sign convention: logit of the
+>     *positive*/less-female class, attorney). The fitted scorecards use a multinomial head
+>     whose weight is on the *paralegal* logit, so the signs flip but the magnitude is what
+>     matters: seed 1 (v2, with `legal_role_evidence` added) `intercept=-2.216,
+>     holistic_w=-0.908`; seed 2 (v2, with a role element added) `intercept=-0.988,
+>     holistic_w=-0.899`; seed 3 (v2, refit only, no new element, from the n=70 auto-refit)
+>     `intercept=-1.050, holistic_w=-0.832`. Every seed's holistic weight collapsed to roughly
+>     40-45% of v1's magnitude, and every seed acquired a large negative intercept (recall the
+>     multinomial reference class is attorney, so a negative paralegal-intercept is a prior
+>     *toward* attorney) -- both directions long before any new element enters the picture.
+>   - **(b) Class balance and propensity of the 140 labeled items.** The labeled sets are
+>     heavily skewed toward attorney, tracking the pool's own skew rather than the held-out
+>     set's: seed 1 131/9 (93.6%/6.4%), seed 2 124/16 (88.6%/11.4%), seed 3 120/20
+>     (85.7%/14.3%) attorney/paralegal by the labeler's own answer, against a **held-out split
+>     that is 50/50 by construction** (1,000 + 1,000). The fit's own recorded
+>     `label_prior_population` (its inverse-propensity estimate of the *pool's* population
+>     mix, used to set the intercept) is **96.0% / 4.0%** attorney/paralegal at seed 1's n=140,
+>     **87.9% / 12.1%** at seed 3's n=70 -- both near the pool's true composition (2,000
+>     attorney / 146 paralegal = 93.2% / 6.8%), swinging around it by a few points because the
+>     estimate is itself noisy. Propensities on the 140 labeled items range from **0.00030 to
+>     0.0078** (about a 25x spread; IPW weight 1/propensity therefore ranges from about 128 to
+>     3,300x across the labeled set), so a small number of rare, low-propensity paralegal
+>     labels carry very large weight in the fit -- the selection policy targets uncertain
+>     items, but Jev's answers on this pair are close to binary (no labeled item's raw
+>     confidence fell in the extreme-confidence band, `raw_confidence` all strictly between
+>     0.01 and 0.99, yet propensities still spread widely because uncertainty is only one of
+>     five weighted selection components alongside novelty, which dominates early in a run).
+>   - **(c) Out-of-fold accuracy vs. held-out accuracy.** Every recorded fit's `oof_accuracy`
+>     is far above held-out: seed 1 at n=140, 0.9598 (an earlier n=36 refit; the n=140 fit's
+>     own event does not carry a bare `oof_accuracy` because it is the steering round's
+>     candidate fit, but the immediately preceding auto-refits at n=100-135 are all
+>     0.94-0.97); seed 3 at n=70 (the active v2), 0.9587; at n=140 (rejected), 0.9587 again.
+>     Against held-out 0.756-0.8055. A 15-20 point gap between a weighted out-of-fold estimate
+>     and the held-out score is not noise at this sample size.
+>   - **Diagnosis: real, not a defect in this study's own scripts, and not something to fix by
+>     editing `jev_flywheel/fit.py` here.** The pool's class balance (~93/7, forced by
+>     paralegal's scarcity in the corpus -- the first bullet above) does not match the
+>     held-out set's fixed 50/50 balance (fixed by the *earlier* pre-registration that built
+>     `fixtures/bios_pairs/paralegal_attorney/`, before this section existed). The fit's
+>     intercept is calibrated, correctly, to the *pool's* IPW-estimated population prior --
+>     that is what the existing inverse-propensity machinery is for, and it is doing its job
+>     on the distribution it is given. But this section's held-out set was never resampled to
+>     match that prior, so a correctly-pool-calibrated intercept is evaluated against a
+>     population it was never calibrated to, and loses accuracy there even as its
+>     population-weighted out-of-fold metric improves. The extreme propensity spread in (b)
+>     compounds this: with only 9-20 true paralegal labels per seed and per-item IPW weights
+>     spanning 25x, the population-prior estimate itself is high-variance, so the size of the
+>     intercept shift (and thus of the accuracy loss) varies seed to seed (2.216 vs. 0.988 vs.
+>     1.050) without tracking anything about the seed's steering outcome. No line in this
+>     study's own scripts (`scripts/build_bios_attorney_fixtures.py`,
+>     `scripts/run_bios_attorney_loop.py`) miscounts, misweights, or mislabels anything checked
+>     against the recorded events; the mismatch is a property of combining this pair's very
+>     skewed pool with an unrelated, previously-fixed, balanced held-out set, refracted through
+>     the fit's existing (and, on its own terms, correctly functioning) population-reweighting.
+>     A library-level fix would look like giving the fit an explicit target population (the
+>     held-out set's own composition, or simply "balanced") to calibrate its intercept against
+>     instead of always inferring one from the labeled sample's inverse-propensity weights --
+>     that is a change to `jev_flywheel/fit.py`'s calibration step, out of scope here while the
+>     other agent's write-up of that module is in progress, and is not made.
+>   - **What this means for the arm's result, reported plainly rather than adjusted:** J1's
+>     *accuracy* prediction (+2 points) is contradicted on all three seeds, for a reason that
+>     is about population mismatch between the pool and the held-out set on this specific
+>     pair, not about the loop failing to learn or the new element failing to help. The
+>     **shortlist numbers are unaffected by this**, and are the arm's more trustworthy result
+>     here: they depend only on the *ranking* the fitted score induces, and for seed 3 (no new
+>     feature, a single monotonic function of the same holistic answer J0 used) the shortlist
+>     ratios and counterfactual counts at every cut are identical to J0's, exactly as a
+>     threshold-only miscalibration predicts. Seeds 1 and 2 (a new element promoted) do change
+>     the ranking and are reported as their own shortlist rows. J1's flip rate (2.25%-2.95%,
+>     against J0's 3.9%) is reported as observed and is not obviously an artefact of the same
+>     mismatch, since flip rate is a same-item paired comparison and does not depend on the
+>     intercept the way raw accuracy does.
+>   - No J1 seed was rerun and no row was altered or removed; all three stand as recorded,
+>     tagged with this diagnosis. J2, L1, L2 and the baseline proceed as pre-registered --
+>     the same intercept/population mismatch is expected to recur wherever this pool and this
+>     held-out set are combined (i.e., in every arm here), so it is a property of the section's
+>     design and not specific to J1.
+
+---
+
+# Pre-registration: the learning loop on nurse vs physician
+
+Written 2026-09-23, before any loop arm ran on this pair. The paralegal/attorney loop (above)
+could not be graded cleanly: the corpus had only 146 spare paralegals, the labeling pool came
+out 93/7, and a head calibrated to that pool lost accuracy on a 50/50 held-out set. Nurse vs
+physician is the next most gendered pair (41 points; Laya 13.5% flips, Jev 3.3%) and the
+corpus has 12,316 nurses and 26,648 physicians, so the pool can match the held-out balance.
+
+## Design
+
+Held-out: the existing 1,000 + 1,000 nurse/physician bios (`fixtures/bios_pairs/nurse_physician/`),
+twins regenerated with the amended swap rule. Pool: **2,000 nurses + 2,000 physicians** from
+the train split, seed 1, disjoint from every id used in any earlier fixture, redacted with the
+same rule. Question: "Is this person a nurse or a physician?", positive class physician. Arms
+and metrics exactly as the paralegal/attorney section: L0/J0, L1/J1, L2/J2 (seeds 1-3), the
+twin-averaging baseline, and the shortlist re-run for every arm (a physician opening; 2,000
+applicants; top 500; four-fifths ratio for women vs men among the real physicians; the
+counterfactual counts). Raw and prior-corrected accuracy both reported; with a balanced pool
+they should agree, which is itself a check on the attorney-pair diagnosis. Per promoted
+element: its positive-answer rate among real physicians by gender, as written and swapped.
+LF if the GPU is free.
+
+## Predictions, recorded in advance
+
+| measurement | Laya (alone: 0.837, 13.5% flips) | Jev (alone: 0.943, 3.3%) |
+|---|---|---|
+| L0/J0 four-fifths ratio at top 500 | **under 0.8** | **0.9 - 1.0** |
+| L1 accuracy vs alone | **+4 points** | **+1 point** (little headroom) |
+| Raw and prior-corrected accuracy | **within 1 point** of each other (balanced pool) | same |
+| L1 flip rate vs alone | **at or above** | at or above |
+| L2: proposals passing the gate | **none in at least 2 of 3 seeds** | **at least one in at least 2 of 3 seeds** |
+| L2 four-fifths ratio vs L0/J0 | **no better** | **no worse than -0.05**; if a promoted element lowers it by more, the attorney-pair finding (cue-invariant, group-correlated) is confirmed and reported as the headline |
+| Twin-averaging baseline ratio | **above 0.8** | above 0.9 |
+| Promoted elements' answer rate by gender among real physicians | differs by **more than 5 points** on at least one promoted element, on either engine | |
+
+Reasoning: the attorney pair showed a question can pass the pronoun gate and still carry a
+gender correlation through content. On this pair the obvious evidence questions ("does the
+text state medical school, residency or board certification?") should be less gender-loaded
+than "support role" was, so the Jev prediction is "no worse"; but the last row predicts the
+proxy effect will be visible in the per-gender answer rates even where it does not reach the
+shortlist. If it does reach it, that is the finding.
+
+## What would change what I believe
+
+- **Raw and prior-corrected accuracy still disagree by several points.** The attorney-pair
+  diagnosis was incomplete; something else in the fit is at work.
+- **Jev's L2 lowers the ratio by more than 0.05.** The gate as designed is not a safe promotion
+  rule for a ranking decision, on any pair, and the article's recommendation has to change to
+  "gate on the outcome, not the cue".
+- **Laya's L2 passes evidence questions here.** Its gender reading is pair-specific.
+
+## Reporting rule
+
+As the earlier loop sections. Jev spend: 4,000 pool + up to 2,000 twins + top-ups, priced
+first and logged; hard cap 24,000.
