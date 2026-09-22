@@ -37,6 +37,7 @@ full list, and it is not short.
 | how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
 | the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
 | getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
+| what actually fine-tuning an open engine buys, and costs | [Fine-tuning the engine instead](#fine-tuning-the-engine-instead) |
 | the caveats, in full | [What this does not prove](#what-this-does-not-prove) |
 | the design decisions, and the failure each one prevents | [Design notes](#design-notes) |
 
@@ -99,7 +100,7 @@ about sport, about the workplace, or neither — and held-out accuracy went from
 
 ## Try it
 
-This repo does three things, one after another, and each has its own command. You do not need to
+This repo does three things, one after another, and each has its own command (a fourth, `make finetune`, reruns a slice of [the fine-tuning comparison](#fine-tuning-the-engine-instead)). You do not need to
 read the rest of this README to run them, and **none of them needs a Jev key**: the answers Jev
 gave when the run was recorded are in `fixtures/`.
 
@@ -210,7 +211,10 @@ per-tier skew and the request-cost fit. It also reports something worth knowing 
 any accuracy here: the fixtures are de-duplicated by text, which fell unevenly, so the corpus is
 57% positive and a majority-class baseline already scores 56.6%.
 
-This is the third of three articles. The
+This repo started as the third of three articles, and has since grown three of its own
+([fine-tuning Jev](https://anth.us/blog/fine-tuning-jev/),
+[Jev vs Laya](https://anth.us/blog/jev-vs-laya/) and
+[distilling into a classifier you own](https://anth.us/blog/distilling-jev-into-a-classifier/)). The
 [first](https://anth.us/blog/fine-tuned-classification-with-confidence/) (September 2025)
 planted the pattern and fine-tuned a model to absorb it. The
 [second](https://anth.us/blog/can-you-trust-jev-confidence/) asked whether Jev's confidence can be
@@ -257,11 +261,11 @@ prompt plus a model checkpoint.
     - key: topic_domain
       question_type: choice
       instructions: Which best describes the main subject of this text...
-      criteria: [sports_recreation, workplace_operations, something_else]
+      criteria: [sports_or_recreation, business_or_workplace, something_else]
   decision:
     model: multinomial_logistic
     classes: [positive, negative]
-    features: [self.holistic.clr.positive, topic_domain.clr.sports_recreation, ...]
+    features: [self.holistic.clr.positive, topic_domain.clr.sports_or_recreation, ...]
     parameters:
       weights: {positive: {intercept: 0.31, self.holistic.clr.positive: 1.84, ...}}
     calibration: {method: temperature, temperature: 1.31, ...}
@@ -533,11 +537,13 @@ English to do the perception, and spending your scarce labels on the much smalle
 what those perceptions are worth. A step that expands the hypothesis space is worth more, per
 label, than any amount of optimizing inside a space that cannot represent the answer.
 
-**What we have not measured** is this against fine-tuning on the same budget. The architectural
-reason to expect an advantage is clear — 140 examples is thin for moving millions of parameters,
-and a fine-tuned model cannot tell you what it learned — but we have not run that comparison
-here, and the earlier article's fine-tune used a far larger training set. Treat the comparison as
-a reason to expect something, not as a result.
+**Against fine-tuning on the same budget**, which this section used to list as unmeasured: we ran it, on
+Laya, since Jev's weights cannot be touched. Fine-tuning won on accuracy (0.896 against 0.870 and
+0.802), which we had predicted it would not, and lost on calibration, on confidence ranking, on
+legibility and on leaving the engine's other answers alone.
+[Fine-tuning the engine instead](#fine-tuning-the-engine-instead) has all of it. The argument above
+still explains why *refits* bought nothing; it does not show the layer beats gradient descent,
+and on this corpus it does not.
 
 ## How often does it work?
 
@@ -640,9 +646,9 @@ rewards being confident *and* right, and Laya is right less often.
 **Two leads, not findings:** steering cost Laya its *medium* tier (0.991 down to 0.840) while
 the weak (0.671 to 0.787) and neutral (0.483 to 0.703) tiers improved; Jev shows the same shape
 more mildly (1.000 to 0.953). And the refit at 37 labels made Laya's calibration worse (ECE
-0.107 to 0.153) before later refits recovered it. Both come out of one run, and the tier cells
-in a 600-item sample are small, so they are things to check on the full 3,521 items rather than
-results.
+0.107 to 0.153) before later refits recovered it. The first holds on the full 3,521 held-out items, where Laya's medium tier goes from 0.998 to
+0.898 (`studies/laya_paired.jsonl`); Jev has topic answers for the 600 only, so its milder version
+is still one small cell. The second comes out of one run and remains a lead.
 
 **What the replay does not show.** The factor was *transferred*: the analyst wrote it after
 reading Jev's disagreements, and we asked Laya the resulting question. That is one run, with the
@@ -759,9 +765,10 @@ What this says, and what it does not:
 - **Soft labels helped a little, not decisively** (0.912 against 0.908, about the size of the
   seed spread). The clearer gain is calibration: soft targets need one temperature of 0.42, hard
   targets 1.56, and both end near 0.03 ECE.
-- **It passes the gate on 10 of 11 slices in every seed and the eleventh in 2 of 3.** The one that
-  fails sometimes is neutral workplace text (0.727 against the teacher's 0.740, 150 items), a
-  slice both are near a coin flip on. The neutral-and-nothing-named slice, which no cue can
+- **It passes the gate on 10 of 11 slices in every seed and the eleventh in 2 of 3.** For the soft
+  student the one that fails, in seed 2, is neutral workplace text (0.707 against the teacher's
+  0.740, 150 items; 0.727 on average), a slice both are near a coin flip on. The hard student
+  fails a different one, neutral sports text in seed 1 (0.811 against 0.839, 180 items). The neutral-and-nothing-named slice, which no cue can
   resolve, is 0.634 against the teacher's 0.594.
 - **The cascade does not help here**, and that is a real result: because the student is at
   least as accurate as the teacher on almost every slice, deferring to the teacher only lowers
@@ -788,7 +795,7 @@ slice and every cascade threshold.
 general version of the second half of this chapter — train a student, then serve it — and a more
 finished one. You write your
 classification tasks as prompts in a YAML file; an LLM (GPT-4o-mini) *generates* a training set
-from a positive and a negative instruction per task, with a review pass over what it generated;
+from a positive and a negative instruction per task;
 one MobileBERT encoder is trained on SageMaker with a small binary head per task, so several tasks
 answer in one forward pass; and CDK deploys it as a serverless endpoint. Its README reports about
 270 ms a request against 1.5 to 3 seconds for the teacher LLM. That is the path from a distilled
@@ -812,6 +819,136 @@ fitted on the human labels the student never saw, a per-slice gate against the *
 a cascade back to the teacher. Those are what tell you *where* a student may serve, and they earn
 their keep when the teacher is a small fitted head with known weak slices rather than a large
 general model.
+
+## Fine-tuning the engine instead
+
+Everything so far leaves the engine alone. The obvious question is what happens if you don't:
+take the same 140 labels and move the model's own weights with them. Jev cannot answer that
+question, because TypeSafe serves the same weights to everyone. Laya can, because its weights are
+open. So the comparison this README used to list as unmeasured has now been run, on Laya, and it
+was pre-registered first ([`studies/PREREGISTERED.md`](studies/PREREGISTERED.md), committed before
+any arm trained).
+
+### What you can change with each engine
+
+| | Jev | Laya |
+|---|---|---|
+| Change what gets asked (add, reword, retire questions; sharpen criteria) | Yes | Yes |
+| Fit your own decision head over the answers, and calibrate it | Yes | Yes |
+| Distill the aligned system into a small classifier you own | Yes | Yes |
+| Change the engine's weights | **No**: the same weights serve every account | **Yes**: Apache-2.0, open weights |
+
+The first three rows are this repo. The last row is this chapter.
+
+### The study
+
+[`scripts/finetune_laya.py`](scripts/finetune_laya.py) fine-tunes Laya through the same `laya-mlx`
+port everything else here uses, asking the scorecard's Sentiment question verbatim and training
+with cross-entropy on the option-marker logits. Four arms, three seeds each, scored on the same
+600 held-out items as every other number in this README:
+
+| | accuracy | ECE | Brier | neutral tier |
+|---|---|---|---|---|
+| *Laya alone (no labels)* | *0.722* | *0.107* | *0.189* | *0.483* |
+| *Jev alone (no labels)* | *0.768* | *0.151* | *0.188* | *0.517* |
+| *Laya with the layer, 140 labels* | *0.802* | *0.015* | *0.130* | *0.703* |
+| *Jev with the layer, 140 labels* | *0.870* | *0.030* | *0.093* | *0.724* |
+| **A.** Laya, full fine-tune, the recorded 140 labels | **0.896** (0.887 to 0.903) | 0.087 | 0.089 | 0.669 |
+| **B.** Laya, head-only fine-tune, same 140 | 0.659 (0.620 to 0.712) | 0.061 | 0.182 | 0.497 |
+| **D.** DistilBERT, same 140 | 0.835 (0.818 to 0.848) | 0.080 | 0.125 | **0.782** |
+
+**Fine-tuning won on accuracy, and we had predicted it would not.** We wrote down 0.74 to 0.80
+for arm A, a seed spread of at least three points, and head-only beating full. It scored 0.896
+with a spread of 1.7, above the layer on either engine, and head-only landed below a Laya that
+had seen no labels at all. Five of seven predictions were wrong; the outcome table sits under the
+predictions, which we left unedited. The risk we did name in advance is the one that came true:
+the planted bias is a lexical cue in templated text, and 140 examples are enough for a text
+encoder to find it.
+
+Arm C is the learning curve, full fine-tunes on uniform random pool draws:
+
+| labels | 20* | 40* | 80* | 140 | 300 | 500 | 800 | 2,000 | 5,140 |
+|---|---|---|---|---|---|---|---|---|---|
+| accuracy | 0.819 | 0.833 | 0.852 | 0.884 | 0.902 | 0.926 | 0.928 | 0.938 | 0.942 |
+
+(*exploratory, not pre-registered; one learning rate, no cross-validation.) On this corpus
+fine-tuning is above the layer on Laya at every budget we tried, down to 20 labels, and passes Jev
+with the layer somewhere between 80 and 140. It flattens at about the 0.938 a plain text
+classifier reaches with a reference label for every pool item. Gentler learning rates did not
+rescue head-only (0.722 at 1e-5, which is untuned Laya; 0.679 at 2e-5): what gets learned here is
+learned in the encoder.
+
+### What fine-tuning costs
+
+**The engine's other answers move.** One checkpoint answers every question on a scorecard, so we
+asked each fine-tuned arm A model the eight questions it was *not* trained on and compared its top
+answer with base Laya's, on the same 600 items
+([`studies/finetune_laya_drift.jsonl`](studies/finetune_laya_drift.jsonl)):
+
+| untrained question | top answer changed |
+|---|---|
+| Is the text sarcastic or ironic? | 8.6% |
+| Does it express praise? | 21.2% |
+| Does it express criticism? | 26.3% |
+| `topic_domain` (the element steering added) | 35.4% |
+| Would the author recommend it? | 48.4% |
+| How did it compare with expectations? | 59.8% |
+| Does it express both positive and negative feelings? | 61.0% |
+| How strong is the emotion? | 74.8% |
+
+Forty-two percent on average. A changed answer is not necessarily a worse one; there is no answer
+key for these questions, so this measures movement and says nothing about damage. But every other
+score on that scorecard needs validating again after a fine-tune. With a frozen engine none of
+them do, and that is checkable: [the steering chapter](#fine-tunings-effect-without-fine-tuning-anything)
+verified Jev's answer is the same object before and after a round.
+
+**Its confidence is worth less than its accuracy suggests.** Rank each system's verdicts by its
+own confidence and auto-accept from the top until the accepted set would drop below 95% accurate
+([`scripts/selective_prediction.py`](scripts/selective_prediction.py), exploratory):
+
+| | can auto-accept at 95% | AUROC, confidence against correct |
+|---|---|---|
+| Jev with the layer | **72.5%** | **0.853** |
+| Laya, full fine-tune | 71% (59% to 82% by seed) | 0.800 (0.760 to 0.851) |
+| DistilBERT, same 140 | 63% (57% to 69%) | 0.839 |
+| Laya with the layer | 54.5% | 0.799 |
+| Jev alone | 46% (on a 277-item tie block; Jev rounds to two decimals) | 0.762 |
+| Laya alone | 34.5% | 0.740 |
+
+The most accurate system is not the one that knows best when it is right. And the fine-tuned
+arms' calibration numbers are loose for a reason we traced: one temperature per arm was fitted on
+cross-validation models trained on about two thirds of the labels and applied to three differently
+seeded final models, so it helped one seed and hurt another; and retraining the *same* seed
+reproduced accuracy within a point but not calibration (ECE 0.046 against a recorded 0.116).
+Gradient training on this GPU is not run-to-run deterministic, and at 140 labels calibration is
+sensitive to that. The head's fit is deterministic. (The fine-tuned models in the table above
+were retrained for the probe; their accuracies differ from the arm table by up to a point.)
+
+**It cannot say what it learned.** The layer's adaptation is one question in English and two
+signed coefficients that a person approved. The fine-tune's is 421M changed numbers. On this
+corpus that matters more than usual, because what both of them learned is a bias: the layer
+described it, which is what gives anyone the chance to object.
+
+**And on Jev it is not available at all.** Which is the practical upshot. If you are on a hosted
+engine, the first three rows of the table are the whole menu, and this repo is a measurement of
+what they buy. If your engine's weights are open and you care about accuracy more than about an
+explanation, a calibrated confidence or the other scores on the card, fine-tune it, then redo
+calibration on labels you held back, and re-check every other question.
+
+The honest limits are the usual ones, doubled. This corpus flatters any text classifier: DistilBERT,
+which has no notion of a typed question, beat the layer on Laya with the same 140 labels and was
+the best system of all on the neutral tier, where only the planted cue can help. Cross-validation
+used 3 folds where 5 were pre-registered, arm C reused learning rates between anchor sizes, and
+one run was killed and one resumed; all of it is in the pre-registration's deviations note. Not
+tried, and the natural next experiment: fine-tune Laya only on the *observation* questions, to
+close its perception gap with Jev, and leave the verdict in the readable head.
+
+```bash
+make finetune                                   # arms A, B and D, one seed; tens of minutes on an M1 Max
+python scripts/finetune_laya.py --arms A B C D --seeds 1 2 3   # the study; hours, and wants a quiet GPU
+python scripts/selective_prediction.py          # auto-accept coverage and AUROC
+python scripts/exploratory_finetune.py          # head-only at low lr; 20, 40 and 80 labels
+```
 
 ## What this does not prove
 
@@ -935,7 +1072,8 @@ jev_flywheel/
   loop.py console.py cli.py workspace.py   the human-facing loop
   report.py charts.py recording.py   measurement, the figure, record and replay
   laya.py         a local second engine: the same questions, answered on your machine
-scripts/          the studies: audit_corpus, audit_arms, laya_*, learning_curve, distill_student
+scripts/          the studies: audit_corpus, audit_arms, laya_*, learning_curve, distill_student,
+                  finetune_laya, selective_prediction, exploratory_finetune
 procedures/steer_scorecard.tac   the steering loop, in Tactus
 diagrams/         the diagram sources (.d2); `make diagrams` renders them to images/
 fixtures/         8,801 items, cached Jev and Laya answers, the recorded run
@@ -955,7 +1093,7 @@ pair is the same two hues re-stepped for a dark surface, and both pairs were che
 colour-vision separation and for contrast against the exact canvas they are drawn on. Inverting
 a light palette is what produces unreadable dark charts.
 
-`make test` runs the specs (480, none needing a network or a key). The procedure's specs are
+`make test` runs the specs (503, none needing a network or a key). The procedure's specs are
 pytest-driven rather than Tactus BDD, because they need the Python host module registered, which
 `tactus test` cannot do.
 
