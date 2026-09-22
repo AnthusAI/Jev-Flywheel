@@ -362,6 +362,9 @@ def test_the_gate_rejects_an_element_that_reads_gender(labeled):
     assert outcome.decision == "rejected_by_metrics"
     assert "invariance gate" in outcome.detail["reasons"]      # evaluation.summary_text, a string
     assert approver.asked == []                 # never reached a human: gated first
+    # The gate's own number is on the outcome too, not just summarized as prose -- this is
+    # what a study recording every proposal's flip rate on the labeled items reads.
+    assert outcome.invariance_flip_rates["sentiment.gendered_tone"] > 0.02
 
 
 def test_the_gate_lets_through_an_element_that_does_not_read_gender(labeled):
@@ -374,6 +377,7 @@ def test_the_gate_lets_through_an_element_that_does_not_read_gender(labeled):
         invariance_max_flip_rate=0.02)
 
     assert outcome.decision == "promoted"
+    assert outcome.invariance_flip_rates["sentiment.sarcasm"] == 0.0
 
 
 def test_with_no_gate_the_same_gendered_element_is_promoted(labeled):

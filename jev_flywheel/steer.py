@@ -115,6 +115,13 @@ class SteerOutcome:
     approvals_asked: List[str] = field(default_factory=list)
     analyst_reply: Optional[str] = None
     discovery_reply: Optional[str] = None
+    # The gender-invariance gate's own measurement (jev_flywheel.invariance,
+    # studies/PREREGISTERED.md's J2/L2 arms): {element_key: flip_rate} for each newly proposed
+    # element, or None when the gate was off or evaluate() was never reached (e.g. a no-op
+    # round). The procedure's own return value does not carry this -- it only ever summarizes
+    # the gate's effect as prose inside a rejection's "reasons" -- so it is read directly off
+    # the host after the round, the same place the analyst's raw reply is read from.
+    invariance_flip_rates: Optional[Dict[str, float]] = None
 
     @property
     def promoted(self) -> bool:
@@ -224,4 +231,4 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         analyst_reply=host.last_reply)
     return SteerOutcome(
         decision, detail, list(getattr(hitl_handler, "asked", [])), host.last_reply,
-        host.last_discovery_reply)
+        host.last_discovery_reply, host.last_invariance_flip_rates)
