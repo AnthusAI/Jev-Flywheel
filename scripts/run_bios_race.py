@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+"""Score the race-name counterfactual study (both engines, engine-alone, no fitted head) from
+recorded answers.
+
+    python scripts/run_bios_race.py --engine jev
+    python scripts/run_bios_race.py --engine laya
+
+Reads ``fixtures/bios/race_versions.jsonl`` (built by ``scripts/build_bios_race_fixtures.py``)
+and the engine's answer fixture (``fixtures/bios/answers-race.jsonl.gz`` for Jev,
+``fixtures/bios/answers-race-laya.jsonl.gz`` for Laya), builds a ``Verdict`` for each of a
+bio's three named versions, and appends one row to ``studies/bios_race.jsonl`` via
+``scripts/bios_race.score_arm``. ``--excluded`` records how many of the 2,000 held-out bios had
+no subject pronoun and so could not carry a name (429, reported by the fixtures build; passed
+through here rather than recomputed so this script needs no dependency on ``items.jsonl``).
+"""
+from __future__ import annotations
+
+import argparse
+import gzip
+import json
+from pathlib import Path
+
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bios_gender import Verdict, write_rows  # noqa: E402
+from bios_race import score_arm  # noqa: E402
+
+ANSWER_FILES = {"jev": "answers-race.jsonl.gz", "laya": "answers-race-laya.jsonl.gz"}
+DEFAULT_EXCLUDED = 429  # see scripts/build_bios_race_fixtures.py's own report
+
+
+def load_jsonl(path: Path):
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                yield json.loads(line)
+
+
+def main(fixtures: Path, engine: str, out: Path, excluded: int) -> None:
+    versions = {row["id"]: row for row in load_jsonl(fixtures / "race_versions.jsonl")}
+    answers_path = fixtures / ANSWER_FILES[engine]
+    if not answers_path.exists():
+        raise SystemExit(f"{answers_path} does not exist -- see this script's docstring")
+    question = "Occupation"
+    answers = {row["id"]: row["answers"][question] for row in load_jsonl(answers_path)}
+
+    def verdict(source_id: str, version_id: str) -> Verdict:
+        """A version's answer, keyed by the bio's *source* id (shared across its three named
+        versions) so ``score_arm`` can pair white_a/white_b/black for the same bio."""
+        a = answers[version_id]
+        meta = versions[version_id]["metadata"]
+        return Verdict(source_id, a["choice"], a["probabilities"]["surgeon"],
+                       meta["reference_label"], meta["gender"])
+
+    by_source: dict = {}
+    for version_id, row in versions.items():
+        by_source.setdefault(row["metadata"]["source_id"], {})[row["metadata"]["version"]] = \
+            version_id
+
+    missing = [vid for vid in versions if vid not in answers]
+    if missing:
+        raise SystemExit(f"{len(missing)} versions have no {engine} answer yet, e.g. "
+                          f"{missing[:3]}")
+
+    white_a = [verdict(source_id, ids["white_a"]) for source_id, ids in by_source.items()]
+    white_b = {source_id: verdict(source_id, ids["white_b"])
+               for source_id, ids in by_source.items()}
+    black = {source_id: verdict(source_id, ids["black"])
+             for source_id, ids in by_source.items()}
+
+    metrics = score_arm(engine=engine, white_a=white_a, white_b=white_b, black=black,
+                        excluded=excluded)
+    row = metrics.as_row()
+    print(json.dumps(row, indent=2))
+    write_rows([row], out)
+    print(f"appended to {out}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--fixtures", type=Path, default=Path("fixtures/bios"))
+    parser.add_argument("--engine", choices=list(ANSWER_FILES), required=True)
+    parser.add_argument("--out", type=Path, default=Path("studies/bios_race.jsonl"))
+    parser.add_argument("--excluded", type=int, default=DEFAULT_EXCLUDED)
+    args = parser.parse_args()
+    main(args.fixtures, args.engine, args.out, args.excluded)

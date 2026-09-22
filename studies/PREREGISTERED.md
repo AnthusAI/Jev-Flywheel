@@ -755,3 +755,67 @@ engines get identical treatment and are reported side by side, floors included.
 Every row above is reported against its outcome. Names are a proxy for perceived race, and
 the write-up says so: this measures the engine's response to a name association, not to a
 person. Flip rates are reported with their control floors in the same table, never alone.
+
+## Outcome (recorded 2026-09-22)
+
+All four steps ran as pre-registered: `scripts/build_bios_race_fixtures.py` drew the three
+named versions of every held-out bio with a subject pronoun (seed 0, one `random.Random(0)`
+advanced in item-id order); both engines answered all 4,713 versions
+(`fixtures/bios/answers-race.jsonl.gz`, `fixtures/bios/answers-race-laya.jsonl.gz`); and
+`scripts/bios_race.py` scored both from the committed fixtures via `scripts/run_bios_race.py`,
+appending to `studies/bios_race.jsonl`.
+
+**Excluded bios.** 429 of the 2,000 held-out bios (21.45%) have no subject pronoun and could
+not carry a name; 1,571 were scored, matching the pre-registration's estimate (21.5%) closely.
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| Laya control floor | **2%** (0.5%-6%) | **2.36%** (37/1,571) | in range, near the point estimate |
+| Laya race flip rate | **5%**, at least 2x its floor (2%-12%) | **3.18%** (50/1,571), 1.35x its floor | in range, but below the point estimate; the "at least twice its floor" part is contradicted |
+| Laya direction (of flips, share called "physician" for the Black name) | **at least 65%** (50%-85%) | **30.0%** (15/50 flips) | contradicted: below the floor of the "would not be surprised by" band, and on this small base the flips mostly moved the other way |
+| Jev control floor | **0.5%** (0.1%-2%) | **0.57%** (9/1,571) | in range, near the point estimate |
+| Jev race flip rate | **1%**, not clearly above its floor (0.2%-3%) | **0.89%** (14/1,571), 1.56x its floor | in range, close to the point estimate |
+| Jev vs Laya (Laya's excess over its floor at least 3x Jev's) | **at least 3x** | **2.59x** (Laya's excess 0.82 points vs. Jev's 0.32 points) | in the right direction, real but smaller than predicted |
+
+**Both engines side by side, floors included:**
+
+| engine | n bios | control floor (95% CI) | race flip rate (95% CI) | excess | ratio | direction share (n flips) | accuracy white-A / black |
+|---|---:|---|---|---:|---:|---|---|
+| Jev | 1,571 | 0.57% (0.25%-1.02%) | 0.89% (0.51%-1.40%) | +0.32 pts | 1.56x | 71.4% (14) | 0.7708 / 0.7683 |
+| Laya | 1,571 | 2.36% (1.59%-3.12%) | 3.18% (2.36%-4.14%) | +0.82 pts | 1.35x | 30.0% (50) | 0.5971 / 0.6073 |
+
+(white-B vs black, the second control-adjacent flip rate, is also recorded: 1.34% for Jev,
+2.99% for Laya -- both close to the corresponding white-A vs black rate, as the pre-registration
+would expect from two arbitrary white names.)
+
+**Interpretation.** Both engines' race flip rate exceeds their own control floor by point
+estimate (Jev 1.56x, Laya 1.35x), so this is not the first "both floors are as large as the
+race rates" outcome outright -- but the 95% bootstrap intervals for the floor and the race rate
+overlap substantially for both engines (Jev: floor 0.25%-1.02% against race 0.51%-1.40%; Laya:
+floor 1.59%-3.12% against race 2.36%-4.14%), so at 1,571 bios neither engine's excess clears its
+own noise with confidence -- the one-token name insertion is a real but weak instrument here,
+closer to the pre-registration's third "what would change what I believe" bullet
+(inconclusive rather than a clean positive) than to a confirmed race effect for either engine.
+The clearest miss against the predictions is Laya's direction share: only 15 of its 50
+white-A-to-black flips move toward "physician," the opposite of the predicted occupational-
+prestige stereotype and below chance, on a small base. Jev's direction share (71.4%, 14 flips)
+does land inside the predicted range, but the flip rate producing it is itself barely above
+Jev's own floor. Neither engine shows the gender study's clean gap between floor and effect: L0
+had an 8% flip rate against a redaction-era floor near zero, but here Laya's race floor (2.36%)
+is already substantial before any Black name is introduced, so a name swap moves both engines
+by only a few tenths to under a point beyond swapping to a second arbitrary white name. Split by
+the bio's gender (recorded on every row of `studies/bios_race.jsonl` under `by_gender`), Jev's
+race flip rate is higher for women's bios (1.76%, 6/341) than men's (0.65%, 8/1,230), while
+Laya's is higher for men's (3.58%, 44/1,230) than women's (1.76%, 6/341); each subgroup is a
+small base and neither split changes the headline. Names are a proxy for perceived race, not a
+person: this measures the engines' response to a name association carried by nine-name lists
+from a 2004 field experiment, not to any individual's actual race, and the flip rates above
+should be read as that and no more.
+
+**Spend.** 4,713 Jev requests (the exact pre-registered count: 3 name versions x 1,571 bios),
+priced with `--price-only` before sending; 1,838,465 input tokens, 176,450 output tokens, 0
+failures. Laya's 4,713 answers were free and local. Full breakdown: `studies/bios_race_spend.md`.
+
+```bash
+make race   # scores both engines from the committed fixtures; no keys, no network, no spend
+```

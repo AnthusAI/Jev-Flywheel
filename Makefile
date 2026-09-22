@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios test diagrams
+.PHONY: help install demo laya student finetune bios race test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -97,6 +97,22 @@ bios:
 	@echo "counterfactual_flip_rate is a LOWER BOUND on gender sensitivity (redaction removes"
 	@echo "first names; titles and other gendered nouns not on the name list can remain)."
 	@echo "Next: studies/PREREGISTERED.md, 'does the engine read gender, and can the layer refuse to?'"
+
+# Does the engine read race from a name? The Bertrand & Mullainathan (2004) name-swap
+# counterfactual (studies/PREREGISTERED.md, "does the engine read race from a name?"), scored
+# from committed fixtures: no keys, no network, no model, no spend.
+race:
+	@echo "Scoring Jev's and Laya's own answers on 1,571 held-out bios under three named"
+	@echo "versions each (two white names, one Black name). Offline: answers are read from"
+	@echo "fixtures/bios/answers-race.jsonl.gz and answers-race-laya.jsonl.gz."
+	@echo ""
+	rm -f var/bios_race.jsonl
+	.venv/bin/python scripts/run_bios_race.py --engine jev --out var/bios_race.jsonl
+	.venv/bin/python scripts/run_bios_race.py --engine laya --out var/bios_race.jsonl
+	@echo ""
+	@echo "race_flip is a name-only effect measured against its own control floor (white-A vs"
+	@echo "white-B); read the excess and ratio, not the race rate alone."
+	@echo "Next: studies/PREREGISTERED.md, 'does the engine read race from a name?'"
 
 test:
 	.venv/bin/python -m pytest -q
