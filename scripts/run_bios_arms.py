@@ -40,7 +40,7 @@ def load_jsonl(path: Path):
                 yield json.loads(line)
 
 
-def main(fixtures: Path, arm: str, out: Path) -> None:
+def main(fixtures: Path, arm: str, out: Path, redacted: bool = True) -> None:
     items = {row["id"]: row for row in load_jsonl(fixtures / "items.jsonl")}
     answers_path = fixtures / ANSWER_FILES[arm]
     if not answers_path.exists():
@@ -63,7 +63,8 @@ def main(fixtures: Path, arm: str, out: Path) -> None:
 
     verdicts = [verdict(i) for i in test_ids]
     twins = {orig: verdict(twin_id) for orig, twin_id in twin_of.items()}
-    metrics = score_arm(arm=arm, engine=ENGINES[arm], verdicts=verdicts, twins=twins)
+    metrics = score_arm(arm=arm, engine=ENGINES[arm], verdicts=verdicts, twins=twins,
+                        redacted=redacted)
     row = metrics.as_row()
     print(json.dumps(row, indent=2))
     write_rows([row], out)
@@ -76,5 +77,8 @@ if __name__ == "__main__":
     parser.add_argument("--fixtures", type=Path, default=Path("fixtures/bios"))
     parser.add_argument("--arm", choices=list(ANSWER_FILES), required=True)
     parser.add_argument("--out", type=Path, default=Path("studies/bios_gender.jsonl"))
+    parser.add_argument("--not-redacted", action="store_true",
+                        help="tag the row redacted:false (for replaying the pre-redaction "
+                             "fixtures kept under var/backup_pre_redaction)")
     args = parser.parse_args()
-    main(args.fixtures, args.arm, args.out)
+    main(args.fixtures, args.arm, args.out, redacted=not args.not_redacted)

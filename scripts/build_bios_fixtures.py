@@ -18,6 +18,13 @@ occupation. For every **test** item (never pool) a gender-swapped twin is also w
 are never labeled and never enter the pool; they exist only so an engine can be asked the same
 question twice, once as written and once with its pronouns and role nouns flipped.
 
+Every item's ``text`` is first-name-redacted (see ``jev_flywheel.counterfactual.redact_names``):
+``hard_text`` keeps first names in the body, which is itself a gender cue the pronoun swap alone
+does not remove (see ``studies/PREREGISTERED.md``'s second 2026-09-22 deviation). A twin is the
+pronoun/role-noun swap of the *redacted* text, so the id an item gets (``bios-{row index:06d}``,
+derived from the source parquet's row index, not from the text) is unaffected by redaction and
+the sample is identical to the pre-redaction run for the same seed.
+
 .. _LabHC/bias_in_bios: https://huggingface.co/datasets/LabHC/bias_in_bios
 """
 from __future__ import annotations
@@ -31,7 +38,7 @@ from typing import Dict
 
 import pandas as pd
 
-from jev_flywheel.counterfactual import swap_gender
+from jev_flywheel.counterfactual import redact_names_batch, swap_gender
 
 PARQUET_URL = ("https://huggingface.co/api/datasets/LabHC/bias_in_bios/"
                "parquet/default/train/0.parquet")
@@ -101,17 +108,30 @@ def split_stratified(df: pd.DataFrame, labels: Dict[int, str]) -> pd.DataFrame:
 
 
 def build_items(df: pd.DataFrame, labels: Dict[int, str], positive: str, negative: str):
+    """Build every item's record. ``text`` is the redacted bio (first names spaCy tags as
+    ``PERSON`` and that are on ``fixtures/bios/first_names.txt`` replaced with ``[name]``, see
+    ``jev_flywheel.counterfactual.redact_names``); ``metadata.redacted`` records how many tokens
+    that removed. A test item's counterfactual twin is the pronoun/role-noun swap of the
+    *redacted* text, so the two texts an engine sees differ only in pronouns and role nouns, not
+    in whether a first name is present. Redaction runs once, batched over every row via
+    ``redact_names_batch``, rather than per row -- spaCy's ``nlp.pipe`` is far faster batched.
+    """
+    raw_texts = [str(row["hard_text"]) for _, row in df.iterrows()]
+    print(f"redacting names from {len(raw_texts)} bios (spaCy en_core_web_sm) ...")
+    redactions = redact_names_batch(raw_texts)
+
     items = []
     twins = []
-    for idx, row in df.iterrows():
+    for (idx, row), redaction in zip(df.iterrows(), redactions):
         occupation = labels[int(row["profession"])]
         item_id = f"bios-{idx:06d}"
-        text = str(row["hard_text"])
+        text = redaction.text
         metadata = {
             "split": row["split"],
             "reference_label": occupation,
             "occupation": occupation,
             "gender": "female" if int(row["gender"]) == 1 else "male",
+            "redacted": redaction.redacted,
         }
         items.append({"id": item_id, "text": text, "metadata": metadata})
         if row["split"] == "test":
@@ -127,6 +147,7 @@ def build_items(df: pd.DataFrame, labels: Dict[int, str], positive: str, negativ
                     "counterfactual_of": item_id,
                     "swapped": swap.swapped,
                     "her_resolved": swap.her_resolved,
+                    "redacted": redaction.redacted,
                 },
             })
             twins.append(twin_id)

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from bios_gender import (  # noqa: E402
-    Verdict, accuracy, counterfactual_flip_rate, flip_direction_share, mean_abs_delta_p,
+    Verdict, accuracy, counterfactual_flip_rate, ece, flip_direction_share, mean_abs_delta_p,
     mentions_gender, score_arm, tpr_gap_surgeon)
 
 
@@ -95,11 +95,35 @@ def test_tpr_gap_is_none_without_surgeon_bios_for_a_gender():
 def test_score_arm_bundles_every_metric():
     verdicts = [v("a", "surgeon", 0.9, "surgeon", "male")]
     twins = {"a": v("a-swapped", "physician", 0.3, "surgeon", "female")}
-    metrics = score_arm(arm="J0", engine="jev", verdicts=verdicts, twins=twins)
+    metrics = score_arm(arm="J0", engine="jev", verdicts=verdicts, twins=twins, redacted=False)
     row = metrics.as_row()
     assert row["arm"] == "J0" and row["engine"] == "jev" and row["n"] == 1
     assert row["accuracy"] == 1.0
     assert row["counterfactual_flip_rate"] == 1.0
+    assert row["redacted"] is False
+    assert "ece" in row
+
+
+def test_score_arm_defaults_redacted_to_true():
+    verdicts = [v("a", "surgeon", 0.9, "surgeon", "male")]
+    metrics = score_arm(arm="L0", engine="laya", verdicts=verdicts, twins={})
+    assert metrics.as_row()["redacted"] is True
+
+
+def test_ece_is_zero_for_perfectly_confident_correct_predictions():
+    verdicts = [v("a", "surgeon", 1.0, "surgeon", "male"),
+                v("b", "physician", 0.0, "physician", "female")]
+    assert ece(verdicts) == pytest.approx(0.0)
+
+
+def test_ece_of_empty_set_is_zero():
+    assert ece([]) == 0.0
+
+
+def test_ece_uses_confidence_in_the_predicted_class_not_p_surgeon():
+    # predicted "physician" at p_surgeon=0.1 is a 0.9-confidence, correct call.
+    verdicts = [v("a", "physician", 0.1, "physician", "male")]
+    assert ece(verdicts) == pytest.approx(0.1)
 
 
 def test_mentions_gender_flags_obvious_wording():

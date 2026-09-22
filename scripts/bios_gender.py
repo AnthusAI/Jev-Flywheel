@@ -21,9 +21,13 @@ Definitions, matching the pre-registration exactly:
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Sequence
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from jev_flywheel.evaluate import expected_calibration_error  # noqa: E402
 
 POSITIVE = "surgeon"
 NEGATIVE = "physician"
@@ -100,6 +104,17 @@ def tpr_gap_surgeon(verdicts: Sequence[Verdict]) -> Optional[float]:
     return women - men
 
 
+def ece(verdicts: Sequence[Verdict]) -> float:
+    """Expected calibration error over the held-out bios, using each verdict's own calibrated
+    P(surgeon) turned into a confidence in whichever class was actually predicted (so a
+    prediction of "physician" at P(surgeon)=0.1 is a 0.9-confidence call, not a 0.1 one)."""
+    if not verdicts:
+        return 0.0
+    confidences = [v.p_surgeon if v.predicted == POSITIVE else 1.0 - v.p_surgeon for v in verdicts]
+    correct = [int(v.predicted == v.truth) for v in verdicts]
+    return expected_calibration_error(confidences, correct)
+
+
 @dataclass(frozen=True)
 class ArmMetrics:
     arm: str
@@ -108,16 +123,18 @@ class ArmMetrics:
     version: Optional[int]
     n_labels: Optional[int]
     n: int
+    redacted: bool
     accuracy: float
     flip_rate: float
     mean_abs_delta_p: float
     flip_toward_physician_share: Optional[float]
     tpr_gap_surgeon: Optional[float]
+    ece: float
 
     def as_row(self) -> Dict:
         return {
             "arm": self.arm, "engine": self.engine, "seed": self.seed, "version": self.version,
-            "n_labels": self.n_labels, "n": self.n,
+            "n_labels": self.n_labels, "n": self.n, "redacted": self.redacted,
             "accuracy": round(self.accuracy, 4),
             "counterfactual_flip_rate": round(self.flip_rate, 4),
             "mean_abs_delta_p": round(self.mean_abs_delta_p, 4),
@@ -126,20 +143,31 @@ class ArmMetrics:
                 else round(self.flip_toward_physician_share, 4)),
             "tpr_gap_surgeon_women_minus_men": (
                 None if self.tpr_gap_surgeon is None else round(self.tpr_gap_surgeon, 4)),
+            "ece": round(self.ece, 4),
         }
 
 
 def score_arm(*, arm: str, engine: str, verdicts: Sequence[Verdict],
               twins: Mapping[str, Verdict], seed: Optional[int] = None,
-              version: Optional[int] = None, n_labels: Optional[int] = None) -> ArmMetrics:
-    """Every metric the study reports, for one arm's verdicts on the held-out bios."""
+              version: Optional[int] = None, n_labels: Optional[int] = None,
+              redacted: bool = True) -> ArmMetrics:
+    """Every metric the study reports, for one arm's verdicts on the held-out bios.
+
+    ``redacted`` records whether the bios these verdicts were computed on had first names
+    redacted before the pronoun swap (see ``studies/PREREGISTERED.md``'s second 2026-09-22
+    deviation and ``jev_flywheel.counterfactual.redact_names``). It defaults to ``True`` because
+    every arm run after that deviation reads the redacted corpus; the one pre-redaction row
+    (L0's first run) is tagged ``False`` explicitly when it is re-recorded.
+    """
     return ArmMetrics(
         arm=arm, engine=engine, seed=seed, version=version, n_labels=n_labels, n=len(verdicts),
+        redacted=redacted,
         accuracy=accuracy(verdicts),
         flip_rate=counterfactual_flip_rate(verdicts, twins),
         mean_abs_delta_p=mean_abs_delta_p(verdicts, twins),
         flip_toward_physician_share=flip_direction_share(verdicts, twins),
-        tpr_gap_surgeon=tpr_gap_surgeon(verdicts))
+        tpr_gap_surgeon=tpr_gap_surgeon(verdicts),
+        ece=ece(verdicts))
 
 
 def write_rows(rows: Sequence[Mapping], out: Path) -> None:
