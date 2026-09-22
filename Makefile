@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios race race2 age test diagrams
+.PHONY: help install demo laya student finetune bios race race2 age pairs test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -10,6 +10,7 @@ help:
 	@echo "  make student   3. distil the result into a small local BERT classifier (downloads ~1.2 GB in all)"
 	@echo "  make finetune  4. does gradient fine-tuning of Laya itself beat the fitted head? (one seed, quick)"
 	@echo "  make bios      5. does the engine read gender? (surgeon/physician bios, J0/L0, offline)"
+	@echo "  make pairs     does the gender result hold on other decisions? (3 more pairs, offline)"
 	@echo "  make test      run the test suite"
 	@echo ""
 	@echo "What each one does, what it needs and what to expect: README.md, section 'Try it'."
@@ -147,6 +148,27 @@ age:
 	@echo "age_flip/age_shift (34 vs 61) are read against their own floors (34 vs 35, 61 vs 62);"
 	@echo "read the shift and its interval against the floor's, not the age effect alone."
 	@echo "Next: studies/PREREGISTERED.md, 'does the engine read age?'"
+
+# Does the gender result hold on other decisions? Three more occupation pairs (nurse/physician,
+# paralegal/attorney, teacher/professor), same method as the primary surgeon/physician study, no
+# fitted head, no labels spent (studies/PREREGISTERED.md, "does the gender result hold on other
+# decisions?"). Offline: answers are read from the committed fixtures/bios_pairs/<pair>/ fixtures.
+pairs:
+	@echo "Scoring Jev's and Laya's own answers on three more occupation pairs (1,000 bios per"
+	@echo "label each, all held out) and their gender-swapped, name-redacted counterfactual twins."
+	@echo ""
+	rm -f var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair nurse_physician --engine jev --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair nurse_physician --engine laya --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair paralegal_attorney --engine jev --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair paralegal_attorney --engine laya --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair teacher_professor --engine jev --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --pair teacher_professor --engine laya --out var/bios_pairs.jsonl
+	.venv/bin/python scripts/run_bios_pairs.py --copy-surgeon-physician --out var/bios_pairs.jsonl
+	@echo ""
+	@echo "Four pairs in one table, ordered by the gap in women's share between the two labels;"
+	@echo "counterfactual_flip_rate is a LOWER BOUND on gender sensitivity, as in the primary study."
+	@echo "Next: studies/PREREGISTERED.md, 'does the gender result hold on other decisions?'"
 
 test:
 	.venv/bin/python -m pytest -q

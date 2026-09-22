@@ -1295,3 +1295,88 @@ allowance for the two to swap.
 
 All four pairs in one table, both engines, with intervals. Every prediction above against its
 outcome. The learning-loop arms stay on the surgeon pair; this section is about the engines.
+
+## Outcome (recorded 2026-09-22)
+
+All three new pairs ran exactly as pre-registered: `scripts/build_bios_pairs_fixtures.py`
+sampled 1,000 bios per label from the train split (seed 0, all held out, no pool -- no labels
+spent) for nurse/physician, paralegal/attorney and teacher/professor; the same redaction
+(spaCy `PERSON` &cap; the committed first-name list) and `swap_gender` twin-building the primary
+study uses; both engines answered every bio and its twin (4,000 answers per pair per engine,
+12,000 Jev requests in all, priced first with `--price-only` and sent one pair at a time, well
+under the 12,600 cap -- see `studies/bios_pairs_spend.md`). Paralegal's train-split pool had at
+least 1,000 rows, so no pair needed the "use all available" fallback the pre-registration allowed.
+`scripts/bios_pairs.py` scored all three from the committed fixtures via `scripts/run_bios_pairs.py`,
+appending to `studies/bios_pairs.jsonl`; the surgeon/physician row is copied from the existing
+redacted J0/L0 rows in `studies/bios_gender.jsonl` (tagged `source: "bios_gender"`) rather than
+re-run, per this section's own design.
+
+### Predictions against what happened
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| Laya flip rate, nurse/physician | 10% (5%-18%) | **13.50%** [12.05%, 15.05%] | in range |
+| Laya flip rate, paralegal/attorney | 6% (3%-12%) | **17.85%** [16.15%, 19.55%] | **contradicted** -- well above the upper end of the not-surprised band |
+| Laya flip rate, teacher/professor | 3% (1%-6%) | **7.65%** [6.55%, 8.85%] | **contradicted** -- above the upper end of the not-surprised band |
+| Laya direction, every pair | at least 80% toward the more-female label (65%-100%) | nurse/physician **100%**, paralegal/attorney **100%**, teacher/professor **100%** | confirmed, at the ceiling of the band on every pair |
+| Laya ordering across the four pairs | flip rate increases with the gap in women's share (paralegal >= nurse >= surgeon >= teacher, allowing nurse/paralegal to swap) | **paralegal (17.85%) > nurse (13.50%) > surgeon (7.95%) > teacher (7.65%)** | **confirmed**, in the exact predicted order (no swap needed) |
+| Jev flip rate, every pair | at most 1.5% (0.3%-3%) | nurse/physician **3.30%**, paralegal/attorney **3.90%**, teacher/professor **1.25%**, surgeon/physician **1.05%** | **contradicted** on two of four pairs (nurse and paralegal both clear 3%, past the "at most 1.5%" prediction and the 3% not-surprised ceiling); teacher and surgeon are in range |
+| Jev direction | stereotyped in at least 70% of flips, every pair | nurse/physician **100%**, paralegal/attorney **93.75%**, teacher/professor **75%**, surgeon/physician **93.75%** | confirmed on every pair |
+| Jev ordering | too few flips to order; reported anyway | by gap: teacher (15, 1.25%) > surgeon (35, 1.05%), then nurse (41, 3.30%) > paralegal (47, 3.90%) -- rises overall but surgeon dips below teacher | reported as observed; not monotonic, as the pre-registration anticipated might happen ("too few flips to order") |
+
+### All four pairs, both engines, ordered by the gap in women's share
+
+| pair (gap, pts) | engine | flip rate (95% CI) | direction (toward more-female) | accuracy | recall gap, less-female label, women − men |
+|---|---|---|---|---:|---:|
+| teacher/professor (15) | Jev | 1.25% [0.80%, 1.75%] | 75.0% | 0.8875 | -5.15 pts |
+| teacher/professor (15) | Laya | 7.65% [6.55%, 8.85%] | 100.0% | 0.8145 | -9.10 pts |
+| surgeon/physician (35) | Jev | 1.05% | 93.75% | 0.7850 | -1.42 pts |
+| surgeon/physician (35) | Laya | 7.95% | 99.28% | 0.6730 | -17.18 pts |
+| nurse/physician (41) | Jev | 3.30% [2.60%, 4.10%] | 100.0% | 0.9430 | -2.19 pts |
+| nurse/physician (41) | Laya | 13.50% [12.05%, 15.05%] | 100.0% | 0.8370 | -1.60 pts |
+| paralegal/attorney (47) | Jev | 3.90% [3.10%, 4.85%] | 93.75% | 0.8540 | -5.53 pts |
+| paralegal/attorney (47) | Laya | 17.85% [16.15%, 19.55%] | 100.0% | 0.7210 | -8.84 pts |
+
+(Surgeon/physician's flip-rate CI is not recorded in `studies/bios_gender.jsonl`, which predates
+this section's bootstrap-CI convention; its point estimate is copied unchanged. Every other row's
+CI is the 95% percentile bootstrap over bios, 1,000 resamples, seed 0, matching
+`scripts/bios_race.bootstrap_flip_ci`'s method.)
+
+**The ordering verdict.** Laya's flip rate rises monotonically with the gap in women's share
+across all four pairs -- paralegal/attorney (47 points, 17.85%) > nurse/physician (41, 13.50%) >
+surgeon/physician (35, 7.95%) > teacher/professor (15, 7.65%) -- confirming the pre-registration's
+prediction exactly, without needing the nurse/paralegal swap the prediction allowed for. Jev's
+flip rate also rises with the gap overall (3.90% at 47 points down to roughly 1% at 15-35 points),
+but is not strictly monotonic: surgeon/physician (35 points) flips slightly less than
+teacher/professor (15 points), the one place the ordering does not hold for either engine. Both
+engines clear their pre-registered per-pair predictions on some pairs and miss on others in the
+same direction -- too low for Laya on paralegal/attorney and teacher/professor, too high for Jev
+on nurse/physician and paralegal/attorney -- so the surprises are about magnitude, not about
+whether the pattern generalises: the ordering test is what the pre-registration says would matter
+most for "the engine carries the stereotype" versus "the engine is sensitive to the pronoun but
+not in proportion to it", and it passes cleanly for Laya and passes for Jev everywhere except one
+adjacent pair out of six comparisons.
+
+The gender result holds beyond surgery. Both engines flip their verdict on a pronoun-only swap on
+every one of four occupation pairs spanning three domains (medicine, law, education), the
+direction of every flip is toward the more-female label at least three-quarters of the time (and
+at or near 100% for six of the eight engine-pair combinations), and the size of the effect tracks
+how gendered the pair is in the underlying corpus for Laya exactly and for Jev in all but one
+comparison -- so this is not an artefact of the surgeon/physician pair specifically, though Jev's
+per-pair flip rate (1.05%-3.90%) is roughly an order of magnitude below Laya's (7.65%-17.85%) on
+every pair, the same gap in kind the primary study found on surgeon/physician alone. The two "what
+would change what I believe" triggers that did fire -- Jev exceeding 3% on two pairs, contradicting
+"at most 1.5%" -- mean Jev's invariance is closer to "much less sensitive than Laya" than to
+"insensitive": on this test its flip rate is small but not negligible, and the pre-registration's
+"exceeds 3% on any pair -> its invariance is decision-specific" trigger fired for nurse/physician
+and paralegal/attorney, so that qualifier belongs in the write-up rather than a flat claim of
+near-invariance.
+
+**Spend.** 12,000 Jev requests (the exact pre-registered count: 3 pairs x 4,000 answers per pair),
+priced with `--price-only` before each pair was sent; 4,597,855 input tokens, 437,234 output
+tokens, 0 failures, well under the 12,600 cap. Laya's 12,000 answers were free and local, 0
+failures. Full breakdown: `studies/bios_pairs_spend.md`.
+
+```bash
+make pairs   # scores all three new pairs plus the copied surgeon/physician row, offline
+```
