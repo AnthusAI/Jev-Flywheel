@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios race test diagrams
+.PHONY: help install demo laya student finetune bios race race2 test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -113,6 +113,24 @@ race:
 	@echo "race_flip is a name-only effect measured against its own control floor (white-A vs"
 	@echo "white-B); read the excess and ratio, not the race rate alone."
 	@echo "Next: studies/PREREGISTERED.md, 'does the engine read race from a name?'"
+
+# Race from a full name, second attempt: a recurring cue (pronoun, every [name] placeholder,
+# every PERSON-span surname) instead of the first attempt's one-token pronoun swap, four groups
+# (white, black, hispanic, asian) instead of one, and a continuous outcome (the signed mean
+# shift in P(surgeon)) instead of a flip rate alone. Offline: answers are read from
+# fixtures/bios/answers-race2-laya.jsonl.gz and answers-race2.jsonl.gz.
+race2:
+	@echo "Scoring Laya on all eligible bios and on the 500-bio Jev subsample, and Jev on that"
+	@echo "same 500-bio subsample, under four full-name groups (4 names each)."
+	@echo ""
+	rm -f var/bios_race2.jsonl
+	.venv/bin/python scripts/run_bios_race2.py --engine laya --sample all --out var/bios_race2.jsonl
+	.venv/bin/python scripts/run_bios_race2.py --engine laya --sample 500 --out var/bios_race2.jsonl
+	.venv/bin/python scripts/run_bios_race2.py --engine jev --sample 500 --out var/bios_race2.jsonl
+	@echo ""
+	@echo "shift is a name-only effect measured against its own floor (white names 1-2 vs 3-4);"
+	@echo "read the shift and its interval against the floor's, not the shift alone."
+	@echo "Next: studies/PREREGISTERED.md, 'race from a full name, second attempt'"
 
 test:
 	.venv/bin/python -m pytest -q
