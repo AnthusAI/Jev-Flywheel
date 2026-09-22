@@ -551,22 +551,52 @@ if the first result is dull.
 >   real one when the arms finish; the credentials deviation above stays as the record of why the
 >   study ran in two sittings.
 
-## Outcome (recorded 2026-09-22; blocked on two credentials, see the deviations above)
+> **Deviation, 2026-09-22, after both credentials were confirmed working** (recorded before
+> giving up on the arms it blocks; nothing above -- the predictions, the arms, the sample, or
+> the 2% gate -- is altered).
+>
+> - **The Bedrock analyst is unavailable for a third reason, and this one is not a credential.**
+>   `aws sts get-caller-identity` succeeds and a real Jev request round-trips cleanly (see the
+>   spend log), but the smallest possible steering round -- ten labels, one round, the recorded
+>   procedure, `us.moonshotai.kimi-k3` on Bedrock, `allow_spend=True` -- fails on the call to the
+>   model itself: `litellm.BadRequestError: BedrockException - "This model doesn't support the
+>   temperature field. Remove temperature and try again."` This is a real response from Bedrock,
+>   not a network or auth failure, and it reproduced on a second attempt. `procedures/steer_scorecard.tac`
+>   declares no `temperature` on either `Agent {}` block; Tactus 0.52.0 (this checkout's pinned
+>   version) sends one anyway on every Bedrock call regardless of what the procedure asks for,
+>   which is a Tactus/litellm compatibility issue with this model, not something
+>   `jev_flywheel` or this study's own code controls. Per the pre-registration's step 2 rule this
+>   is reported, not patched around: **J1, J2, L1, L2, and LF (which trains on the L1 seed-1
+>   run's labels) could not be run in this environment.** The invariance gate itself
+>   (`jev_flywheel/invariance.py`, and its wiring into `jev_flywheel/host.py` and
+>   `jev_flywheel/steer.py` behind `invariance_max_flip_rate`) is implemented and specified
+>   end-to-end against a scripted analyst (`tests/steer_test.py`, no API keys), so nothing about
+>   J2/L2 needs further code once the model issue is fixed upstream or a different Bedrock model
+>   is substituted (which the pre-registration does not authorize on its own).
+> - **J0 did run.** `TYPESAFE_API_KEY` only blocks the analyst, not plain Jev answering, and
+>   `scripts/build_bios_jev_answers.py` (new) asks Jev the one scorecard question of all 8,000
+>   bios (pool, test, and the test items' counterfactual twins) with no steering round involved.
+>   Priced first (`--price-only`, then a 100-item test batch, then the remaining 7,900), per the
+>   money rule; see `studies/bios_gender_spend.md`. Neither `typesafe-sdk` 0.7.0 nor `flywheel
+>   topup` exposes a dollar rate anywhere in this repo or its dependencies, so the spend log and
+>   this section track **requests and input/output tokens**, the only units available, and say so
+>   plainly rather than inventing a $ figure.
 
-Only the corpus and the **L0** arm (Laya's own holistic answer, no fitted head, no labels) could
-be measured. Every other row needs `TYPESAFE_API_KEY` (J0, J1, J2) or a working Bedrock session
-for the analyst (J1, J2, L1, L2, and LF, which trains on J1/L1's output). Both were unavailable
-throughout this run. The table reports what was predicted and, where nothing else stands in the
-way, what was found; every other cell is **blocked**, not negative or zero.
+## Outcome (recorded 2026-09-22)
+
+**J0 and L0 are measured. J1, J2, L1, L2 and LF are blocked** by the Bedrock/Tactus
+compatibility failure above, not by missing credentials -- both keys work, and a real Jev
+request and a real Bedrock request both round-tripped. The table reports what was predicted
+and what was found; blocked cells are marked as such, not as negative or zero.
 
 | measurement | prediction | observed | verdict |
 |---|---|---|---|
-| J0 accuracy | 0.80 (0.70-0.88) | blocked (no `TYPESAFE_API_KEY`) | not measured |
-| J0 flip rate | 4% (1%-12%) | blocked | not measured |
-| J0 direction (share toward physician on male->female flips) | at least 70% (55%-90%) | blocked | not measured |
-| J0 TPR gap, women minus men | -6 pts (-15 to 0) | blocked | not measured |
-| **L0 flip rate** | higher than J0, about 8% (3%-20%) | **7.9%** (158/2,000 pairs) | **in range and close to the point estimate**; cannot be compared with J0, which was not measured |
-| J1 flip rate vs J0 | within 1 point of J0 | blocked (no Bedrock analyst) | not measured |
+| J0 accuracy | 0.80 (0.70-0.88) | **0.785** | in range, near the point estimate |
+| J0 flip rate | 4% (1%-12%) | **1.05%** (21/2,000 pairs) | in range, near the low end |
+| J0 direction (share toward physician on male->female flips) | at least 70% (55%-90%) | **93.75%** (15/16 male-origin flips) | clears the floor; above the upper end of the "would not be surprised by" band, on a small base (16 flips) |
+| J0 TPR gap, women minus men | -6 pts (-15 to 0) | **-1.4 pts** | in range, near zero -- smaller than predicted |
+| **L0 flip rate** | higher than J0, about 8% (3%-20%) | **7.95%** (159/2,000 pairs), vs. J0's 1.05% | **right**: L0 > J0, and close to the 8% point estimate |
+| J1 flip rate vs J0 | within 1 point of J0 | blocked (Bedrock/Tactus failure) | not measured |
 | J1 accuracy vs J0 | +3 pts (+1 to +8) | blocked | not measured |
 | J2 flip rate vs J0 | at most half of J0's | blocked | not measured |
 | Analyst proposes a gendered element (J1, no gate) | at most 1 of 3 seeds | blocked | not measured |
@@ -575,51 +605,76 @@ way, what was found; every other cell is **blocked**, not negative or zero.
 
 What could be measured beyond the pre-registration's own table:
 
-- **L0 accuracy is 0.672** on the 2,000 held-out surgeon/physician bios (majority class,
-  physician, is 50% of this pair by construction, so this is well above chance but well below
-  the 0.80 predicted for J0 -- a different engine, not a test of that prediction).
-- **L0's flip direction is not merely "mostly toward physician," it is total on this run**: of
-  the 137 male-origin bios whose verdict changed under the swap, **137 moved to "physician" and
-  zero moved to "surgeon"** (`flip_toward_physician_share = 1.0`). The reverse direction
-  (female-original bios swapped to male) flipped less often (21 of 158 total flips) and was not
-  separately tallied by the pre-registration's direction metric, which is defined one-directional
-  on purpose (see `scripts/bios_gender.py:flip_direction_share`). This is the single cleanest
-  result in this run: on this engine, on this pair, every flip this test can detect points the
-  same way the paper's stereotype does, with the gate metric giving no counterexample to weigh
-  against it.
-- **L0's TPR gap for "surgeon" is -17.1 points** (recall 0.221 on women's surgeon bios, 136
-  items, against 0.391 on men's, 864 items; more negative than J0's predicted -6, but J0 was not
-  measured on this engine or this metric before, so the two numbers are not a like-for-like
-  comparison -- they differ by engine as well as by whatever else differs between Jev and Laya).
+- **Redaction changed almost nothing about L0's numbers.** L0 was measured twice: once on the
+  pre-redaction fixtures (flip rate 7.9%, 158/2,000, `redacted: false` in
+  `studies/bios_gender.jsonl`) and once after every bio's first names were redacted
+  (`redacted: true`, flip rate 7.95%, 159/2,000). The direction share moved from a clean 1.0 to
+  0.9928 (one counterexample appeared among 139 flips) and the TPR gap moved from -17.06 to
+  -17.18 points. All differences are inside the noise a single extra flip produces at n=2,000;
+  removing the name cue did not change the finding, which is what the pre-registration's second
+  2026-09-22 deviation predicted going in.
+- **J0 is far less gender-sensitive than L0 on this test, by an order of magnitude**: 1.05%
+  flip rate against 7.95%, mean |delta P| 0.0126 against 0.0751, and a TPR gap of -1.4 points
+  against -17.2. Both engines are put through the identical test on the identical corpus and
+  twins, so this is a real difference between them on this measurement, not an artifact of
+  different prompts or splits. It is still a **lower bound** for both: redaction removes first
+  names, but a title ("Dr."), a possessive left over from a name ("Dr. [name]'s"), and role
+  nouns the swap rule does not carry (e.g. "chairwoman" is swapped, but a bio's institutional
+  context, patient-pronoun references to *other* people, or gendered honorifics outside the
+  swap-and-redact vocabulary are not touched) can still leak gender through either bound.
+- **J0's flip direction is on a small base.** Only 16 of 1,000 male-origin bios flipped under the
+  swap at all (1.6%), so "93.75% moved toward physician" is 15 of those 16 -- consistent with the
+  predicted direction and outside the "would not be surprised by" band only because the base rate
+  of flips itself is so low, not because the direction is unusually skewed; one different flip
+  would have moved the share nine points. L0's direction share (0.9928, on 139 flips) is a more
+  stable estimate of the same effect and is closer to the original 1.0 recorded before redaction.
+- **L0's TPR gap for "surgeon" is far larger than J0's or the paper's rough shape**: -17.18 points
+  (recall 0.221 on women's surgeon bios, 136 items, against 0.397 on men's, 864 items) against
+  J0's -1.42 (recall 0.985 on women, 0.999 on men -- J0 gets nearly every surgeon bio right
+  regardless of gender, so its TPR gap is small because its recall is high on both groups, not
+  because it is insensitive to the swap it does show elsewhere in the flip-rate numbers).
 - **The counterfactual swap touched bios as the pre-registration expected**: mean 3.04 tokens
-  changed per twin, and only 6 of 2,000 test bios had zero swappable tokens (no pronoun or role
-  noun the rule recognizes) -- consistent with the pre-registration's "about three tokens each"
-  and its 99.5%/99.8% coverage claim for the sentiment corpus's swap rule, now checked on a
-  second, unrelated corpus.
+  changed per twin (unchanged by redaction, since redaction and the pronoun swap touch disjoint
+  tokens), and only 6 of 2,000 test bios had zero swappable tokens -- consistent with the
+  pre-registration's "about three tokens each" and its 99.5%/99.8% coverage claim, now checked on
+  a second, unrelated corpus and confirmed again after redaction.
 - **The corpus reproduces the source paper's gender skew inside this sample**: 14.0% of sampled
   surgeon bios are women (421/3,000) against 48.3% of physician bios (1,449/3,000), against the
-  pre-registration's stated population rates of 14.8% and 49.4% -- close, as expected from a
-  3,000-item uniform sample of a skew measured over the full split.
+  pre-registration's stated population rates of 14.8% and 49.4%.
 
-**What would change what I believe, updated for what is actually known:** nothing here falsifies
-or confirms the diagnosis the pre-registration is built to test, because the diagnosis is about
-whether *steering* (J1/J2) and *fine-tuning* (LF) change an engine's gender sensitivity, and
-none of those three arms ran. The one finding that stands on its own -- L0's flip direction is
-total, not merely majority, on the flips this test can see -- says an unmitigated free local
-engine reads gender in this pair in exactly the direction the literature predicts, at least as
-far as a pronoun-and-role-noun swap can show it. It does not say anything about the hosted engine,
-about whether re-weighting existing questions helps (J1/L1), about whether the invariance gate
-can find a question that does not (J2/L2), or about fine-tuning's effect (LF): the pre-registration
-was written to answer those, and answering them needs the two credentials this run did not have.
+**What would change what I believe, updated for what is actually known:** the central causal
+claim -- that an engine can be shown to read gender through a pronoun swap alone, without relying
+on a correlational TPR gap -- is now confirmed for **both** engines, not just Laya: J0 flips on
+1.05% of held-out bios for no reason but a pronoun and a handful of role nouns, and on the flips
+it produces, the direction matches the paper's stereotype in 15 of 16 cases. That single-engine
+finding from the interim outcome ("L0's flip direction is total, not merely majority") now has a
+second, independent, much lower-flip-rate confirmation from the hosted engine, put through
+exactly the same test. What the pre-registration was actually built to test -- whether *steering*
+(J1/J2) can find a gender-blind element that still beats the incumbent, and whether the gate
+(J2/L2) or ordinary fine-tuning (LF) changes an engine's own sensitivity -- is unanswered, because
+none of those three arms ran; the Bedrock/Tactus incompatibility blocks all of them equally.
 
-**What is committed and ready to run the moment both keys work**, with no further code:
+**Spend.** Total Jev usage for this study: 8,001 requests (1 credential-check request plus
+8,000 for J0), roughly 3.06M input tokens and 300K output tokens. No Bedrock analyst request
+succeeded, so no steering-round spend was incurred beyond the one failed attempt used to
+diagnose the temperature error. Neither `typesafe-sdk` 0.7.0 nor this repo's CLI exposes a
+dollar rate anywhere, so this total cannot be checked against the $60 cap in dollars; it is
+reported in the only units available (`studies/bios_gender_spend.md` has the full, priced-first
+breakdown by step).
+
+**What is committed and ready to run the moment the Bedrock/Tactus issue is fixed**, with no
+further code:
 
 ```bash
-cp .env.example .env               # fill in TYPESAFE_API_KEY
-aws login                          # or otherwise refresh Bedrock credentials
-python scripts/run_bios_arms.py --arm J0        # after a Jev topup over fixtures/bios/items.jsonl
-# J1/J2/L1/L2/LF: build a Workspace.init(..., "fixtures/bios", ...) per arm and run
-# jev_flywheel.simulate.label_with_reference + jev_flywheel.steer.run_steering, exactly as
-# scripts/laya_rounds.py does for the sentiment corpus; J2/L2 pass compare()'s
-# invariance_flip_rates, computed from the labeled items' swapped-twin answers.
+# TYPESAFE_API_KEY and Bedrock credentials already work in this checkout; the remaining
+# blocker is upstream (Tactus 0.52.0 sending a temperature field us.moonshotai.kimi-k3 on
+# Bedrock rejects). Once that is fixed (a Tactus upgrade, or another way to omit the field):
+python scripts/laya_rounds.py --seeds 1 2 3        # the pattern for L1, adapted to fixtures/bios
+# J1/J2/L1/L2: build Workspace.init(..., "fixtures/bios", answers=..., engine=...) per arm and
+# run jev_flywheel.simulate.label_with_reference + jev_flywheel.steer.run_steering, exactly as
+# scripts/laya_rounds.py does for the sentiment corpus; J2/L2 pass
+# invariance_max_flip_rate=0.02 to run_steering (wired end-to-end, specced in
+# tests/steer_test.py under "the gender-invariance gate").
+# LF: scripts/finetune_laya.py's arm A recipe, seeds 1-3, 3-fold CV, on the 140 labels the
+# L1 seed-1 run above produces.
 ```
