@@ -527,6 +527,30 @@ if the first result is dull.
 >   The pricing check the pre-registration's money rule asks for (`flywheel topup` without
 >   `--yes`) was therefore never reached; nothing was priced because nothing could be sent.
 
+> **Deviation, 2026-09-22, later the same day, still before any Jev request** (the credentials
+> above were then supplied and the study resumed).
+>
+> - **First names are redacted before the pronoun swap, in every item.** A check on 2,000 bios
+>   found the subject's first name in the body of **28%** of them ("Alysson has extensive
+>   research experience"), so the pre-registered pronoun-only swap left a gendered cue in more
+>   than a quarter of twins; "lower bound" was an understatement. The fix: every bio, pool and
+>   held-out alike, has each token that is both inside a spaCy `en_core_web_sm` 3.8.0 `PERSON`
+>   span *and* on the committed list of US first names (`fixtures/bios/first_names.txt`, SSA
+>   data, at least 5,000 births 1970-2021) replaced by `[name]`. The twin is then the pronoun
+>   swap of the redacted text, so the two texts an engine sees differ in pronouns and role nouns
+>   only. Surnames stay (they are not gendered); institution names that happen to contain a
+>   first name ("Albert Einstein College") are redacted the same way in both texts, which is
+>   noise rather than bias, and the count of redacted tokens is recorded per item. The name list
+>   alone would have hit 62% of bios, mostly institutions ("Mercy Hospital", "Baylor College");
+>   spaCy alone tags insurance plans and surnames; the intersection is what is used.
+> - **This changes the corpus every arm reads**, so `fixtures/bios/` is rebuilt and Laya's
+>   answers recomputed. The L0 number recorded below (7.9%, before redaction) was seen before
+>   this decision was made; the decision was to remove a cue, not to change any prediction,
+>   threshold, sample or pair, and both the pre-redaction and post-redaction L0 numbers are kept.
+> - The interim Outcome section below, written while the study was blocked, is replaced by the
+>   real one when the arms finish; the credentials deviation above stays as the record of why the
+>   study ran in two sittings.
+
 ## Outcome (recorded 2026-09-22; blocked on two credentials, see the deviations above)
 
 Only the corpus and the **L0** arm (Laya's own holistic answer, no fitted head, no labels) could
