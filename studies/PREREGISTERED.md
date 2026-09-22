@@ -492,3 +492,110 @@ put through the same test, so this cannot be read as a finding about one vendor.
 counterfactual numbers are lower bounds and are labelled as such wherever they appear. The
 occupation pair, the sample and the gate threshold were chosen once, here, and are not changed
 if the first result is dull.
+
+> **Deviations, 2026-09-22** (recorded before any arm ran; nothing above -- the predictions,
+> the arms, the sample, or the 2% gate -- is altered).
+>
+> - **`TYPESAFE_API_KEY` was not available.** No `.env` existed in this checkout and none was
+>   supplied. Every Jev-dependent measurement (J0, J1, J2, and the top-up J2 needs to score a
+>   proposed element on the swapped twins of the labeled items) is therefore **not run**. This
+>   blocks the whole left-hand column of the arms table, not just J0.
+> - **The Bedrock analyst was not available.** `aws sts get-caller-identity` returned "Your
+>   session has expired. Please reauthenticate using `aws login`" -- an interactive SSO login,
+>   which is out of scope for an unattended run and was not attempted. Every arm that needs a
+>   steering round (J1, J2, L1, L2) is therefore also **not run**, and LF -- which trains on
+>   "the 140 labels from the L1 seed-1 run" -- has no labels to train on and could not run either.
+>   No workaround (a different provider, a cached credential) was substituted; the rule in
+>   [Going live](#going-live) is Kimi K3 on Bedrock, and nothing here reruns the study on a
+>   different model.
+> - **What did run, offline and with no keys:** the corpus (`fixtures/bios/items.jsonl`, built by
+>   `scripts/build_bios_fixtures.py` from the public `LabHC/bias_in_bios` parquet on the Hub --
+>   no auth needed for a public dataset), the metrics module (`scripts/bios_gender.py`, specs in
+>   `tests/bios_gender_test.py`), the invariance gate as a standalone tested function
+>   (`jev_flywheel/invariance.py`, specs in `jev_flywheel/invariance_test.py`, wired into
+>   `jev_flywheel.fit.compare` behind an `invariance_flip_rates` parameter that defaults to
+>   `None` and changes nothing about any existing caller or test), Laya's own answer to the one
+>   scorecard question on all 8,000 items (`scripts/build_bios_laya_answers.py`, free and local
+>   -- writes `fixtures/bios/answers-laya.jsonl.gz`), and the **L0 arm**
+>   (`scripts/run_bios_arms.py --arm L0`, also exposed as `make bios`, offline from the committed
+>   fixture).
+> - **The nurse/physician replication was not built.** The pre-registration says to run it "at
+>   the end if everything else is done and the Jev budget allows"; nothing else is done, so it
+>   was not started. `scripts/build_bios_fixtures.py --pair nurse_physician` builds it once keys
+>   are available; it needs no code not already written.
+> - **Total Jev spend: $0.** No Jev request was ever sent -- there was no key to send one with.
+>   The pricing check the pre-registration's money rule asks for (`flywheel topup` without
+>   `--yes`) was therefore never reached; nothing was priced because nothing could be sent.
+
+## Outcome (recorded 2026-09-22; blocked on two credentials, see the deviations above)
+
+Only the corpus and the **L0** arm (Laya's own holistic answer, no fitted head, no labels) could
+be measured. Every other row needs `TYPESAFE_API_KEY` (J0, J1, J2) or a working Bedrock session
+for the analyst (J1, J2, L1, L2, and LF, which trains on J1/L1's output). Both were unavailable
+throughout this run. The table reports what was predicted and, where nothing else stands in the
+way, what was found; every other cell is **blocked**, not negative or zero.
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| J0 accuracy | 0.80 (0.70-0.88) | blocked (no `TYPESAFE_API_KEY`) | not measured |
+| J0 flip rate | 4% (1%-12%) | blocked | not measured |
+| J0 direction (share toward physician on male->female flips) | at least 70% (55%-90%) | blocked | not measured |
+| J0 TPR gap, women minus men | -6 pts (-15 to 0) | blocked | not measured |
+| **L0 flip rate** | higher than J0, about 8% (3%-20%) | **7.9%** (158/2,000 pairs) | **in range and close to the point estimate**; cannot be compared with J0, which was not measured |
+| J1 flip rate vs J0 | within 1 point of J0 | blocked (no Bedrock analyst) | not measured |
+| J1 accuracy vs J0 | +3 pts (+1 to +8) | blocked | not measured |
+| J2 flip rate vs J0 | at most half of J0's | blocked | not measured |
+| Analyst proposes a gendered element (J1, no gate) | at most 1 of 3 seeds | blocked | not measured |
+| LF flip rate vs L0 | higher | blocked (no labels: needs the L1 seed-1 run) | not measured |
+| LF accuracy | 0.85 (0.80-0.90) | blocked | not measured |
+
+What could be measured beyond the pre-registration's own table:
+
+- **L0 accuracy is 0.672** on the 2,000 held-out surgeon/physician bios (majority class,
+  physician, is 50% of this pair by construction, so this is well above chance but well below
+  the 0.80 predicted for J0 -- a different engine, not a test of that prediction).
+- **L0's flip direction is not merely "mostly toward physician," it is total on this run**: of
+  the 137 male-origin bios whose verdict changed under the swap, **137 moved to "physician" and
+  zero moved to "surgeon"** (`flip_toward_physician_share = 1.0`). The reverse direction
+  (female-original bios swapped to male) flipped less often (21 of 158 total flips) and was not
+  separately tallied by the pre-registration's direction metric, which is defined one-directional
+  on purpose (see `scripts/bios_gender.py:flip_direction_share`). This is the single cleanest
+  result in this run: on this engine, on this pair, every flip this test can detect points the
+  same way the paper's stereotype does, with the gate metric giving no counterexample to weigh
+  against it.
+- **L0's TPR gap for "surgeon" is -17.1 points** (recall 0.221 on women's surgeon bios, 136
+  items, against 0.391 on men's, 864 items; more negative than J0's predicted -6, but J0 was not
+  measured on this engine or this metric before, so the two numbers are not a like-for-like
+  comparison -- they differ by engine as well as by whatever else differs between Jev and Laya).
+- **The counterfactual swap touched bios as the pre-registration expected**: mean 3.04 tokens
+  changed per twin, and only 6 of 2,000 test bios had zero swappable tokens (no pronoun or role
+  noun the rule recognizes) -- consistent with the pre-registration's "about three tokens each"
+  and its 99.5%/99.8% coverage claim for the sentiment corpus's swap rule, now checked on a
+  second, unrelated corpus.
+- **The corpus reproduces the source paper's gender skew inside this sample**: 14.0% of sampled
+  surgeon bios are women (421/3,000) against 48.3% of physician bios (1,449/3,000), against the
+  pre-registration's stated population rates of 14.8% and 49.4% -- close, as expected from a
+  3,000-item uniform sample of a skew measured over the full split.
+
+**What would change what I believe, updated for what is actually known:** nothing here falsifies
+or confirms the diagnosis the pre-registration is built to test, because the diagnosis is about
+whether *steering* (J1/J2) and *fine-tuning* (LF) change an engine's gender sensitivity, and
+none of those three arms ran. The one finding that stands on its own -- L0's flip direction is
+total, not merely majority, on the flips this test can see -- says an unmitigated free local
+engine reads gender in this pair in exactly the direction the literature predicts, at least as
+far as a pronoun-and-role-noun swap can show it. It does not say anything about the hosted engine,
+about whether re-weighting existing questions helps (J1/L1), about whether the invariance gate
+can find a question that does not (J2/L2), or about fine-tuning's effect (LF): the pre-registration
+was written to answer those, and answering them needs the two credentials this run did not have.
+
+**What is committed and ready to run the moment both keys work**, with no further code:
+
+```bash
+cp .env.example .env               # fill in TYPESAFE_API_KEY
+aws login                          # or otherwise refresh Bedrock credentials
+python scripts/run_bios_arms.py --arm J0        # after a Jev topup over fixtures/bios/items.jsonl
+# J1/J2/L1/L2/LF: build a Workspace.init(..., "fixtures/bios", ...) per arm and run
+# jev_flywheel.simulate.label_with_reference + jev_flywheel.steer.run_steering, exactly as
+# scripts/laya_rounds.py does for the sentiment corpus; J2/L2 pass compare()'s
+# invariance_flip_rates, computed from the labeled items' swapped-twin answers.
+```

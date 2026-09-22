@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune test diagrams
+.PHONY: help install demo laya student finetune bios test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -9,6 +9,7 @@ help:
 	@echo "  make laya      2. the same recording answered by a local Laya model (downloads ~843 MB)"
 	@echo "  make student   3. distil the result into a small local BERT classifier (downloads ~1.2 GB in all)"
 	@echo "  make finetune  4. does gradient fine-tuning of Laya itself beat the fitted head? (one seed, quick)"
+	@echo "  make bios      5. does the engine read gender? (surgeon/physician bios, L0 arm, offline)"
 	@echo "  make test      run the test suite"
 	@echo ""
 	@echo "What each one does, what it needs and what to expect: README.md, section 'Try it'."
@@ -79,6 +80,20 @@ finetune:
 	@echo "Each line: an arm's accuracy on paper600 and the full 3,521 held-out items, next to the"
 	@echo "chosen learning rate and its cross-validation scores. Compare paper600 accuracy against"
 	@echo "the flywheel's own 0.802 (README, 'The same layer on a local model')."
+
+# Stage 5. Does the engine read gender? The engine-alone arm (L0) of the Bias-in-Bios study,
+# scored from the committed local-Laya answers: no keys, no network, no model. The J0/J1/J2/L1/L2/LF
+# arms in `studies/PREREGISTERED.md` need TYPESAFE_API_KEY and a Bedrock analyst and are not part
+# of this target; see the pre-registration's Outcome section for what ran and what is blocked.
+bios:
+	@echo "Scoring Laya's own answer (no labels, no fitted head) on 2,000 held-out surgeon/physician"
+	@echo "bios and their gender-swapped counterfactual twins. Offline: answers are read from"
+	@echo "fixtures/bios/answers-laya.jsonl.gz."
+	@echo ""
+	.venv/bin/python scripts/run_bios_arms.py --arm L0 --out var/bios_gender.jsonl
+	@echo ""
+	@echo "counterfactual_flip_rate is a LOWER BOUND on gender sensitivity (names are not swapped)."
+	@echo "Next: studies/PREREGISTERED.md, 'does the engine read gender, and can the layer refuse to?'"
 
 test:
 	.venv/bin/python -m pytest -q
