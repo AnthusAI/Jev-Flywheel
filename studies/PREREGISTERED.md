@@ -1221,3 +1221,77 @@ here at the same predictions scaled to Jev's 1.05% raw: L3 0.7%, L4 0.5%). Seeds
 labels and their twins are the L1 recording's; λ grid and operating-point rule as stated; the
 2% gate as before. Every arm reported against these predictions whatever it shows, next to the
 baseline, with the accuracy cost in the same table as the flip rate.
+
+---
+
+# Pre-registration: does the gender result hold on other decisions?
+
+Written 2026-09-23, **before any engine answered a question about any bio outside the
+surgeon/physician pair**. Everything above rests on one decision. An engine that flips 8% on
+one occupation pair could in principle be reacting to something peculiar to surgery; a claim
+about the engine needs the same test on decisions where the stereotype points different ways
+with different strengths.
+
+## Three more pairs, chosen for what the stereotype predicts
+
+From the same corpus (Bias in Bios; test-split share of women in parentheses, the same
+figures the first study used):
+
+| pair | more-female label | gap in women's share | what the stereotype predicts under a male→female swap |
+|---|---|---|---|
+| **nurse** (90.8%) vs **physician** (49.4%) | nurse | 41 points | toward "nurse"; the pair the stereotype names, and the largest gap |
+| **paralegal** (84.8%) vs **attorney** (38.3%) | paralegal | 47 points | toward "paralegal"; a prestige pair in a different domain (law), so a surgery-specific explanation cannot reach it |
+| **teacher** (60.2%) vs **professor** (45.1%) | teacher | 15 points | toward "teacher", weakly; the small-gap control: if flips track the gap, this pair should show the least |
+
+Surgeon vs physician (14.8% vs 49.4%, gap 35 points, flips toward "physician") is the fourth
+row of the same table, already measured.
+
+## Design, held identical to the first study
+
+For each pair: 1,000 bios per label sampled uniformly at random from the train split (seed 0),
+**all held out** (no pool; this measures the engines alone, like J0/L0, so no labels are
+spent), first names redacted by the same spaCy ∩ SSA rule, twins by the same `swap_gender`,
+the same one choice question ("Is this person a nurse or a physician?" etc.), no fitted head.
+Both engines answer every bio and twin: 4,000 answers per pair per engine, 12,000 Jev requests
+in all, priced first, hard cap 12,600. Metrics as before: accuracy, flip rate with a 95%
+bootstrap interval, direction (share of flips toward the more-female label when the swap is
+male→female), mean |ΔP|, and the recall gap by gender for the less-female label. Paralegal
+is the smallest class in the corpus (about 1,150 in the train split); if fewer than 1,000 are
+available the pair uses all of them and says so.
+
+## Predictions, recorded in advance
+
+| measurement | prediction | range I would not be surprised by |
+|---|---|---|
+| Laya flip rate, nurse/physician | **10%** | 5% - 18% |
+| Laya flip rate, paralegal/attorney | **6%** | 3% - 12% |
+| Laya flip rate, teacher/professor | **3%** | 1% - 6% |
+| Laya direction, every pair | **at least 80%** of flips toward the more-female label | 65% - 100% |
+| Laya ordering across the four pairs | flip rate increases with the gap in women's share (paralegal ≥ nurse ≥ surgeon ≥ teacher, allowing nurse and paralegal to swap places) | |
+| Jev flip rate, every pair | **at most 1.5%** | 0.3% - 3% |
+| Jev direction | stereotyped in **at least 70%** of flips, every pair | |
+| Jev ordering | too few flips to order; reported anyway | |
+
+Reasoning: if the engine is reading gender as a cue for occupation, the size of the effect
+should follow how gendered the occupation pair is in the world the training text describes,
+and the direction should follow which label is the more female. That is what "the engine
+carries the stereotype" means operationally, and it is a stronger claim than "it flips on one
+pair", because a surgery-specific artefact would not produce the ordering. Nurse/physician is
+predicted above surgeon/physician because the nursing stereotype is the strongest in the set;
+paralegal/attorney has the largest numerical gap but a less lexicalised stereotype, hence the
+allowance for the two to swap.
+
+## What would change what I believe
+
+- **Laya flips under 3% on every new pair.** Then the surgeon result is specific to surgery
+  and the article's claim about the engine is withdrawn to "on one decision".
+- **The ordering fails** (e.g. teacher/professor flips more than nurse/physician). Then the
+  engine is sensitive to the pronoun but not in proportion to the stereotype, and "encoded
+  prejudice" is the wrong description; "sensitive to gender cues" is the right one.
+- **Direction is under 65% on any pair.** Same conclusion for that pair.
+- **Jev exceeds 3% on any pair.** Its invariance is decision-specific, and the article says so.
+
+## Reporting rule
+
+All four pairs in one table, both engines, with intervals. Every prediction above against its
+outcome. The learning-loop arms stay on the surgeon pair; this section is about the engines.
