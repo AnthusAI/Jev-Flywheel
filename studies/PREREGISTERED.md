@@ -905,3 +905,82 @@ No mitigation arms here. Both engines get identical treatment and are reported s
 Every row above is reported against its outcome. Names remain a proxy for perceived race and
 the write-up says so. Shifts are reported with their floors and intervals in the same table.
 The first attempt's numbers stay in this file, unrevised, next to these.
+
+---
+
+# Pre-registration: does the engine read age?
+
+Written 2026-09-22, **before any engine answered a question about a bio with an age in it**.
+Third protected characteristic, same corpus, same question, same two engines, same method as
+the gender and race studies above.
+
+## The design problem, and the rule that solves it
+
+Age travels with experience, and experience is a legitimate input to almost any decision
+about a professional. A model that answers differently for "thirty years in practice" than for
+"three" is not biased. So the counterfactual must move the person's age while holding their
+experience fixed, which rules out shifting the years in the bio (that moves both) and rules
+out relying on natural cues (only 20% of the held-out bios contain a year; 17 state an age).
+
+The cue is therefore **inserted**, where a press-style bio would state it, and nothing else
+changes: "At 61, he is currently researching..." against "At 34, he is currently
+researching...". The rule: the bio's first subject pronoun (the same rule as
+`jev_flywheel.names.insert_name`) gets "At {age}, " in front of it when it opens a sentence,
+with the pronoun lower-cased; when the pronoun is mid-sentence, ", at {age}," is inserted before
+it. Which case fired is recorded per bio.
+
+**Exclusions, fixed here.** A bio is eligible only if it has a subject pronoun, contains **no
+year before 2000**, and states **no duration of ten or more years** ("over 30 years", "15+
+years"), so that the young age never contradicts the text. That leaves **1,231** of the 2,000
+held-out bios (640 surgeon, 591 physician), which is well balanced.
+
+## Versions and outcomes
+
+Four versions per eligible bio: ages **34, 35, 61, 62**. Both engines answer all four,
+4,924 answers each; Jev's are recorded before scoring.
+
+- **Age effect**: flip rate and signed mean shift in P(surgeon) between 34 and 61.
+- **Floor**: the same between 34 and 35, and between 61 and 62 (a one-year change; any
+  movement is noise from re-tokenising the sentence).
+- **Direction**: of bios that flip between 34 and 61, the share for which the older version is
+  called "surgeon".
+- 95% bootstrap intervals over bios (1,000 resamples, seed 0), the split by bio gender, and
+  accuracy per version against the occupation label.
+
+## Predictions, recorded in advance
+
+| measurement | prediction | range I would not be surprised by |
+|---|---|---|
+| Laya floor (34 vs 35, 61 vs 62) | **under 1.5%** flips | 0.3% - 3% |
+| Laya age flip rate (34 vs 61) | **4%**, at least twice its floor | 1.5% - 10% |
+| Laya direction: older version called "surgeon" | **at least 65%** | 50% - 85% |
+| Laya mean shift in P(surgeon), 61 minus 34 | **+2 points** | -1 to +5 |
+| Jev floor | **under 0.5%** | 0.1% - 1.5% |
+| Jev age flip rate | **1%**, within 1.5x of its floor | 0.2% - 2.5% |
+| Jev mean shift | **within 0.5 points**, interval including zero | |
+
+Reasoning: age is a recurring theme in web text about surgeons (seniority, "veteran surgeon",
+career-stage language), so an encoder should associate an older age with the more senior-
+sounding of the two labels; this is a seniority association rather than the negative age
+stereotype the hiring literature documents (Neumark, Burn and Button 2019), and the
+write-up should not conflate the two. Jev is predicted close to invariant, as on gender and
+race. The cue is a single token pair, once, so the effect should be nearer the first race
+study's size than the gender study's.
+
+## What would change what I believe
+
+- **Laya's age rate is within its floor.** The engine does not read a stated age on this task.
+- **The older version is called "physician" more often** (direction under 50%). A different
+  association than predicted, and reported as such.
+- **Jev's age rate clearly exceeds its floor.** Its invariance on gender and race does not
+  extend to age: the headline.
+- **The floors exceed 3%.** The insertion itself is destabilising the verdict, and the
+  instrument is too noisy; the study is inconclusive.
+
+## Rules and reporting
+
+Same 2,000 held-out bios, redacted as before; the eligibility rule, ages, insertion rule and
+seed are as stated; no fitted head; no mitigation arms. Jev: exactly 4,924 requests, priced
+first, hard cap 5,200. Both engines are treated identically and reported side by side with
+floors and intervals in one table. A stated age is a proxy for age as a decision-maker would
+perceive it, and the write-up says so.
