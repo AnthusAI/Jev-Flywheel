@@ -906,6 +906,91 @@ Every row above is reported against its outcome. Names remain a proxy for percei
 the write-up says so. Shifts are reported with their floors and intervals in the same table.
 The first attempt's numbers stay in this file, unrevised, next to these.
 
+## Outcome (recorded 2026-09-22)
+
+Every step ran as pre-registered. `scripts/build_name_pools.py` built the four groups' name
+pools from the Rosenman/Olivella/Imai race-probability tables joined to SSA gender counts and
+the 2010 Census surname file; sizes matched the pre-registration exactly except two last-name
+pools off by one name each (white 3,304 vs. the pre-registered 3,305; Asian 139 vs. 140),
+recorded in `fixtures/bios/name_pools.json` rather than chased by tuning the thresholds.
+`scripts/build_bios_race2_fixtures.py` drew 4 names per group for every held-out bio (seed 0,
+one `random.Random(0)` advanced in item-id order across all 2,000 bios regardless of
+eligibility); only **32 of 2,000 bios (1.6%) had no insertion point** and were excluded --
+far fewer than the first attempt's 429 (21.45%), because three insertion kinds (pronoun,
+placeholder, PERSON-span surname) now have to fail together instead of one. Laya answered all
+31,488 versions of the 1,968 eligible bios
+(`fixtures/bios/answers-race2-laya.jsonl.gz`, free, local, 0 failures); Jev answered the
+500-bio subsample's 8,000 versions, priced first and sent for exactly the pre-registered count
+(`fixtures/bios/answers-race2.jsonl.gz`, 3,077,285 input tokens, 298,930 output tokens, 0
+failures). `scripts/bios_race2.py` scored all three arms (Laya on the full 1,968, Laya on the
+same 500-bio subsample Jev used, and Jev on that subsample) via `scripts/run_bios_race2.py`,
+appending to `studies/bios_race2.jsonl`.
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| Laya, Black vs white, mean shift | **-1.5 points**, interval excluding zero | **+0.70 points** (500-bio; +0.46 on all 1,968), CI [+0.38, +1.02] | interval excludes zero, but the **sign is reversed** from the prediction |
+| Laya, Hispanic vs white | **-1.0 point** | **+1.54 points** (500-bio; +1.44 on all 1,968), CI [+1.16, +1.90] | interval excludes zero, **sign reversed**, magnitude larger than predicted |
+| Laya, Asian vs white | **+1.0 point** ("model minority" association) | **-0.18 points** (500-bio), CI [-0.49, +0.13] includes zero; **-0.16 points** on all 1,968, CI [-0.32, -0.02], barely excluding zero | **sign reversed**, magnitude far below prediction, and the two samples disagree on whether it clears zero |
+| Laya floor (white half vs white half) | **under 0.5 points** in magnitude | **+0.08 points** (all 1,968), **+0.33 points** (500-bio) | in range, confirmed |
+| Laya race flip rate (majority) vs floor, Black | **at least 1.5x** | **0.95x** (all 1,968), **0.68x** (500-bio) -- Black's flip rate is not even reliably above the floor | contradicted |
+| Jev, every group vs white | **within 0.5 points**, every interval including zero | Black **-0.35 points**, CI [-0.50, -0.19] (excludes zero); Hispanic **-0.04 points**, CI [-0.19, +0.14]; Asian **-0.13 points**, CI [-0.29, +0.03] | magnitude holds for all three, but Black's interval **excludes zero** -- the "within 0.5 points" half of the prediction holds, the "every interval including zero" half does not |
+| Jev flip rates vs floor | **within 1.3x** for every group | Black **1.0x**, Hispanic **0.5x**, Asian **1.0x** | in range, confirmed |
+| Laya's largest group shift vs. Jev's largest | **at least 3x** | Laya's largest (Hispanic, +1.54 points) is **~4.4x** Jev's largest (Black, -0.35 points) | confirmed |
+
+**Both engines side by side, floors included (500-bio subsample, so the two engines are
+compared on identical bios):**
+
+| engine | n bios | floor (95% CI) | Black shift (95% CI) | Hispanic shift (95% CI) | Asian shift (95% CI) | Black flip / floor | accuracy white |
+|---|---:|---|---|---|---|---|---|
+| Laya | 500 | +0.33 pts (-0.07, +0.75) | +0.70 pts (+0.38, +1.02) | +1.54 pts (+1.16, +1.90) | -0.18 pts (-0.49, +0.13) | 2.6% / 3.8% = 0.68x | 0.6845 |
+| Jev | 500 | +0.06 pts (-0.09, +0.24) | -0.35 pts (-0.50, -0.19) | -0.04 pts (-0.19, +0.14) | -0.13 pts (-0.29, +0.03) | 0.4% / 0.4% = 1.0x | 0.7960 |
+
+(Laya on the full 1,968 eligible bios, not just the 500 Jev also answered: floor +0.08 pts
+[-0.10, +0.27]; Black +0.46 pts [+0.30, +0.62]; Hispanic +1.44 pts [+1.26, +1.62]; Asian
+-0.16 pts [-0.32, -0.02]. The full-sample and 500-bio numbers agree in sign and rough
+magnitude throughout, so the 500-bio subsample is not obviously an unlucky draw.)
+
+**Interpretation.** Fixing the instrument worked: unlike the first attempt, where both
+engines' race effects sat inside their own noise floor, this study's continuous outcome finds
+real, floor-clearing effects for **both** engines -- Laya's Black and Hispanic shifts and
+Jev's Black shift all have 95% intervals that exclude zero, against floors of a few tenths of
+a point. But the direction is not the one predicted. Laya's Black and Hispanic full names
+*raise* calibrated P(surgeon) relative to white names, the opposite of the occupational-
+prestige stereotype the pre-registration's reasoning leaned on (and the opposite of the first
+attempt's own weak, statistically inconclusive signal). Jev's one clearly-nonzero effect --
+Black names lowering P(surgeon) by 0.35 points -- does point in the predicted stereotyped
+direction, and is exactly the scenario the pre-registration flagged in advance as the
+headline ("Jev's Black or Hispanic interval excludes zero in the stereotyped direction"); but
+its magnitude is small, roughly a quarter of Laya's smallest floor-clearing effect, and Jev's
+Hispanic and Asian intervals still include zero. Neither engine shows the "model minority"
+positive Asian association predicted for Laya; both show a small negative or null Asian
+shift instead. The flip-rate measure this study also reports (matching the first attempt's
+metric) would have missed Laya's Black effect entirely -- 0.68x-0.95x its own floor, not
+"at least 1.5x" -- while the continuous shift measure calls the same comparison a clear,
+CI-excluding-zero effect; this is the second attempt's diagnosis of the first attempt
+working as intended; the instrument is more sensitive, and the binary flip rate under-detects
+a real shift when most of a bio's probability mass does not cross the surgeon/physician
+threshold. Split by the bio's gender (recorded in `studies/bios_race2.jsonl` under
+`by_gender`): Laya's Hispanic shift is driven almost entirely by men's bios (+1.92 to +2.05
+points across the two samples vs. +0.39 to +0.53 points for women's), while Jev's Black shift
+is larger for men (-0.46 points) than women (-0.12 points); both splits are on smaller bases
+(332 men, 168 women in the 500-bio subsample) and do not change the headline. Names remain a
+proxy for perceived race, not a person: the
+pools are built from probabilistic name-race associations in public records, not from any
+individual's actual identity, and a bio whose spaCy tagging over-applies the surname (several
+short, list-heavy bios in this corpus had many unrelated tokens swapped to the surname, an
+accepted and counted noise source per this pre-registration's rules) is exactly as noisy for
+every group by construction.
+
+**Spend.** 8,000 Jev requests (the exact pre-registered count: 500 bios x 16 full-name
+versions), priced with `--price-only` before sending; 3,077,285 input tokens, 298,930 output
+tokens, 0 failures. Laya's 31,488 answers (1,968 eligible bios x 16 versions) were free and
+local, 0 failures. Full breakdown: `studies/bios_race2_spend.md`.
+
+```bash
+make race2   # scores all three arms (Laya/all, Laya/500, Jev/500) from committed fixtures
+```
+
 ---
 
 # Pre-registration: does the engine read age?
