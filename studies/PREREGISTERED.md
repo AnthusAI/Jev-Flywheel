@@ -1655,6 +1655,263 @@ and logged; hard cap 24,000 for this section.
 >     the same intercept/population mismatch is expected to recur wherever this pool and this
 >     held-out set are combined (i.e., in every arm here), so it is a property of the section's
 >     design and not specific to J1.
+>
+> **Second diagnostic, added after J2 seed 1 (2026-09-22), before the tie diagnostic below.**
+> J2 seed 1's promoted element (`support_role_signals`) passed the invariance gate (0.81% flip
+> on the labeled twins, well under the 2% threshold) and was still promoted -- and the top-500
+> four-fifths ratio *fell*, from J0's 0.85 to 0.66, with 37 women attorneys shortlisted only if
+> read as men (against J0's 15). `studies/bios_attorney_elements.jsonl` (new file) was added to
+> separate two mechanisms per promoted element, for every arm and seed: (a) the element's own
+> answer, among held-out bios whose true label is attorney, differing by gender **as written**
+> (a content proxy -- the engine reads the bio's content as more "support role" for women even
+> though they are attorneys, nothing to do with pronouns) versus (b) the shortlist ranking
+> becoming more pronoun-sensitive because the fit shrank the holistic feature's weight. Method:
+> for each promoted feature, the mean feature value (its `.clr`/`.logit_p` term) by gender among
+> true attorneys, as written and on the swapped twin, plus its fitted weight; and two ablations
+> of the fitted head -- rerank with the new element's weight zeroed (isolates mechanism (b), the
+> refit/threshold effect alone) and rerank with the holistic weight reset to v1's un-shrunk
+> value (isolates mechanism (a), the new element's own contribution). Neither ablation touches
+> `jev_flywheel/fit.py`; both read the fitted head's own weights, computed in
+> `scripts/run_bios_attorney_loop.py`'s `element_diagnostics`.
+>
+> Result, for every arm/seed that promoted something (J1 seeds 1-2, J2 seeds 1-2, L1 seeds
+> 1-2): zeroing the new element's weight restores the top-500 ratio to within a point of J0's
+> 0.8512 in every case (J1 seed 1: 0.7515 -> 0.8512; J2 seed 1: 0.6562 -> 0.8512; J2 seed 2:
+> 0.6488 -> 0.8512); resetting the holistic weight to v1's, while keeping the new element,
+> barely moves the ratio at all (J2 seed 1: 0.6562 -> 0.6562, unchanged; J2 seed 2: 0.6488 ->
+> 0.6530). **Mechanism (a), the content proxy, accounts for essentially all of the
+> degradation; mechanism (b), the holistic-weight shrinkage, accounts for almost none of it.**
+> The per-feature gender split confirms the direction directly: J2 seed 1's
+> `support_role_signals` (fitted weight +0.89 toward "paralegal") averages -3.29 (log-odds) for
+> true women attorneys' bios as written against -3.63 for true men's (410 women, 574 men) --
+> women's attorney bios read as carrying more "support role" signal even though they are
+> attorneys -- and the gap barely moves on the swapped twin (-3.38 vs -3.53), confirming this is
+> a same-text content correlation the pronoun-swap gate cannot see, not a pronoun artefact. J2
+> seed 2's three promoted elements show the same direction (e.g. `paralegal_or_support_role`:
+> women -2.72, men -3.26, weight +0.69). **A question can pass an invariance gate defined on the
+> pronoun swap and still make the shortlist outcome worse for the group the swap is meant to
+> protect, because the gate only tests one channel (does this element's own answer flip under
+> the swap) and says nothing about a second channel (does this element's answer correlate with
+> gender through the bio's actual content, independent of any swap).** This is reported as
+> found, without narrowing the gate's definition after the fact -- the pre-registered 2% gate on
+> swap-sensitivity is exactly what was specified, and it is not redefined here to catch this.
+>
+> **Third diagnostic, tie fairness (added before the Outcome, 2026-09-22).** Jev's calibrated
+> P(attorney) is coarse: on the raw engine (J0), 733 of the 2,000 held-out+twin-pool applicants
+> tie at exactly 1.000 (101 distinct values across the whole pool), and the top-500 cut falls
+> inside that block, so the ordinary tie-break (sort by id) is arbitrary and a fitted arm's
+> promoted element becomes the de facto tie-breaker for the whole block just by separating those
+> 733 scores. `scripts/bios_attorney_shortlist.py`'s `tie_diagnostics` (new) records, per row of
+> `studies/bios_attorney_shortlist.jsonl`: the score at the cut, how many applicants rank
+> strictly above it, how many tie at it, and a **tie-fair four-fifths ratio** -- the ratio a
+> uniformly random tie-break would give, crediting each tied applicant
+> `(places admitted at the cut - count above) / count tied` places. For J0, the tie-fair ratio
+> (0.8509) matches the recorded one (0.8512) almost exactly: **real attorneys reach the P=1.000
+> block at different rates by gender** (44.0% of women, 51.7% of men expected-shortlisted in a
+> fair tie-break), so most of J0's shortfall from parity is decided *before* the tie, not by it.
+> For J1/J2's promoted seeds the tie-fair ratio tracks the recorded one closely too (J2 seed 1:
+> 0.6354 tie-fair against 0.6562 recorded; J2 seed 2: 0.6488 against 0.6488, no tie at all --
+> 1,224 distinct scores, only 3 tied), which combined with the mechanism-separation result above
+> says the same thing from a different angle: the promoted element's degradation is not a
+> tie-break artefact inflating or deflating the recorded ratio -- it is the element genuinely
+> resorting the formerly-tied block, and resorting it along a line that correlates with gender.
+> Laya's own scores are essentially continuous throughout (L0: 1,564 distinct values, 3 ties at
+> the top-500 cut; L1/L2: 1,564-1,998 distinct values, 1-3 ties), so ties never material for
+> Laya and its rows are unaffected by this diagnostic.
+>
+> **Fourth diagnostic, exploratory prior-corrected accuracy (added alongside the first
+> diagnostic, before J2 seeds 2-3 ran).** Every fitted arm's row in `studies/bios_attorney.jsonl`
+> now also carries `label_prior_population_attorney` (the fit's own recorded population-prior
+> estimate, read from `scorecards/lineage.jsonl`) and `accuracy_prior_corrected_exploratory`: the
+> held-out accuracy the same fitted head would show if its intercept were shifted by
+> `logit(0.5) - logit(prior)` -- i.e. re-calibrated to the held-out set's actual 50/50 balance
+> instead of the pool's skewed one -- and every item re-thresholded at 0.5. Computed in
+> `scripts/run_bios_attorney_loop.py` (`prior_corrected_accuracy`), not in `jev_flywheel/fit.py`;
+> the shift is a constant added to every item's logit, so it changes no ranking and the shortlist
+> numbers are identical with or without it. Marked exploratory in every row and in the Outcome
+> table below.
+
+## Outcome (recorded 2026-09-22; `studies/bios_attorney.jsonl`, `studies/bios_attorney_proposals.jsonl`,
+`studies/bios_attorney_shortlist.jsonl`, `studies/bios_attorney_elements.jsonl`)
+
+Fixtures: `fixtures/bios_attorney/` (`scripts/build_bios_attorney_fixtures.py`) reused the
+existing 2,000 held-out paralegal/attorney bios unchanged and regenerated their twins under the
+amended swap rule -- only 2 of 2,000 twins changed text. The pool could only reach 2,000
+attorney + 146 paralegal (2,146, not the pre-registered 2,000 + 2,000): paralegal is the
+smallest class in the whole corpus and the earlier held-out sample already used 1,000 of the
+~1,150 available. Recorded as a Deviation above, not worked around. J0/L0 (the engines alone,
+no fitted head) confirm the amended rule changed nothing material: Jev 3.90% flip (unchanged to
+two decimal places from the old-rule row in `bios_pairs.jsonl`), Laya 17.85% (unchanged).
+
+### Predictions against what happened
+
+| measurement | prediction | observed | verdict |
+|---|---|---|---|
+| L0/J0 flip rate, amended twins | Laya 17.5% (+-1pt), Jev 3.9% | Laya **17.85%**, Jev **3.90%** | confirmed, within a point/exact |
+| L1 accuracy vs L0 (0.721) | +5 points | raw: **0.593, 0.7115, 0.583** (-12.8, -1.0, -13.8 pts) | **contradicted on raw accuracy**, all three seeds worse, not better |
+| L1 accuracy, prior-corrected (exploratory) | (not pre-registered; read against +5 pts for context) | **0.8185, 0.8185, 0.7745** (+9.75, +9.75, +5.35 pts) | on the population the fit actually calibrated to, the prediction's direction and rough size hold |
+| J1 accuracy vs J0 (0.854) | +2 points | raw: **0.787, 0.8055, 0.756** (-6.7, -4.85, -9.8 pts) | **contradicted on raw accuracy**, all three seeds worse |
+| J1 accuracy, prior-corrected (exploratory) | (not pre-registered) | **0.8565, 0.8685, 0.886** (+0.25, +1.45, +3.2 pts) | close to or exceeding the +2 pt prediction on the corrected basis |
+| L1/J1 flip rate at or above the engine alone | at or above L0 17.85% / J0 3.9% | Laya **5.4%, 13.6%, 6.25%** (all below); Jev **2.25%, 2.35%, 2.95%** (all below) | **contradicted for both engines** -- every seed's flip rate fell, not rose; see note below |
+| J2: proposals passing the gate | none in >=2/3 seeds Laya; >=1 in >=2/3 seeds Jev | Laya: **0 of 3 seeds** passed; Jev: **2 of 3 seeds** (seeds 1, 2) passed | confirmed on both engines |
+| J2 flip rate vs J0 | roughly halved, about 2% | promoted seeds **1.70%, 2.15%** (mean 1.93%, almost exactly half of 3.90%); unpromoted seed 3 **2.95%** | confirmed for the promoted seeds |
+| L2 flip rate vs L0 | unchanged or worse | **0%, 17.85%, 6.25%** | seed 2 unchanged (exactly, since the fit landed back at v1); seed 1's 0% is a degenerate collapse (see note), not an invariance win; seed 3 lower, not worse |
+| J2 four-fifths ratio at top 500 (engine alone 0.85) | **above 0.9** | promoted seeds **0.6562, 0.6488** -- both *below J0*; unpromoted seed 3 **0.8512** (=J0) | **strongly contradicted -- this is the section's headline** (see the mechanism-separation diagnostic above) |
+| L2 four-fifths ratio at top 500 (engine alone 0.48) | under 0.6 | **0.4808** every seed, identical to L0 | confirmed (gate rejects every proposal on Laya, so the ranking never changes) |
+| Twin-averaging baseline, ratio (Laya) | above 0.8 | **0.8731** | confirmed |
+| Twin-averaging baseline, ratio (Jev) | above 0.9 | **0.7169** | **contradicted** -- below 0.8, below J0's own 0.8512 |
+| LF flip rate vs L0 | higher | **deferred** -- see below | not measured |
+
+**Note on the flip-rate reversal.** L1/J1 flip rates fell below the engine-alone baseline in
+every seed, the opposite of the prediction that a refit "at or above" the base rate. The likely
+mechanism is the same population/prior mismatch the first Deviation diagnoses: a refit whose
+intercept is pulled toward the pool's skewed attorney prior pushes most bios' scores away from
+the decision boundary in both the as-written and swapped forms, so fewer items sit close enough
+to flip -- a side effect of threshold miscalibration, not evidence the loop made the engine more
+gender-invariant. L2 seed 1's 0% flip rate is the extreme case of the same mechanism: its v2 fit
+(rejected_by_metrics, no new element) collapsed to an intercept so strongly skewed that accuracy
+fell to 0.5 (see the metrics row) while flips vanished because almost every bio and its twin
+land on the same side of an extreme threshold. None of this is presented as the loop achieving
+invariance; it is reported as a byproduct of the same fit pathology already diagnosed, alongside
+the shortlist ratios, which are not affected by threshold placement in the same way (see below).
+
+### The arm table (shortlist ratio primary, flip rate second, accuracy third)
+
+Every arm on the same 2,000 held-out bios (1,000 attorney, 1,000 paralegal) and their amended-rule
+twins. Accuracy is raw / prior-corrected-exploratory (`--` where no fit ever ran, i.e. J0/L0, or
+where the fit's provenance carries no recorded population prior).
+
+| arm | seed | top-500 four-fifths ratio | tie-fair ratio (top-500) | counterfactual flip rate | accuracy (raw / prior-corrected*) |
+|---|---:|---:|---:|---:|---|
+| J0 | -- | 0.8512 | 0.8509 | 3.90% | 0.854 / -- |
+| L0 | -- | 0.4808 | 0.4808 | 17.85% | 0.721 / -- |
+| J1 | 1 | 0.7515 | 0.7675 | 2.25% | 0.787 / 0.8565* |
+| J1 | 2 | 0.8242 | 0.8393 | 2.35% | 0.8055 / 0.8685* |
+| J1 | 3 | 0.8512 (=J0) | 0.8509 | 2.95% | 0.756 / 0.886* |
+| J2 | 1 | **0.6562** | 0.6354 | 1.70% | 0.789 / 0.8485* |
+| J2 | 2 | **0.6488** | 0.6488 | 2.15% | 0.8075 / 0.8705* |
+| J2 | 3 | 0.8512 (=J0) | 0.8509 | 2.95% | 0.756 / 0.886* |
+| L1 | 1 | 0.3329 | 0.3329 | 5.40% | 0.593 / 0.8185* |
+| L1 | 2 | 0.3825 | 0.3825 | 13.60% | 0.7115 / 0.8185* |
+| L1 | 3 | 0.4808 (=L0) | 0.4808 | 6.25% | 0.583 / 0.7745* |
+| L2 | 1 | 0.4808 (=L0) | 0.4808 | 0.00% | 0.500 / 0.7915* |
+| L2 | 2 | 0.4808 (=L0) | 0.4808 | 17.85% (=L0) | 0.721 / -- |
+| L2 | 3 | 0.4808 (=L0) | 0.4808 | 6.25% | 0.583 / 0.7745* |
+| baseline-L1 | 1 | **0.8731** | 0.8731 | 0.00% (by construction) | 0.540 / -- |
+| baseline-J1 | 1 | 0.7169 | 0.7148 | 0.00% (by construction) | 0.785 / -- |
+
+Reading the table by its primary column: **J2's two promoted seeds are the worst outcome in the
+whole table for Jev** -- worse than doing nothing (J0), worse than the ungated loop (J1), on the
+metric the pre-registration says a compliance review would actually compute. The gate did its
+one job (reject an element whose *own* answer flips under the swap) and that job was not enough,
+because the promoted elements' degradation runs through content correlation with gender, not
+swap-sensitivity (see the mechanism-separation diagnostic). Twin-averaging is the one arm that
+reliably beats the engine alone on this metric for Laya (0.8731 vs 0.4808) and is a real,
+cheap, threshold-blind fix for the pronoun channel specifically -- but it does *not* reach that
+bar for Jev (0.7169, below even J0's 0.8512), because Jev's own shortfall from parity is mostly
+not a pronoun-swap effect to begin with (J0's control floor is a content difference between
+women's and men's attorney bios reaching the P=1.000 tie block at different rates -- see the
+tie-fairness diagnostic -- which averaging with a swapped twin does nothing to fix).
+
+### Promoted elements by seed, and what actually changed
+
+| arm | seed | decision | element(s) | gate flip rate | promoted? |
+|---|---:|---|---|---:|---|
+| J1 | 1 | promoted | `legal_role_evidence` (3-way: practicing/support/none) | -- (no gate) | yes |
+| J1 | 2 | promoted | `stated_legal_role` (2-way: attorney/paralegal) | -- (no gate) | yes |
+| J1 | 3 | rejected_by_metrics | 4 candidates tried, none improved fit | -- (no gate) | no (v2 = a plain refit from n=70, no new question) |
+| J2 | 1 | promoted | `support_role_signals` (yes/no) | 0.81% | yes |
+| J2 | 2 | promoted | `mentions_legal_work`, `paralegal_or_support_role`, `currently_law_student` | 0.81%, 1.61%, 1.61% | yes |
+| J2 | 3 | rejected_by_metrics | 3 candidates; one failed the gate (2.42%), two failed the ordinary fit | -- | no |
+| L1 | 1 | promoted | `explicit_paralegal_identification`, `supports_attorneys_role`, `attorney_license_stated` | -- (no gate) | yes |
+| L1 | 2 | promoted | `support_role_language`, `represents_own_clients`, `currently_student`, `attorney_credential` | -- (no gate) | yes |
+| L1 | 3 | rejected_by_metrics | 4 candidates, none improved fit | -- (no gate) | no |
+| L2 | 1-3 | rejected_by_metrics, all 3 seeds | 11 candidates total tried across seeds | **every one failed the gate**: 1.4%-15% flip, all above the 2% line | **none** |
+
+Every proposal's wording (`studies/bios_attorney_proposals.jsonl`) is about legal-role content
+-- job title, licensure, client representation, support-role framing, student status. **None of
+the 22 distinct candidate elements across every arm and seed mentions gender, pronouns, sex, or
+any gendered noun**, read directly: the analyst never proposed a gendered question on this pair,
+gate or no gate, matching the primary study's own prediction and the surgeon pair's finding.
+What differs from the surgeon pair is not *what* got proposed but *what proposing it did*: on
+the surgeon pair the gate found content questions Jev could answer without reading gender and
+promoting them helped; here, the content questions Jev answers *do* correlate with gender
+through the bios' actual content (women's genuinely-attorney bios read as more "support role"),
+and the swap-only gate cannot see that. **The improvement or harm in every arm here came from
+which questions were promoted, not from the refit alone**: every seed's own refit-only variant
+(J1/J2 seed 3, L1/L2 seed 3, and L2 across all three seeds) reproduces J0/L0's shortlist ratio
+exactly (0.8512 / 0.4808), because a single re-weighted holistic feature cannot change a
+ranking's *order*, only its threshold -- confirmed directly by the mechanism-separation
+ablation's "holistic reset" column, which barely moves the ratio in every case it was tested.
+
+### Does the surgeon-pair pattern reproduce? (gate passes evidence questions on Jev, none on Laya)
+
+**Yes, cleanly, on the gate's own narrow question.** Every one of J2's 7 candidate elements
+across 3 seeds passed the 2% gate at 0-2.4% flip on the labeled twins (6 of 7 passed; the one
+Jev failure was 2.42%, barely over the line); every one of L2's 11 candidates across 3 seeds
+failed it, at 1.4% to 15% flip -- an order of magnitude higher floor for Laya, matching every
+other measurement of the two engines' pronoun sensitivity in this project. The gate is doing
+exactly what it was built to test (does this element's own answer move under a pronoun swap?)
+and the answer to that question reproduces perfectly. **What does not reproduce is the
+surgeon-pair's conclusion that passing the gate is good news**: there, gated promotion helped
+accuracy without the accuracy coming at the cost this section's shortlist and mechanism
+diagnostics newly expose. The difference is not a failure of replication; it is this section
+asking a question (does the promoted element's *own answer* correlate with gender through
+content, not through the swap?) that the surgeon-pair study never measured, because it never
+built a shortlist or a mechanism-separation diagnostic. Read together, the two sections say: the
+gate reliably measures swap-sensitivity, swap-sensitivity is not the only channel by which an
+element reads gender, and an engine whose content itself correlates with gender (which the
+gender-and-race studies established Jev's answers do, just far less than Laya's) can still be
+made to discriminate more by a gate-cleared feature.
+
+### LF
+
+**Deferred.** The pre-registration allows LF "if the GPU is free after the surgeon-pair LF
+finishes." At every point this section's Laya arms needed the GPU, `ps aux` showed either the
+other agent's `run_bios_flipopt.py` (surgeon-pair diagnostics) or, later, `--offline` replay
+jobs; no `finetune_laya_bios.py` process (the surgeon-pair LF) was ever observed running or
+finished in this checkout during this section's work. Per the one-Laya-process-at-a-time rule
+and the pre-registration's own condition (after the surgeon-pair LF, not merely "GPU idle right
+now"), LF for this pair was not started and is recorded as deferred, not attempted and not
+approximated.
+
+### Spend
+
+23,280 Jev requests total for this section (hard cap 24,000): 2,148 pool + changed-twin
+requests, 8,388 for the three J1 seeds (140 steering + up to 4,000 serving each, seed 3 needing
+no serve since nothing new was promoted), 8,760 for the three J2 seeds (280 steering + gate
+top-up + up to 4,000 serving each), 3,984 to serve the Jev twin-averaging baseline. Full
+per-step breakdown, priced before every send: `studies/bios_attorney_spend.md`. Laya's answers
+(6,146 items x however many arms read them) were free and local, 0 failures. 16 of 4,000
+held-out+twin items failed on every Jev serving call that needed them (0.4%, the same 16 items
+each time -- a persistent, not transient, per-item failure; excluded from every arm's `n`, which
+is why every fitted arm's `n` is 3,984 x 2 = ... consistent across arms rather than exactly
+4,000).
+
+### One paragraph
+
+The mitigation that worked on the surgeon pair does not work here, and the reason is legible:
+the invariance gate tests one channel (does an element's own answer move under a pronoun swap)
+and this pair's harm runs through a second channel the gate was never built to see (does the
+element's answer correlate with gender through the bio's actual content, independent of any
+swap). On Jev, the gate passed two elements about legal-role content that, read individually,
+look exactly like the kind of gender-blind evidence question the surgeon-pair study hoped the
+loop would find -- and promoting them cut the top-500 four-fifths ratio from 0.85 to 0.65,
+worse than doing nothing. The mechanism-separation and tie-fairness diagnostics agree: this is
+not a threshold artefact or an unlucky tie-break: women's genuinely-attorney bios score lower on
+"practices law themselves" content than men's attorney bios do, as written, gate or no gate, and
+a fitted head that leans on that content will discriminate by gender even while passing a test
+built to catch exactly that. The one intervention that reliably helped on this pair was the one
+the pre-registration called "no fitting at all": twin-averaging lifted Laya's ratio from 0.48 to
+0.87 (a cheap, threshold-blind fix for the pronoun channel specifically), but left Jev's
+untouched at 0.72, because Jev's shortfall was never mostly a pronoun-swap effect to begin with.
+Accuracy is the wrong headline number to trust on this pair at all: every fitted arm's raw
+accuracy fell relative to the engine alone, for a reason (a pool/held-out population mismatch,
+diagnosed and not fixed in `jev_flywheel/fit.py`) that is orthogonal to whether the loop found
+anything useful, and the exploratory prior-corrected accuracy shows the same fits looking
+roughly as good as predicted once that mismatch is undone -- so the shortlist ratio, not
+accuracy, is this section's honest primary result, exactly because it is a ranking statistic
+the population mismatch cannot touch.
 
 ---
 

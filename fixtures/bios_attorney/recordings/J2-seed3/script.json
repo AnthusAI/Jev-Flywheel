@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_attorney J2, seed 3",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic question forces a paralegal/attorney choice on every text, and it fails in two recurring ways: bios with no legal content at all (guitar, hypnosis, comedy, theater, fiction) get answered 'paralegal' even though the pool is ~86% attorney, and bios containing the keyword 'paralegal' (a senior paralegal who later earned a J.D.; a bar member with 'paralegal duties') get classified by the keyword instead of the person's actual current role and credentials. The label is really decided by a chain the scorecard cannot represent with one feature: is there legal content at all, does the person hold attorney credentials or practice law, and is their current role explicitly paralegal/legal-assistant.\", \"add_elements\": [{\"key\": \"mentions_legal_work\", \"question_type\": \"noul\", \"instructions\": \"Does the text mention the person working in law or the legal field, such as at a law firm, court, bar, or legal organization, or studying or training in law?\", \"criteria\": null}, {\"key\": \"attorney_credentials\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate the person is qualified or working as an attorney, for example by mentioning a law degree such as a J.D., admission to a bar, a license to practice law, or that they practice law or represent clients?\", \"criteria\": null}, {\"key\": \"current_paralegal_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person's current job as being a paralegal or legal assistant, for example by calling them a paralegal, mentioning a paralegal certificate or paralegal program, or saying they assist or support attorneys in their work?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

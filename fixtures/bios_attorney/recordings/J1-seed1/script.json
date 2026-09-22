@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney J1, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard has only the holistic attorney/paralegal question, and its errors fall into two systematic groups: (1) bios with no legal-role content at all (hobbies, family, hometown, non-law degrees) are guessed paralegal, yet in this corpus they are almost always attorneys, since paralegal bios nearly always name the support role; (2) texts with legal vocabulary but support-role framing ('assisted attorneys', 'second year law student', 'responded to an opening at a firm') are guessed attorney when they are paralegals. A single element that separates 'practices law with own clients' from 'support/trainee role assisting lawyers' from 'no legal role mentioned' gives the fit the signal the holistic is missing in both directions.\", \"add_elements\": [{\"key\": \"legal_role_evidence\", \"question_type\": \"choice\", \"instructions\": \"Which best describes the person's role as stated in the text: practicing law themselves (representing or advising their own clients, appearing in court, holding a J.D./bar license, or being a partner/associate/counsel at a law firm); a support or trainee role (paralegal, legal assistant, law student, or someone who assists attorneys rather than serving their own clients); or no legal role mentioned at all (the text covers only personal background, family, hobbies, community activities, or non-legal education)?\", \"criteria\": {\"practicing_lawyer\": null, \"support_or_trainee_role\": null, \"no_legal_role_mentioned\": null}}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

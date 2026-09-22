@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L1, seed 3",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and it is failing on texts that contain explicit occupation evidence: bios that literally say 'paralegal since 2006', 'graduate of the Accelerated Paralegal program', 'senior immigration paralegal', or 'Paralegal Certification' are predicted attorney, while bios with a J.D., bar admission, private practice, or 'represents clients' language are predicted paralegal when non-legal or assistive wording distracts the holistic answer. The errors are dominated by these missed explicit-credential and role-language signals, not by sentiment or style, so targeted factual elements should carry the load that the holistic question cannot.\", \"add_elements\": [{\"key\": \"paralegal_credential_mentioned\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly describe this person as a paralegal or legal assistant, or mention a paralegal-specific credential or affiliation such as a paralegal certificate, a paralegal studies program, a CP or ACP designation, or a paralegal association?\", \"criteria\": null}, {\"key\": \"attorney_license_mentioned\", \"question_type\": \"noul\", \"instructions\": \"Does the text mention this person holding a J.D. (Juris Doctor), being admitted to a bar, being licensed to practice law, or having practiced law as an attorney, where a paralegal certificate or a non-JD masters degree alone does not count?\", \"criteria\": null}, {\"key\": \"represents_or_counsels_clients\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person as representing, advising, or counseling clients in legal matters, or as handling their own cases, transactions, or practice areas?\", \"criteria\": null}, {\"key\": \"support_role_language\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person's own role as assisting, supporting, or providing background help to attorneys, a firm, or a legal team, for example with phrases like 'assists with', 'provides legal support', or 'background support'?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

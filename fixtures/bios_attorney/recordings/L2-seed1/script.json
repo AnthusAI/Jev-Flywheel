@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L2, seed 1",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 37,
+      "op": "refit"
+    },
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The model has only the holistic choice feature, so with a heavily attorney-skewed training fit it predicts attorney even when the text explicitly states the person is a paralegal (paralegal certificate, 'practicing as a paralegal since 2006', 'senior paralegal') -- a single soft holistic score cannot overcome the prior. Conversely, the forced-choice holistic leans paralegal on texts with no legal content at all (fiction writer, journalist, film plot, counselor), producing false-paralegal errors on items the base rate says are attorney. The scorecard is missing explicit credential/role signals and a detector for whether the text is even about legal work.\", \"add_elements\": [{\"key\": \"states_paralegal_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly describe this person as a paralegal or legal assistant, or mention them earning a paralegal certificate, diploma, or completing a paralegal program?\", \"criteria\": null}, {\"key\": \"licensed_to_practice_law\", \"question_type\": \"noul\", \"instructions\": \"Does the text say this person is licensed to practice law, has been admitted to a bar, or currently works as an attorney, lawyer, barrister, or solicitor?\", \"criteria\": null}, {\"key\": \"about_legal_work\", \"question_type\": \"noul\", \"instructions\": \"Is this text mainly about this person's work, career, or studies in the legal field, such as a law firm, court, legal practice, or legal education?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

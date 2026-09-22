@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios race race2 age pairs test diagrams
+.PHONY: help install demo laya student finetune bios flipopt race race2 age pairs test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -10,6 +10,7 @@ help:
 	@echo "  make student   3. distil the result into a small local BERT classifier (downloads ~1.2 GB in all)"
 	@echo "  make finetune  4. does gradient fine-tuning of Laya itself beat the fitted head? (one seed, quick)"
 	@echo "  make bios      5. does the engine read gender? (surgeon/physician bios, J0/L0, offline)"
+	@echo "  make flipopt   optimising the head against the flip (baseline/L3/L4/L5/L6, offline)"
 	@echo "  make pairs     does the gender result hold on other decisions? (3 more pairs, offline)"
 	@echo "  make test      run the test suite"
 	@echo ""
@@ -83,10 +84,11 @@ finetune:
 	@echo "the flywheel's own 0.802 (README, 'The same layer on a local model')."
 
 # Stage 5. Does the engine read gender? The engine-alone arms (J0, L0) of the Bias-in-Bios
-# study, scored from committed answer fixtures: no keys, no network, no model, no spend. The
-# J1/J2/L1/L2/LF arms in `studies/PREREGISTERED.md` need a working Bedrock analyst (blocked in
-# the environment this study ran in -- see the pre-registration's Outcome section) and are not
-# part of this target.
+# study, scored from committed answer fixtures: no keys, no network, no model, no spend. J1,
+# J2, L1 and L2 have all run (fixtures/bios/recordings/<arm>-seed<N>/) and replay offline, one
+# recording at a time, via `flywheel replay <dir> --fixtures fixtures/bios` -- not looped here
+# because each recording's chart/report is meant to be inspected on its own. LF needs the GPU
+# (laya-mlx) and has no recording to replay from.
 bios:
 	@echo "Scoring Jev's and Laya's own answers (no labels, no fitted head) on 2,000 held-out"
 	@echo "surgeon/physician bios and their gender-swapped, name-redacted counterfactual twins."
@@ -97,7 +99,38 @@ bios:
 	@echo ""
 	@echo "counterfactual_flip_rate is a LOWER BOUND on gender sensitivity (redaction removes"
 	@echo "first names; titles and other gendered nouns not on the name list can remain)."
+	@echo ""
+	@echo "J1/J2/L1/L2 replay with no keys and no GPU from their recordings, one seed at a time:"
+	@echo "  flywheel replay fixtures/bios/recordings/J1-seed1 --fixtures fixtures/bios"
+	@echo "  (J2-seed<N>, L1-seed<N>, L2-seed<N> for N in 1 2 3, same pattern)"
+	@echo "LF needs the GPU (laya-mlx) and is not replayable from a recording."
 	@echo "Next: studies/PREREGISTERED.md, 'does the engine read gender, and can the layer refuse to?'"
+
+# Stage 5b. Optimising the head against the flip: baseline (twin averaging) and L3/L4/L5/L6 at
+# the registered 2% gate, replayed offline -- baseline replays each seed's actual L1 recording
+# (jev_flywheel.recording.replay); L3/L4/L5 need only the single holistic feature's answers,
+# already in the committed fixtures/bios/answers-laya.jsonl.gz (test split and its
+# counterfactual twins alike). Writes to var/, not studies/, so a replay never touches the
+# authoritative rows. Where feasible only: the 5%/10% exploratory gate extension
+# (studies/bios_flipopt_gate_sensitivity.jsonl) and any seed where a new element got promoted
+# (L6's own steering round, or L5 at the 5%/10% gates) need that element's answers on the 2,000
+# held-out bios and twins, which are never persisted past the run that answered them -- those
+# are not replayable here and need the GPU (laya-mlx) again, same as LF.
+flipopt:
+	@echo "Replaying baseline/L3/L4/L5/L6 at the registered 2% gate (studies/PREREGISTERED.md,"
+	@echo "'optimising the head against the flip') from the committed Laya answer fixtures."
+	@echo ""
+	rm -f var/bios_flipopt.jsonl
+	.venv/bin/python scripts/run_bios_flipopt.py --arm baseline --seeds 1 2 3 --offline --out var/bios_flipopt.jsonl
+	.venv/bin/python scripts/run_bios_flipopt.py --arm L3 --seeds 1 2 3 --offline --out var/bios_flipopt.jsonl
+	.venv/bin/python scripts/run_bios_flipopt.py --arm L4 --seeds 1 2 3 --offline --out var/bios_flipopt.jsonl
+	.venv/bin/python scripts/run_bios_flipopt.py --arm L5 --seeds 1 2 3 --offline --out var/bios_flipopt.jsonl
+	.venv/bin/python scripts/run_bios_flipopt.py --arm L6 --seeds 1 2 3 --offline --out var/bios_flipopt.jsonl
+	@echo ""
+	@echo "Not replayed here (need the GPU: a promoted element's held-out answers are never"
+	@echo "cached past the run that made them): the 5%%/10%% exploratory gate extension, and"
+	@echo "L6 seeds where the analyst's proposal was promoted rather than rejected."
+	@echo "Next: studies/PREREGISTERED.md, 'optimising the head against the flip'"
 
 # Does the engine read race from a name? The Bertrand & Mullainathan (2004) name-swap
 # counterfactual (studies/PREREGISTERED.md, "does the engine read race from a name?"), scored
@@ -169,6 +202,26 @@ pairs:
 	@echo "Four pairs in one table, ordered by the gap in women's share between the two labels;"
 	@echo "counterfactual_flip_rate is a LOWER BOUND on gender sensitivity, as in the primary study."
 	@echo "Next: studies/PREREGISTERED.md, 'does the gender result hold on other decisions?'"
+
+# The learning loop on the pair that matters: paralegal/attorney, the worst case the four-pair
+# test found (studies/PREREGISTERED.md, final section). J0/L0 (the engines alone) are scored
+# offline from committed fixtures, no keys, no network, no spend. J1/J2/L1/L2 (140 labels, one
+# steering round, the invariance gate on J2/L2) and the twin-averaging baseline are recorded to
+# fixtures/bios_attorney/recordings/<arm>-seed<N>/ when they are run
+# (scripts/run_bios_attorney_loop.py) and can be replayed from there with no keys via
+# `flywheel replay <recording-dir> --fixtures fixtures/bios_attorney`, one recording at a time.
+attorney:
+	@echo "Scoring Jev's and Laya's own answers (no labels, no fitted head) on the paralegal/"
+	@echo "attorney held-out bios and their amended-rule gender-swapped, name-redacted twins."
+	@echo ""
+	.venv/bin/python scripts/run_bios_attorney_loop.py --arm J0
+	.venv/bin/python scripts/run_bios_attorney_loop.py --arm L0
+	@echo ""
+	@echo "J1/J2/L1/L2 and the twin-averaging baseline need a steering round (Bedrock analyst for"
+	@echo "J1/J2/L1/L2; Laya locally for L1/L2) and are not part of this offline target. Replay a"
+	@echo "committed recording with: flywheel replay fixtures/bios_attorney/recordings/<arm>-seed<N> \\"
+	@echo "  --fixtures fixtures/bios_attorney"
+	@echo "Next: studies/PREREGISTERED.md, 'the learning loop on the pair that matters'"
 
 test:
 	.venv/bin/python -m pytest -q

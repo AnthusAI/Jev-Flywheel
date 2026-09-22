@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L1, seed 2",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic element forces one question to carry the whole decision, and it is fooled whenever a paralegal bio is written in attorney-style language (practice-area focus, decades of experience, law-school attendance) or an attorney bio omits credentials and only shows client/courtroom work. The reducible errors split into three clean signals the scorecard never asks about: explicit support-role or paralegal-credential language (most false-attorney errors), independent representation of one's own clients (most false-paralegal errors with legal content), and current enrollment as a student (law students and recent interns labeled paralegal). The remaining errors are texts with no legal content at all (writer bios, article quotes, one garbled item) whose labels come from outside the text and are irreducible from the text alone.\", \"add_elements\": [{\"key\": \"support_role_language\", \"question_type\": \"noul\", \"instructions\": \"Does the text call this person a paralegal or legal assistant, mention a paralegal-studies or legal-studies degree or certificate, or describe their work as assisting attorneys with tasks such as drafting documents, trial preparation, or research?\", \"criteria\": null}, {\"key\": \"represents_own_clients\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person as independently representing, advising, or litigating on behalf of their own clients, for example handling their cases, appearing in court for them, or negotiating settlements for them?\", \"criteria\": null}, {\"key\": \"currently_student\", \"question_type\": \"noul\", \"instructions\": \"Is this person described as currently enrolled in, or still completing, a degree, law school, or certificate program?\", \"criteria\": null}, {\"key\": \"attorney_credential\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person holds a J.D. or other law degree, is admitted to a bar, or holds or has held a titled attorney position such as partner, associate, counsel, or state's attorney?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}
