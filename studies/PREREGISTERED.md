@@ -1970,3 +1970,21 @@ shortlist. If it does reach it, that is the finding.
 
 As the earlier loop sections. Jev spend: 4,000 pool + up to 2,000 twins + top-ups, priced
 first and logged; hard cap 24,000.
+
+> **Addendum to "the shortlist", 2026-09-23.** `scripts/bios_shortlist.py` now scores both
+> pairs and adds two things the loop studies above showed were needed. (1) A **tie-fair
+> ratio**: Jev reports two-decimal probabilities, and on both pairs a top-500 cut sits inside
+> a block of 700-840 bios all at P = 1.00, so which of them make the list is decided by the
+> tie-break; the tie-fair ratio counts each tied bio as its block's share of the remaining
+> places. For the engines alone it equals the recorded ratio (women reach the P = 1.00 block
+> less often: a real gap), and it is the reason any element a fitted head adds becomes the
+> tie-breaker for the whole block. (2) **Engine-alone twin averaging**, the cheapest
+> mitigation for a swappable cue: score the bio and its pronoun-swapped twin, average. Top
+> 500, tie-fair ratios: paralegal/attorney Laya 0.48 → **0.79**, Jev 0.85 → **0.91**;
+> nurse/physician Laya 0.65 → **1.25**, Jev 0.95 → 0.97. Accuracy cost: Laya 5.6 and 4.1
+> points, Jev 1.3 and 0.9. On the attorney pair the averaged Laya lands just under the
+> four-fifths line, so on that pair pronouns carry most but not all of the adverse impact; on
+> the nurse pair averaging overshoots to favour women, which says that with the pronoun
+> neutralised, women physicians' bios read *more* physician-like to Laya than men's do (the
+> content asymmetry runs the other way). The counterfactual columns in the twin-averaged
+> rows are not meaningful (a twin of an average is undefined) and should be ignored.

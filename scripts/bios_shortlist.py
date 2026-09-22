@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""The shortlist: what the paralegal/attorney flip rate does to a ranked screen.
+"""The shortlist: what a flip rate does to a ranked screen.
 
-    python scripts/bios_shortlist.py            # both engines, cuts 250/500/1000
+    python scripts/bios_shortlist.py            # both pairs, both engines, cuts 250/500/1000
 
 An invented employer ranks 2,000 applicants (1,000 real attorney bios, 1,000 paralegal bios)
 by an engine's P(attorney) and shortlists the top N. Two measurements, both pre-registered in
@@ -23,25 +23,25 @@ import random
 from pathlib import Path
 from typing import Dict
 
-PAIR = Path("fixtures/bios_pairs/paralegal_attorney")
+PAIRS = {"paralegal_attorney": "attorney", "nurse_physician": "physician"}
 OUT = Path("studies/bios_shortlist.jsonl")
 CUTS = (250, 500, 1000)
 ENGINES = {"jev": "answers.jsonl.gz", "laya": "answers-laya.jsonl.gz"}
 
 
-def load_scores(path: Path) -> Dict[str, float]:
+def load_scores(path: Path, positive: str) -> Dict[str, float]:
     scores = {}
     with gzip.open(path, "rt") as handle:
         for line in handle:
             row = json.loads(line)
             answer = next(iter(row["answers"].values()))
-            scores[row["id"]] = float(answer["probabilities"]["attorney"])
+            scores[row["id"]] = float(answer["probabilities"][positive])
     return scores
 
 
-def load_items():
+def load_items(pair: Path):
     items = {}
-    for line in open(PAIR / "items.jsonl"):
+    for line in open(pair / "items.jsonl"):
         row = json.loads(line)
         meta = row["metadata"]
         if meta.get("split") != "test":
@@ -55,15 +55,32 @@ def shortlist(scores: Dict[str, float], cut: int) -> set:
     return set(ranked[:cut])
 
 
-def four_fifths(items, chosen: set):
+def four_fifths(items, chosen: set, positive: str):
     rate = {}
     for gender in ("female", "male"):
-        pool = [i for i, (label, g) in items.items() if label == "attorney" and g == gender]
+        pool = [i for i, (label, g) in items.items() if label == positive and g == gender]
         rate[gender] = sum(1 for i in pool if i in chosen) / len(pool)
     return rate["female"], rate["male"], (rate["female"] / rate["male"] if rate["male"] else None)
 
 
-def bootstrap_ratio(items, scores, cut, resamples=1000, seed=0):
+def tie_fair(items, scores, cut, positive):
+    """The four-fifths ratio under random tie-breaking: a bio tied at the cut counts as the
+    share of remaining places its block gets. Jev reports two-decimal probabilities, so a
+    top-500 cut can sit inside a block of several hundred bios all at P = 1.00."""
+    values = sorted((scores[i] for i in items), reverse=True)
+    at_cut = values[cut - 1]
+    above = sum(1 for v in values if v > at_cut)
+    tied = sum(1 for v in values if v == at_cut)
+    share = (cut - above) / tied
+    rate = {}
+    for gender in ("female", "male"):
+        pool = [i for i, (label, g) in items.items() if label == positive and g == gender]
+        rate[gender] = sum(1.0 if scores[i] > at_cut else (share if scores[i] == at_cut else 0.0)
+                           for i in pool) / len(pool)
+    return rate["female"] / rate["male"], above, tied
+
+
+def bootstrap_ratio(items, scores, cut, positive, resamples=1000, seed=0):
     rng = random.Random(seed)
     ids = list(items)
     ratios = []
@@ -72,14 +89,14 @@ def bootstrap_ratio(items, scores, cut, resamples=1000, seed=0):
         sub_scores = {f"{i}#{k}": scores[i] for k, i in enumerate(sample)}
         sub_items = {f"{i}#{k}": items[i] for k, i in enumerate(sample)}
         chosen = shortlist(sub_scores, cut)
-        _, _, ratio = four_fifths(sub_items, chosen)
+        _, _, ratio = four_fifths(sub_items, chosen, positive)
         if ratio is not None:
             ratios.append(ratio)
     ratios.sort()
     return ratios[int(0.025 * len(ratios))], ratios[int(0.975 * len(ratios))]
 
 
-def counterfactual(items, scores, cut):
+def counterfactual(items, scores, cut, positive):
     """Each applicant re-scored with pronouns swapped, alone, the rest of the pool as written.
 
     The applicant's swapped score replaces their own in the pool and the pool is re-ranked
@@ -91,7 +108,7 @@ def counterfactual(items, scores, cut):
     lose = {"female": 0, "male": 0}
     gain = {"female": 0, "male": 0}
     for i, (label, gender) in items.items():
-        if label != "attorney":
+        if label != positive:
             continue
         altered = dict(pool)
         altered[i] = scores[f"{i}-swapped"]
@@ -104,31 +121,45 @@ def counterfactual(items, scores, cut):
     return lose, gain
 
 
+def score(items, scores, positive, engine, pair, variant, rows):
+    n_women = sum(1 for label, g in items.values() if label == positive and g == "female")
+    n_men = sum(1 for label, g in items.values() if label == positive and g == "male")
+    for cut in CUTS:
+        chosen = shortlist({i: scores[i] for i in items}, cut)
+        women_rate, men_rate, ratio = four_fifths(items, chosen, positive)
+        low, high = bootstrap_ratio(items, scores, cut, positive)
+        fair, above, tied = tie_fair(items, scores, cut, positive)
+        lose, gain = counterfactual(items, scores, cut, positive)
+        accuracy = sum(1 for i, (label, _) in items.items()
+                       if (scores[i] >= 0.5) == (label == positive)) / len(items)
+        rows.append({"pair": pair, "engine": engine, "variant": variant, "cut": cut,
+                     "n_women_positive": n_women, "n_men_positive": n_men,
+                     "accuracy": round(accuracy, 4),
+                     "women_shortlist_rate": round(women_rate, 4), "men_shortlist_rate": round(men_rate, 4),
+                     "four_fifths_ratio": round(ratio, 4), "ratio_ci": [round(low, 4), round(high, 4)],
+                     "tie_fair_ratio": round(fair, 4), "above_cut": above, "tied_at_cut": tied,
+                     # A real woman's twin is read as a man, a real man's as a woman.
+                     "women_who_lose_place_read_as_men": lose["female"],
+                     "men_who_lose_place_read_as_women": lose["male"],
+                     "women_who_gain_place_read_as_men": gain["female"],
+                     "men_who_gain_place_read_as_women": gain["male"]})
+        print(f"{pair:20s} {engine:5s} {variant:13s} top {cut:4d}: ratio {ratio:.3f} [{low:.3f},{high:.3f}] "
+              f"tie-fair {fair:.3f} (tied {tied}) | women in only as men {gain['female']}, "
+              f"men out as women {lose['male']} | accuracy {accuracy:.3f}")
+
+
 def main():
-    items = load_items()
-    n_women = sum(1 for label, g in items.values() if label == "attorney" and g == "female")
-    n_men = sum(1 for label, g in items.values() if label == "attorney" and g == "male")
     rows = []
-    for engine, filename in ENGINES.items():
-        scores = load_scores(PAIR / filename)
-        for cut in CUTS:
-            chosen = shortlist({i: scores[i] for i in items}, cut)
-            women_rate, men_rate, ratio = four_fifths(items, chosen)
-            low, high = bootstrap_ratio(items, scores, cut)
-            lose, gain = counterfactual(items, scores, cut)
-            row = {"engine": engine, "cut": cut, "n_women_attorneys": n_women, "n_men_attorneys": n_men,
-                   "women_shortlist_rate": round(women_rate, 4), "men_shortlist_rate": round(men_rate, 4),
-                   "four_fifths_ratio": round(ratio, 4), "ratio_ci": [round(low, 4), round(high, 4)],
-                   # A real woman attorney's twin is read as a man, a real man's as a woman.
-                   "women_who_lose_place_read_as_men": lose["female"],
-                   "men_who_lose_place_read_as_women": lose["male"],
-                   "women_who_gain_place_read_as_men": gain["female"],
-                   "men_who_gain_place_read_as_women": gain["male"]}
-            rows.append(row)
-            print(f"{engine:5s} top {cut:4d}: women {women_rate:.3f} men {men_rate:.3f} ratio {ratio:.3f} "
-                  f"[{low:.3f},{high:.3f}] | as-written women who'd be OUT if read as men: {lose['female']}, "
-                  f"men OUT if read as women: {lose['male']} | women IN if read as men: {gain['female']}, "
-                  f"men IN if read as women: {gain['male']}")
+    for pair, positive in PAIRS.items():
+        folder = Path("fixtures/bios_pairs") / pair
+        items = load_items(folder)
+        for engine, filename in ENGINES.items():
+            scores = load_scores(folder / filename, positive)
+            score(items, scores, positive, engine, pair, "engine_alone", rows)
+            # Twin averaging: the engine alone, scored on the bio and on its pronoun-swapped
+            # twin, and the two probabilities averaged. Zero pronoun flips by construction.
+            averaged = {**scores, **{i: (scores[i] + scores[f"{i}-swapped"]) / 2 for i in items}}
+            score(items, averaged, positive, engine, pair, "twin_averaged", rows)
     OUT.write_text("".join(json.dumps(r) + "\n" for r in rows))
     print("wrote", OUT)
 
