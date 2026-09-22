@@ -38,6 +38,7 @@ full list, and it is not short.
 | the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
 | getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
 | what actually fine-tuning an open engine buys, and costs | [Fine-tuning the engine instead](#fine-tuning-the-engine-instead) |
+| whether the engine reads gender, race or age, and whether the layer can refuse to | [Does the engine read gender, race or age?](#does-the-engine-read-gender-race-or-age) |
 | the caveats, in full | [What this does not prove](#what-this-does-not-prove) |
 | the design decisions, and the failure each one prevents | [Design notes](#design-notes) |
 
@@ -211,14 +212,19 @@ per-tier skew and the request-cost fit. It also reports something worth knowing 
 any accuracy here: the fixtures are de-duplicated by text, which fell unevenly, so the corpus is
 57% positive and a majority-class baseline already scores 56.6%.
 
-This repo started as the third of three articles, and has since grown three of its own
+This repo started as the third of three articles, and has since grown four of its own
 ([fine-tuning Jev](https://anth.us/blog/fine-tuning-jev/),
-[Jev vs Laya](https://anth.us/blog/jev-vs-laya/) and
-[distilling into a classifier you own](https://anth.us/blog/distilling-jev-into-a-classifier/)). The
+[Jev vs Laya](https://anth.us/blog/jev-vs-laya/),
+[distilling into a classifier you own](https://anth.us/blog/distilling-jev-into-a-classifier/) and
+[encoding prejudice](https://anth.us/blog/encoding-prejudice/)). The
 [first](https://anth.us/blog/fine-tuned-classification-with-confidence/) (September 2025)
 planted the pattern and fine-tuned a model to absorb it. The
 [second](https://anth.us/blog/can-you-trust-jev-confidence/) asked whether Jev's confidence can be
-trusted. This one asks whether a loop can name what the first one hid.
+trusted. The third asks whether a loop can name what the first one hid. The
+[fourth](https://anth.us/blog/encoding-prejudice/) turns the same machinery on a bias nobody
+planted: does either engine read gender, race or age off a professional biography, and can the
+layer built here be made to refuse to act on it? [Does the engine read gender, race or
+age?](#does-the-engine-read-gender-race-or-age) covers it.
 
 ## The machine
 
@@ -949,6 +955,214 @@ python scripts/finetune_laya.py --arms A B C D --seeds 1 2 3   # the study; hour
 python scripts/selective_prediction.py          # auto-accept coverage and AUROC
 python scripts/exploratory_finetune.py          # head-only at low lr; 20, 40 and 80 labels
 ```
+
+## Does the engine read gender, race or age?
+
+Everything above uses a corpus we built and a bias we planted. This chapter uses a public one
+with a bias the field already documented, so the answer key is somebody else's. It is the
+subject of a fourth article,
+[Encoding Prejudice](https://anth.us/blog/encoding-prejudice/), and the full pre-registration,
+predictions and outcomes are in
+[`studies/PREREGISTERED.md`](studies/PREREGISTERED.md) from "does the engine read gender, and
+can the layer refuse to?" onward.
+
+### The corpus and the method
+
+[Bias in Bios](https://huggingface.co/datasets/LabHC/bias_in_bios) (De-Arteaga et al., 2019) is
+about 400,000 short professional biographies scraped from the web, each labeled with an
+occupation and a binary gender. Its own authors found that occupation classifiers trained on it
+lean on gender cues. We sample pairs of occupations that share vocabulary and differ in gender
+mix — surgeon/physician, then nurse/physician, paralegal/attorney and teacher/professor — and
+ask one engine question per bio: which occupation is this? First names are redacted (spaCy's
+`PERSON` tagger intersected with an SSA name list) so a name cannot leak gender, then every bio
+is asked twice, as written and after a pronoun-and-role-noun swap
+(`jev_flywheel/counterfactual.py`). A **flip** — the verdict changing under the swap — is the
+causal measure: it isolates the engine's own sensitivity from any real difference in how women's
+and men's bios happen to be written. Because names, honorifics and some role nouns outside the
+swap vocabulary are not touched, the flip rate is a **lower bound**, reported as one throughout.
+One rule was amended mid-project: "women's/men's health" phrases are protected from the swap
+(medical content, not the person), and a few more courtesy titles were added to the table.
+
+### Does either engine read gender? Four occupation pairs
+
+Both engines answered all four pairs, each 2,000 held-out bios and their swapped twins, no
+fitted head — this measures the engines alone
+([`studies/bios_gender.jsonl`](studies/bios_gender.jsonl),
+[`studies/bios_pairs.jsonl`](studies/bios_pairs.jsonl)):
+
+| pair (gap in women's share) | engine | flip rate (95% CI) | direction toward more-female label | accuracy | recall gap, less-female label (women − men) |
+|---|---|---:|---:|---:|---:|
+| teacher/professor (15 pts) | Jev | 1.25% [0.80, 1.75] | 75.0% | 0.888 | −5.2 pts |
+| teacher/professor (15 pts) | Laya | 7.65% [6.55, 8.85] | 100.0% | 0.815 | −9.1 pts |
+| surgeon/physician (35 pts) | Jev | 1.05% | 93.75% | 0.785 | −1.4 pts |
+| surgeon/physician (35 pts) | Laya | 7.95% | 99.3% | 0.673 | −17.2 pts |
+| nurse/physician (41 pts) | Jev | 3.30% [2.60, 4.10] | 100.0% | 0.943 | −2.2 pts |
+| nurse/physician (41 pts) | Laya | 13.50% [12.05, 15.05] | 100.0% | 0.837 | −1.6 pts |
+| paralegal/attorney (47 pts) | Jev | 3.90% [3.10, 4.85] | 93.75% | 0.854 | −5.5 pts |
+| paralegal/attorney (47 pts) | Laya | 17.85% [16.15, 19.55] | 100.0% | 0.721 | −8.8 pts |
+
+Both engines flip on a pronoun-only swap, on every pair, and the direction is almost always
+toward the more-female label. **Laya's flip rate rises monotonically with the gap in women's
+share** across all four pairs. Jev's rises overall but not monotonically — surgeon/physician (35
+points) flips slightly less than teacher/professor (15 points), the one place the ordering
+breaks. Jev's per-pair flip rate is roughly an order of magnitude below Laya's throughout, the
+same gap in kind the surgeon pair alone already showed.
+
+### The shortlist
+
+A screener that ranks 2,000 paralegal/attorney applicants by P(attorney) and passes the top
+quartile turns a verdict-level flip rate into something an EEOC four-fifths review would compute
+([`studies/bios_shortlist.jsonl`](studies/bios_shortlist.jsonl)):
+
+| engine | shortlist rate, women / men attorneys (top 500) | four-fifths ratio [95% CI] | tie-fair ratio | women shortlisted only if read as men | men dropped only if read as women |
+|---|---|---:|---:|---:|---:|
+| Jev | 0.444 / 0.521 | 0.85 [0.73, 0.96] | 0.851 | 15 of 419 | 21 of 581 |
+| Laya | 0.289 / 0.601 | 0.48 [0.40, 0.55] | 0.481 | 82 of 419 | 147 of 581 |
+
+Laya's ratio fails the four-fifths line at every cut tried (250, 500, 1,000); Jev's clears 0.8 at
+every cut but the interval reaches it at the tighter two. The tie block matters on Jev: at the
+raw two-decimal precision Jev returns, 733 of 2,000 applicants tie at P = 1.000, and the
+tie-fair ratio (crediting each tied applicant its share of the remaining places under a random
+tie-break) comes out at 0.851, almost identical to the recorded 0.8512 — most of Jev's own
+shortfall from parity is decided before the tie, not by it.
+
+**Engine-alone twin averaging** — score the bio and its swapped twin, average the two
+probabilities, no fitting at all — is the cheapest available fix for the pronoun channel
+specifically: on paralegal/attorney it lifts Laya's tie-fair ratio from 0.48 to 0.79 (an
+accuracy cost of 5.6 points) and Jev's from 0.85 to 0.91 (cost 1.3 points); on nurse/physician,
+Laya 0.65 → 1.25 and Jev 0.95 → 0.97 (costs 4.1 and 0.9 points). Overshooting past 1.0 on the
+nurse pair says that once the pronoun is neutralized, women physicians' bios read as *more*
+physician-like to Laya than men's do — the content asymmetry runs the other way on that pair.
+
+### Race and age
+
+Race is measured by inserting a name instead of a pronoun (the Bertrand-Mullainathan 2004
+design). A first attempt (one name, one token) was **inconclusive**: both engines' race-flip
+excess over their own same-race control floor overlapped that floor's confidence interval
+([`studies/bios_race.jsonl`](studies/bios_race.jsonl)). A second attempt recurred the full name
+everywhere the person is named and switched to a continuous outcome — the signed shift in
+P(surgeon) — which cleared the noise floor for both engines
+([`studies/bios_race2.jsonl`](studies/bios_race2.jsonl), 500-bio subsample both engines share):
+
+| engine | floor (white vs white) | Black vs white | Hispanic vs white | Asian vs white |
+|---|---:|---:|---:|---:|
+| Jev | +0.06 pts [−0.09, +0.24] | −0.35 pts [−0.50, −0.19] | −0.04 pts [−0.19, +0.14] | −0.13 pts [−0.29, +0.03] |
+| Laya | +0.33 pts [−0.07, +0.75] | **+0.70 pts** [+0.38, +1.02] | **+1.54 pts** [+1.16, +1.90] | −0.18 pts [−0.49, +0.13] |
+
+Jev's Black-name shift is small but excludes zero, in the stereotyped (lower) direction. Laya's
+Black and Hispanic shifts clear their floor too, but in the **reversed** direction — a full name
+associated with those groups *raises* calibrated P(surgeon) relative to white names, the
+opposite of the occupational-prestige stereotype either study predicted going in, and
+unexplained by anything measured here.
+
+Age is inserted at the bio's first pronoun ("At 61, she is currently...") on a sample chosen to
+hold stated experience fixed, at 34/35/61/62
+([`studies/bios_age.jsonl`](studies/bios_age.jsonl), 1,231 eligible bios, 95% CIs):
+
+| | Jev | Laya |
+|---|---:|---:|
+| floor, 34 vs 35 | 0.89% [0.41, 1.46] | 0.49% [0.16, 0.97] |
+| floor, 61 vs 62 | 0.57% [0.24, 0.97] | 0.65% [0.24, 1.14] |
+| age flip, 34 vs 61 | 1.30% [0.73, 1.95] | 0.97% [0.49, 1.54] |
+| age shift, 61 minus 34 | +0.07 pts [−0.08, +0.23] | +0.69 pts [+0.53, +0.87] |
+| direction (older called "surgeon") | 50.0% | 83.3% |
+
+Jev looks close to invariant to a stated age; Laya moves more, in the predicted seniority
+direction, though about a third of the predicted size. One number was not predicted and is
+unexplained: Laya's own 61-vs-62 floor shows a shift of −0.52 points with an interval that
+excludes zero — a one-year change, which should be pure re-tokenizing noise, instead reads as a
+small systematic pull toward "physician" at the older end of the range, something the 34-vs-35
+floor does not show.
+
+### The learning loop on the surgeon pair
+
+Does aligning the flywheel to labels fix any of this, and can an invariance gate (reject a
+proposed question whose *own* answer flips on more than 2% of the labeled items' twins) make it
+refuse to? ([`studies/bios_gender.jsonl`](studies/bios_gender.jsonl), three seeds per fitted arm;
+[`studies/bios_flipopt.jsonl`](studies/bios_flipopt.jsonl) for L3–L6 and the baseline):
+
+| arm | engine | accuracy | ECE | flip rate | TPR gap (women − men) |
+|---|---|---:|---:|---:|---:|
+| J0 (raw) | Jev | 0.785 | 0.165 | 1.05% | −1.4 pts |
+| L0 (raw) | Laya | 0.673 | 0.191 | 7.95% | −17.2 pts |
+| J1 (mean of 3) | Jev | 0.800 | 0.049 | 1.73% | −0.7 pts |
+| J2 (mean of 3, gated) | Jev | 0.806 | 0.066 | 0.80% | +1.8 pts |
+| L1 (mean of 3) | Laya | 0.741 | 0.036 | 12.8% | −18.2 pts |
+| L2 (mean of 3, gated) | Laya | 0.734 | 0.062 | 10.7% | −12.2 pts |
+| LF (2 of 3 seeds, fine-tuned) | Laya | 0.802 | 0.056 | 1.58% | −4.1 pts |
+| twin-averaging baseline (mean of 3) | Laya, L1's head | 0.731 | 0.036 | 0.00% | −3.6 pts |
+
+**Read honestly:** the loop raises accuracy on both engines and **does not reduce the flip rate
+as a side effect** — J1 and L1's flip rates sit *above* their raw engine's, because gender
+correlates with the label here and a gender-sensitive answer is a useful feature to a fit that
+never asked for invariance. **The gate is necessary and not sufficient.** On Jev it nearly halves
+the flip rate in 2 of 3 seeds; the third seed promoted a courtesy-title question ("Mr./Ms. rather
+than Dr.") that passed the gate at exactly 0.0% flip, because the swap rule never touches
+courtesy titles even though a title is a near-perfect gender proxy — the gate caught what it was
+built to catch and missed a channel it was never built to see. On Laya the gate never got under
+the raw engine's own sensitivity in any seed, because Laya's own answer to a title-shaped
+question is itself pronoun-noisy and fails the gate outright, for a different reason than Jev's
+success. **On Jev the accuracy improvement came from the refit, not from promoted questions** —
+J1's own gains track calibration and re-weighting more than any new element, matching the
+pattern in the sentiment corpus above. **LF (fine-tuning) reduced the flip rate against the
+prediction**: it was expected to learn the gender-label correlation and instead came out less
+sensitive than raw Laya on both completed seeds, the sharpest contradicted prediction in this
+study.
+
+**L3–L6, in three sentences.** Twin-augmented refitting (L3), an explicit invariance penalty
+(L4) and flip-driven steering (L6) all land within about half a point of the twin-averaging
+baseline's accuracy while running an order of magnitude more flips (11.3–11.4% against 0%),
+because the fit's decision boundary in the one strong feature's own units barely moves across
+the tested range — this is threshold geometry, not a fix. Gating every feature, including the
+holistic answer itself (L5), removes the only feature this scorecard has and collapses to
+majority-class guessing (accuracy 0.50) rather than finding a substitute, because this
+particular scorecard never had a second, less gendered feature to fall back on. **No fitted arm
+beats twin averaging on both axes** — for this cue, on this pair, the honest recommendation is
+the free baseline, not a fitted mitigation.
+
+### The attorney-pair loop: a caveat
+
+Repeating the loop on paralegal/attorney — the pair the shortlist above shows is the worst case
+— exposed a second failure mode
+([`studies/bios_attorney.jsonl`](studies/bios_attorney.jsonl),
+[`studies/bios_attorney_elements.jsonl`](studies/bios_attorney_elements.jsonl)). The labeling
+pool for this pair comes out about 93% attorney / 7% paralegal (paralegal is the smallest class
+in the whole corpus), while the held-out set is a fixed 50/50, so every fitted arm's raw accuracy
+falls relative to the engine alone for a reason that has nothing to do with what the loop found —
+a population-prior mismatch, diagnosed and left unfixed in `jev_flywheel/fit.py`. Underneath that
+noise is the real finding: J2 seed 1 promoted `support_role_signals`, a content question about
+whether a bio reads as a supporting rather than practicing role. It passed the invariance gate at
+0.81% flip — well under the 2% bar — and promoting it still cut the top-500 four-fifths ratio
+from J0's 0.85 to 0.66, because women's genuinely-attorney bios score higher on "support role"
+content than men's attorney bios do, as written, independent of any pronoun. A question can be
+provably invariant to the swap and still correlate with gender through the bio's own content —
+mechanism separation and a tie-fairness check both confirm it is the content correlation, not the
+refit's threshold, doing the damage. The honest rule this adds to the gate's own: **gate on the
+outcome, not the cue.** The nurse-pair loop was stopped by the author partway through (after
+J0/J1/J2 and L0/L1); its rows are kept in
+[`studies/bios_nurse.jsonl`](studies/bios_nurse.jsonl) as a record, not as a finding, and they
+show the same content-correlation pattern on a different promoted element.
+
+### Spend and reproducibility
+
+Across every bios study — gender, race (both attempts), age, the four-pair replication, the
+shortlist and both learning-loop sections — this project sent **103,218 Jev requests** in total
+(summed from [`studies/bios_gender_spend.md`](studies/bios_gender_spend.md),
+[`bios_race_spend.md`](studies/bios_race_spend.md),
+[`bios_race2_spend.md`](studies/bios_race2_spend.md),
+[`bios_age_spend.md`](studies/bios_age_spend.md),
+[`bios_pairs_spend.md`](studies/bios_pairs_spend.md),
+[`bios_attorney_spend.md`](studies/bios_attorney_spend.md) and
+[`bios_nurse_spend.md`](studies/bios_nurse_spend.md); neither `typesafe-sdk` nor this repo's CLI
+exposes a dollar rate, so every log tracks requests and tokens). `make bios`, `make pairs`,
+`make race`, `make race2`, `make age`, `make attorney` and `make nurse` all replay the
+engine-alone arms (J0/L0) offline from committed fixtures — no key, no network, no GPU. `make
+flipopt` replays the baseline and L3–L5 the same way; a seed where the analyst's proposal was
+promoted, or the 5%/10% exploratory gate extension, needs the GPU (`laya-mlx`, Apple silicon)
+again, because a promoted element's answers on the held-out set are never cached past the run
+that made them. The steering rounds themselves (J1/J2/L1/L2 on every pair, and LF's fine-tune)
+need a Jev key and a Bedrock analyst credential, or Apple silicon for Laya and LF, and mostly
+replay from committed recordings under `fixtures/bios*/recordings/` via `flywheel replay`.
 
 ## What this does not prove
 
