@@ -132,6 +132,102 @@ def test_a_directory_that_is_not_a_recording_is_refused(tmp_path):
         load(tmp_path)
 
 
+@pytest.fixture(scope="module")
+def laya_fixtures(fixtures, tmp_path_factory):
+    """The same miniature corpus, plus a distinct Laya baseline (``answers-laya.jsonl.gz``).
+
+    A different model tag ("laya-test") than Jev's fixture ("jev-test") lets a test tell
+    which baseline a recording's "extra answers" were computed against.
+    """
+    import gzip
+
+    root = tmp_path_factory.mktemp("laya-fixtures")
+    shutil.copytree(fixtures, root, dirs_exist_ok=True)
+    with gzip.open(fixtures / "answers.jsonl.gz", "rt") as src, \
+            gzip.open(root / "answers-laya.jsonl.gz", "wt") as dst:
+        for line in src:
+            row = json.loads(line)
+            row["model"] = "laya-test"
+            dst.write(json.dumps(row) + "\n")
+    return root
+
+
+@pytest.fixture(scope="module")
+def laya_session(laya_fixtures, tmp_path_factory):
+    """A Laya-engine session: labels, a promoted refit, then one promoted steering round --
+    the shape ``scripts/laya_rounds.py`` builds for the bios study's L1/L2 arms."""
+    from jev_flywheel.loop import refit
+
+    root = tmp_path_factory.mktemp("laya-session")
+    workspace = Workspace.init(root / "var", laya_fixtures, answers="answers-laya.jsonl.gz",
+                               engine="laya")
+    label(workspace, 100)
+    assert refit(workspace, SCORE).promoted
+    label(workspace, 40, seed=1)
+
+    class LayaClient(Client):
+        async def system_one(self, *, state, questions):
+            response = await super().system_one(state=state, questions=questions)
+            response.model = "laya-test"
+            return response
+
+    client = LayaClient(workspace)
+    outcome = run_steering(
+        workspace, SCORE, allow_spend=True, client_factory=lambda: client,
+        hitl_handler=ScriptedApprover([True]), mock_replies=[reply(add_elements=[SARCASM])])
+    assert outcome.promoted
+    import asyncio
+    from jev_flywheel.jev import JevSession
+    questions = workspace.scorecard().questions()
+    asyncio.run(workspace.cache.fill(
+        JevSession(client_factory=lambda: client), workspace.split("test")[:80], questions))
+    recording = record(workspace, SCORE, root / "recording", laya_fixtures,
+                       title="Laya test session", provenance="Simulated labeler, Laya engine.")
+    return workspace, recording
+
+
+def test_recording_a_laya_session_reads_the_laya_baseline_not_jevs(laya_session):
+    """Regression for a bug this generalisation fixes: comparing a Laya session's cache against
+    Jev's baseline would (by luck of matching item/name/hash keys) treat Laya's own holistic
+    answers as "already provided", so replaying would silently score with no holistic answers
+    to fall back on. Comparing against Laya's own baseline avoids that."""
+    import gzip
+
+    _, recording = laya_session
+    script = load(recording)
+    assert script["engine"] == "laya"
+
+    rows = [json.loads(line) for line in gzip.open(recording / "extra_answers.jsonl.gz", "rt")]
+    assert rows, "a Laya recording captured no extra answers at all"
+    assert {r["model"] for r in rows} == {"laya-test"}
+    assert {r["name"] for r in rows} == {"sentiment.sarcasm"}
+
+
+def test_replaying_a_laya_recording_against_laya_restores_its_extra_answers(
+        laya_session, laya_fixtures, tmp_path):
+    original, recording = laya_session
+
+    replayed = replay(recording, tmp_path / "replayed", laya_fixtures,
+                      answers="answers-laya.jsonl.gz", engine="laya")
+
+    assert replayed.engine == "laya"
+    assert [(e["version"], e["kind"]) for e in replayed.lineage()] == \
+           [(e["version"], e["kind"]) for e in original.lineage()]
+
+
+def test_replaying_a_laya_recording_against_jev_does_not_restore_laya_answers(
+        laya_session, laya_fixtures, tmp_path):
+    """Same guard as the existing cross-engine test above, now checked the other direction:
+    a recording made on Laya is not silently reused as Jev's answers either."""
+    _, recording = laya_session
+
+    replayed = replay(recording, tmp_path / "other", laya_fixtures, engine="jev")
+
+    models = {json.loads(line)["model"]
+              for line in replayed.answers_path.read_text().splitlines()}
+    assert "laya-test" not in models
+
+
 def test_the_figure_is_written_from_the_replayed_session(session, fixtures, tmp_path):
     pytest.importorskip("matplotlib")
     from jev_flywheel.charts import save_chart

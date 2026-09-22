@@ -34,8 +34,15 @@ from jev_flywheel.workspace import Workspace
 
 FORMAT = 1
 # The engine whose answers a recording's extra_answers hold. Restoring them into a workspace for
-# any other engine would put one model's answers under another's name.
+# any other engine would put one model's answers under another's name. Kept as the fallback for
+# a recording written before ``script.json`` carried its own "engine" field.
 RECORDED_ENGINE = "jev"
+# Where each engine's baseline answers live, relative to a fixtures directory -- what a
+# recording's "extra" answers are computed *against*. Jev's baseline is answers.jsonl.gz;
+# Laya's is answers-laya.jsonl.gz (see scripts/build_bios_laya_answers.py and its sentiment
+# equivalent). An engine not listed here falls back to Jev's file, matching every caller before
+# this mapping existed.
+ENGINE_BASELINE_ANSWERS = {"jev": "answers.jsonl.gz", "laya": "answers-laya.jsonl.gz"}
 # Only these outcomes leave a trace worth replaying. A round that stopped at its price, or
 # failed to reach Jev, changed nothing and depended on the network.
 REPLAYABLE_DECISIONS = {"promoted", "rejected_by_human", "rejected_by_metrics",
@@ -46,12 +53,20 @@ class RecordingError(RuntimeError):
     pass
 
 
-def _extra_answer_rows(workspace: Workspace, fixtures: Path):
-    """Answers in the workspace that the bundled fixtures do not already provide."""
+def _extra_answer_rows(workspace: Workspace, fixtures: Path, engine: str = RECORDED_ENGINE):
+    """Answers in the workspace that the bundled fixtures do not already provide.
+
+    "Already provide" is relative to ``engine``'s own baseline extract, not always Jev's: a
+    Laya-engine recording's extra answers are computed against ``answers-laya.jsonl.gz``, or
+    every one of Laya's own answers would look "extra" (nothing in Jev's file matches Laya's
+    values, only its item/name/hash keys) and the recording would balloon to the whole corpus.
+    """
     baseline = AnswerCache()
     reference = Scorecard.from_yaml(
         (Path(fixtures) / "scorecards" / "reference_full.yaml").read_text())
-    import_answers_jsonl(Path(fixtures) / "answers.jsonl.gz", reference.questions(), baseline)
+    baseline_path = Path(fixtures) / ENGINE_BASELINE_ANSWERS.get(engine, "answers.jsonl.gz")
+    if baseline_path.exists():
+        import_answers_jsonl(baseline_path, reference.questions(), baseline)
     known = {(i, n, h) for i, n, h, _ in baseline.rows()}
     for item_id, name, qhash, answer in workspace.cache.rows():
         if (item_id, name, qhash) not in known:
@@ -60,15 +75,22 @@ def _extra_answer_rows(workspace: Workspace, fixtures: Path):
 
 
 def record(workspace: Workspace, score_name: str, out: Path, fixtures: Path, *,
-           title: str, provenance: str) -> Path:
-    """Write a recording of the workspace's session to ``out``."""
+           title: str, provenance: str, engine: Optional[str] = None) -> Path:
+    """Write a recording of the workspace's session to ``out``.
+
+    ``engine`` defaults to the workspace's own engine, so recording a Laya session captures
+    Laya's extra answers (against Laya's baseline) rather than being silently compared with
+    Jev's. It is recorded into ``script.json`` so a later replay against the *same* engine can
+    restore them, exactly as a Jev recording already does.
+    """
+    engine = engine or workspace.engine
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     feedback = workspace.feedback()
     JsonlStore(out / "feedback.jsonl", FeedbackItem).append_all(feedback)
 
     with gzip.open(out / "extra_answers.jsonl.gz", "wt", encoding="utf-8") as handle:
-        for row in _extra_answer_rows(workspace, fixtures):
+        for row in _extra_answer_rows(workspace, fixtures, engine=engine):
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     steps: List[Dict[str, Any]] = []
@@ -85,7 +107,7 @@ def record(workspace: Workspace, score_name: str, out: Path, fixtures: Path, *,
                 "approve": event["decision"] == "promoted",
                 "recorded_decision": event["decision"]})
     (out / "script.json").write_text(json.dumps({
-        "format": FORMAT, "title": title, "score": score_name,
+        "format": FORMAT, "title": title, "score": score_name, "engine": engine,
         "n_labels": workspace.n_labeled(score_name), "steps": steps,
     }, indent=2, ensure_ascii=False))
     (out / "README.md").write_text(
@@ -129,10 +151,11 @@ def replay(
     script = load(directory)
     say = on_step or (lambda message: None)
     score_name = script["score"]
+    recorded_engine = script.get("engine", RECORDED_ENGINE)
     workspace = Workspace.init(workspace_dir, fixtures, force=True, answers=answers, engine=engine)
 
     extra = directory / "extra_answers.jsonl.gz"
-    if extra.exists() and engine == RECORDED_ENGINE:
+    if extra.exists() and engine == recorded_engine:
         with gzip.open(extra, "rt", encoding="utf-8") as handle:
             for line in handle:
                 row = json.loads(line)
