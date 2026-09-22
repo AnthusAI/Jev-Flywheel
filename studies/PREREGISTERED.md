@@ -1442,3 +1442,35 @@ of the order of ten to fifteen points. Jev's 3.9% flip rate should convert into 
 
 Both measurements, both engines, all three cuts, in one table. The scenario is stated as
 constructed: a real corpus, a real question, an invented employer.
+
+## Outcome (recorded 2026-09-23; `studies/bios_shortlist.jsonl`, `scripts/bios_shortlist.py`)
+
+The pool holds 419 women and 581 men among the 1,000 real attorneys.
+
+| cut | engine | women shortlisted | men shortlisted | four-fifths ratio [95% CI] | women attorneys in only if read as men | men attorneys out if read as women | men in only if read as women |
+|---|---|---|---|---|---|---|---|
+| top 250 | jev | 0.222 | 0.258 | **0.86** [0.66, 1.08] | 5 | 13 | 0 |
+| top 250 | laya | 0.131 | 0.320 | **0.41** [0.31, 0.54] | 60 | 110 | 0 |
+| top 500 | jev | 0.444 | 0.521 | **0.85** [0.73, 0.96] | 15 | 21 | 0 |
+| top 500 | laya | 0.289 | 0.601 | **0.48** [0.40, 0.55] | 82 | 147 | 0 |
+| top 1000 | jev | 0.847 | 0.914 | **0.93** [0.88, 0.97] | 10 | 12 | 0 |
+| top 1000 | laya | 0.666 | 0.881 | **0.76** [0.70, 0.82] | 73 | 92 | 0 |
+
+| Prediction | Verdict | What happened |
+|---|---|---|
+| Laya ratio at top 500 about 0.75 (0.6 - 0.9), adverse impact | **Right on adverse impact, wrong on size** | **0.48**: women attorneys are shortlisted at half the rate of men; below the four-fifths line at every cut, including the generous top-1,000 (0.76) |
+| Jev ratio at top 500 about 0.93 (0.85 - 1.0) | **Right** | 0.85 [0.73, 0.96]; above the line at every cut, with the interval reaching it at top 250 and 500 |
+| Laya: about 40 women attorneys (15 - 80) shortlisted only if read as men, top 500 | **Slightly above the range** | 82 of 419 |
+| Jev: about 8 (2 - 20) | **Right** | 15 of 419 |
+| Men losing a place when read as women: about the same count | **Right per head, not per count** | Laya 147 of 581 (25%) against 20% of women; Jev 21 of 581 |
+| Men gaining a place when read as women: near zero | **Right** | 0 on both engines at every cut |
+
+The two measurements agree in direction and the counterfactual says the model, not the bios,
+is the cause: no woman attorney loses a place by being read as a man, no man gains one by
+being read as a woman, on either engine, at any cut. On Laya, one woman attorney in five who
+did not make the top 500 would have made it under male pronouns. The hosted engine's
+"1 to 4%" verdict-level sensitivity becomes a four-fifths ratio of 0.85 at the two tighter
+cuts, above the line but with an interval that reaches it; small at the verdict is not small
+at the shortlist. The scenario is constructed (a real corpus, a real question, an invented
+employer, the simplest possible screener); it is a component of what ranking tools do, not a
+ranking tool.
