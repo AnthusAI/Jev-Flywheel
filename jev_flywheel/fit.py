@@ -340,7 +340,9 @@ def serve_summary(score: Score, questions: Mapping[str, Any], cache: AnswerCache
 
 
 def compare(candidate: FitResult, incumbent: Summary, *, min_brier_gain: float = 0.005,
-            accuracy_tolerance: Optional[float] = None) -> Comparison:
+            accuracy_tolerance: Optional[float] = None,
+            invariance_flip_rates: Optional[Mapping[str, float]] = None,
+            max_flip_rate: float = 0.02) -> Comparison:
     """Decide whether a candidate earns promotion.
 
     The candidate's numbers are out-of-fold, so they are honest; the incumbent's are
@@ -354,6 +356,14 @@ def compare(candidate: FitResult, incumbent: Summary, *, min_brier_gain: float =
     smaller than a couple of items is granularity, not evidence. The default
     tolerance is therefore two effective items, ``2 / n_effective``, which shrinks as
     labels accumulate and the comparison sharpens.
+
+    ``invariance_flip_rates`` is the invariance gate from ``jev_flywheel.invariance``
+    (``studies/PREREGISTERED.md``'s "does the engine read gender" section, arms J2/L2):
+    ``None`` by default, which reproduces every existing caller's behaviour exactly. When
+    given, it is ``{element_key: flip_rate}`` for each newly proposed element, measured on
+    the labeled items' gender-swapped counterfactual twins; a candidate is rejected as a
+    whole if any one new element flips on more than ``max_flip_rate`` of them, on top of
+    (never instead of) the ordinary fit test above.
     """
     if not candidate.fitted or candidate.metrics is None:
         return Comparison(candidate.metrics or Summary(0, 0, 0, 0, 0), incumbent, False,
@@ -369,4 +379,11 @@ def compare(candidate: FitResult, incumbent: Summary, *, min_brier_gain: float =
         reasons.append(f"accuracy fell by {-accuracy_change:.4f}, more than the "
                        f"{accuracy_tolerance:.4f} that {candidate.n_effective:.0f} effective "
                        "labels can resolve")
+    if invariance_flip_rates is not None:
+        from jev_flywheel.invariance import gate_new_elements
+
+        gated = gate_new_elements(invariance_flip_rates, max_flip_rate=max_flip_rate)
+        for key, result in gated.items():
+            if not result.passed:
+                reasons.append(f"element {key!r} failed the invariance gate: {result.reason}")
     return Comparison(candidate.metrics, incumbent, not reasons, reasons)
