@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios race race2 test diagrams
+.PHONY: help install demo laya student finetune bios race race2 age test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -131,6 +131,22 @@ race2:
 	@echo "shift is a name-only effect measured against its own floor (white names 1-2 vs 3-4);"
 	@echo "read the shift and its interval against the floor's, not the shift alone."
 	@echo "Next: studies/PREREGISTERED.md, 'race from a full name, second attempt'"
+
+# Does the engine read age? An age (34, 35, 61, or 62) is inserted at the bio's first subject
+# pronoun, holding the bio's own stated experience fixed (studies/PREREGISTERED.md, "does the
+# engine read age?"). Offline: answers are read from fixtures/bios/answers-age.jsonl.gz and
+# answers-age-laya.jsonl.gz.
+age:
+	@echo "Scoring Jev's and Laya's own answers on 1,231 eligible held-out bios under four aged"
+	@echo "versions each (34, 35, 61, 62)."
+	@echo ""
+	rm -f var/bios_age.jsonl
+	.venv/bin/python scripts/run_bios_age.py --engine jev --out var/bios_age.jsonl
+	.venv/bin/python scripts/run_bios_age.py --engine laya --out var/bios_age.jsonl
+	@echo ""
+	@echo "age_flip/age_shift (34 vs 61) are read against their own floors (34 vs 35, 61 vs 62);"
+	@echo "read the shift and its interval against the floor's, not the age effect alone."
+	@echo "Next: studies/PREREGISTERED.md, 'does the engine read age?'"
 
 test:
 	.venv/bin/python -m pytest -q
