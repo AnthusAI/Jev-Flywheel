@@ -1136,3 +1136,88 @@ as an open question rather than folded into the age-effect number.
 A stated age is a proxy for age as a decision-maker would perceive it, not age itself, and
 this study measures only whether the text of a bio moves an engine's verdict when that proxy
 changes.
+
+---
+
+# Pre-registration: optimising the head against the flip
+
+Written 2026-09-22, after L1 (the loop without a gate) had been measured on two of three seeds
+and **before L2 or any arm below ran**. L1 lifted Laya's held-out accuracy from 0.673 to 0.757
+(seed 1) and left its gender flip rate where it was (8.4% against 7.95% raw); a refit with no
+new element (seed 2) raised it to 10.85%. That is what the loop's objective predicts: it
+optimises agreement with labels, gender correlates with the label in this corpus (15% of
+surgeons are women against 49% of physicians), so a gender-sensitive answer is a *useful*
+feature to the fit. Nothing in the objective asks for invariance. These arms add it.
+
+## The signal
+
+A flip is a disagreement between the engine and itself: the same bio, pronouns swapped, a
+different verdict. Its correct resolution is known without a human -- the two verdicts should
+be equal -- so it is a label-free training signal. Every arm below uses the labeled items'
+swapped twins (the same 140 items the head is fit on, swapped by `swap_gender`), answered by
+the engine on every element in the scorecard. Held-out bios and their twins are used for
+scoring only.
+
+## Arms (Laya, seeds 1-3, each starting from the L1 recording's 140 labels and, where an arm
+steers, its own steering round; L0 and L1 are the references; L2 is the gate as already
+pre-registered)
+
+- **L3 -- twin-augmented refit.** The head is fit on the 140 labeled items *and* their 140
+  twins, each twin carrying its item's label and propensity weight. No other change. A feature
+  whose answer moves between twins now costs the fit an error on one of the pair.
+- **L4 -- invariance penalty.** The head's loss gains a term λ · mean over labeled pairs of
+  (P(surgeon | item) − P(surgeon | twin))². λ is swept over {0.1, 1, 10, 100} and every point is
+  reported; the pre-registered operating point is the largest λ whose out-of-fold accuracy is
+  within 1 point of λ = 0. The cross-validation that chooses C already exists and is reused.
+- **L5 -- gate every feature.** The 2% invariance gate applied to *existing* elements too,
+  including the v1 holistic answer (which flips 7.95% and would fail). Elements that fail are
+  removed from the head's features before fitting; the analyst round then runs as in L2. If
+  nothing survives, the arm reports that and scores the majority class.
+- **L6 -- flip-driven steering.** The analyst's mismatch set is the labeled pairs whose verdicts
+  differ under the swap, each with the comment "only the pronouns differ", shown alongside the
+  reviewer disagreements; promotion uses the L2 gate. Everything else as L1.
+- **Baseline -- twin averaging.** No fitting: at scoring time, P(surgeon) is the mean of the
+  L1 head's probability on the bio and on its twin. Zero flips for the pronoun cue by
+  construction, at twice the inference cost. Every arm above is compared against this.
+
+Each arm reports held-out accuracy, ECE, flip rate, mean |ΔP| and the TPR gap, on the same
+2,000 bios and twins, and its proposals' wording where it steers.
+
+## Predictions, recorded in advance
+
+| arm | flip rate (raw 7.95%, L1 ~8.4%) | accuracy (L1 ~0.757) |
+|---|---|---|
+| L3 twin-augmented | **4%** (2.5% - 6%) | 0.750 (within 1 point of L1) |
+| L4 at the operating point | **2%** (1% - 4%) | 0.745 (1 - 3 points below L1) |
+| L5 gate everything | **1.5%** (0.5% - 4%) | **0.72** (3 - 8 points below L1: losing the holistic answer costs) |
+| L6 flip-driven steering | **5%** (3% - 8%) | 0.755 |
+| baseline twin averaging | 0% on the pronoun cue by construction | 0.757 (unchanged) |
+
+Reasoning: L3 and L4 act on the same mechanism (make gender-sensitive features expensive to the
+fit) with L4 able to push harder, so L4 should reach lower flips at a small accuracy cost. L5
+removes the biggest sensitive feature outright and should be the most invariant and the least
+accurate. L6 depends on the analyst proposing questions whose *answers* resolve flips, which is
+a harder ask than resolving reviewer disagreements, so a smaller effect. None of the fitted arms
+will match the baseline's zero, and the interesting number is how much accuracy each pays to
+get near it.
+
+## What would change what I believe
+
+- **L3 or L4 reaches under 2% at L1's accuracy.** Then the invariance is essentially free on
+  this task, the base-rate correlation was not what the accuracy came from, and the fix is a
+  one-line change to the fit.
+- **L5 loses more than 8 points.** Then the holistic answer is carrying most of the accuracy
+  *and* most of the bias, and they cannot be separated at 140 labels on this engine.
+- **No fitted arm beats twin averaging on both axes.** Then the honest recommendation for this
+  cue is the baseline: score both versions and average, and spend the effort on cues that
+  cannot be swapped.
+- **L6 proposes gendered questions.** Reported by reading, as before.
+
+## Rules and reporting
+
+Laya only for the fitted arms (Jev versions of L3 and L4, which need only 140 twin answers per
+element plus serving, are run afterwards if the Laya result warrants it and are pre-registered
+here at the same predictions scaled to Jev's 1.05% raw: L3 0.7%, L4 0.5%). Seeds 1-3; the 140
+labels and their twins are the L1 recording's; λ grid and operating-point rule as stated; the
+2% gate as before. Every arm reported against these predictions whatever it shows, next to the
+baseline, with the accuracy cost in the same table as the flip rate.
