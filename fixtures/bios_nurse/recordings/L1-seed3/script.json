@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "title": "bios_nurse L1, seed 3",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic feature is deciding on superficial cues -- the 'Dr.' title, hospital affiliations, 'cooperates with doctors', and gendered/care-oriented wording -- while overriding or missing explicit credential statements in the text. This produces two mirrored error clusters: nurse practitioners and RNs called physician because their boilerplate says 'Dr.' and lists hospital affiliations even though it explicitly says 'NURSE PRACTITIONER' or 'RN' (the largest single cluster), and physicians called nurse when the bio is research-, policy-, or media-focused and the physician evidence (medical school, residency, 'practices medicine') is buried. Adding two factual, text-grounded credential questions gives the model explicit evidence to counter the holistic guess in both directions.\", \"add_elements\": [{\"key\": \"explicit_nursing_credential\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly state that this person holds a nursing credential, license, or degree, such as RN, NP, nurse practitioner, nurse midwife, APRN, or a nursing degree such as a Bachelor or Master of Science in Nursing?\", \"criteria\": null}, {\"key\": \"explicit_physician_training\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly state that this person is a physician or has physician training, such as holding an MD or DO, graduating from medical school, completing a medical residency, or practicing medicine?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}
