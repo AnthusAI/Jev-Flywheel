@@ -1380,3 +1380,65 @@ failures. Full breakdown: `studies/bios_pairs_spend.md`.
 ```bash
 make pairs   # scores all three new pairs plus the copied surgeon/physician row, offline
 ```
+
+---
+
+# Pre-registration: the shortlist
+
+Written 2026-09-23, before the analysis below was run, on answers both engines had already
+given for the paralegal/attorney pair (`fixtures/bios_pairs/paralegal_attorney/`; 1,000
+attorney and 1,000 paralegal bios and their pronoun-swapped twins). Nothing new is asked of
+either engine.
+
+## The scenario
+
+An employer receives 2,000 applications for an attorney opening. Its screening software asks
+a decision model one question of each, "Is this person a paralegal or an attorney?", ranks
+applicants by P(attorney), and passes the top 25% (500) to a human. This is the simplest
+screener that could be built on either engine, and it is a component of what résumé-ranking
+tools do (infer role and level before scoring).
+
+## Two measurements
+
+1. **Adverse impact, natural pool.** Rank the 2,000 bios as written. Among the 1,000 real
+   attorneys, the shortlist rate for women and for men, and their ratio. The EEOC's four-fifths
+   rule treats a ratio under **0.80** as evidence of adverse impact. This mixes the model's
+   bias with any real difference in how women's and men's bios are written; it is the number
+   a compliance review would compute.
+2. **Counterfactual pool.** Rank again with every applicant's pronouns swapped and nothing
+   else changed. For each real attorney: shortlisted as written? shortlisted as the swap? The
+   count of **women attorneys who lose their place when read as women** (shortlisted as "he",
+   not as "she", holding the rest of the pool at its as-written scores) and the reverse count
+   for men. This isolates the model as the cause. Reported at shortlist sizes 250, 500 and
+   1,000, since the effect depends on where the cut falls.
+
+Both engines, on the same bios. Bootstrap intervals (1,000 resamples over bios, seed 0) for
+the ratio in (1).
+
+## Predictions, recorded in advance
+
+| measurement | Laya | Jev |
+|---|---|---|
+| Four-fifths ratio, women vs men attorneys, top 500 | **0.75** (0.6 - 0.9), i.e. adverse impact | **0.93** (0.85 - 1.0) |
+| Women attorneys who lose a top-500 place to their pronouns | **40 of the ~380 women attorneys** (15 - 80) | **8** (2 - 20) |
+| Men attorneys who lose a place when read as women | roughly the same count as above, since the mechanism is symmetric | same |
+| Men attorneys who *gain* a place when read as women | near zero | near zero |
+
+Reasoning: Laya flips 17.85% of verdicts on this pair, all toward "paralegal" under a
+male→female swap, and its recall for "attorney" is 8.8 points lower on women's bios; a
+ranking cut at the median of the attorneys' scores should convert that into a shortlist gap
+of the order of ten to fifteen points. Jev's 3.9% flip rate should convert into a few points.
+
+## What would change what I believe
+
+- **Laya's ratio is above 0.8.** The flip rate is concentrated among bios far from the cut,
+  and the verdict-level bias does not reach the shortlist; the article says so.
+- **Jev's ratio is under 0.8.** A "1 to 4%" engine produces adverse impact on a realistic
+  cut, which is the strongest version of the best-case argument.
+- **The natural-pool ratio and the counterfactual count disagree in direction.** Women's bios
+  differ in content in a way that offsets the model's tilt; both are reported.
+
+## Reporting rule
+
+Both measurements, both engines, all three cuts, in one table. The scenario is stated as
+constructed: a real corpus, a real question, an invented employer.
