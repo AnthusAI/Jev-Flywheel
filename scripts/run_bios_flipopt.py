@@ -601,8 +601,16 @@ def main() -> None:
     parser.add_argument("--exploratory-gates", action="store_true",
                         help="L5/L6 only: also run the 5%%/10%% exploratory gate extension "
                              "(studies/bios_flipopt_gate_sensitivity.jsonl).")
+    parser.add_argument("--out", type=Path, default=None,
+                        help="override where metrics rows are written (default "
+                             "studies/bios_flipopt.jsonl); used by `make flipopt` to replay "
+                             "into var/ without touching the authoritative study rows.")
     args = parser.parse_args()
     load_dotenv()
+
+    if args.out is not None:
+        global METRICS_OUT
+        METRICS_OUT = args.out
 
     for seed in args.seeds:
         scratch = args.scratch / f"{args.arm}-seed{seed}" / "var"

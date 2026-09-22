@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_gender J1, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and it fails in two systematic ways. First, it misses explicit surgical evidence (one bio says 'board certified in Surgery' yet was called physician; others name orthopaedic centers, thoracic surgery degrees, or vascular practices) when that evidence is buried in boilerplate about insurance and residencies. Second, it over-fires on the bare word 'surgery' when the person is a physician extender ('Mr./Ms. X practices medicine and specializes in Hand/Urological Surgery') or in a non-core field (refractive/eye surgery, pelvic reconstructive surgery), all of which are labeled physician in this data. A large residual set of surgeon-labeled bios contains no surgical content at all and is irreducible from text alone.\", \"add_elements\": [{\"key\": \"core_surgical_specialty\", \"question_type\": \"noul\", \"instructions\": \"Does the text tie this person to a core surgical field \\u2014 such as orthopedic, plastic, neurological, cardiac, thoracic, vascular, trauma, or general surgery \\u2014 or explicitly call them a surgeon or say they are board certified in surgery? Answer no if 'surgery' appears only as part of another specialty such as eye/refractive surgery, urological surgery, or pelvic/gynecologic surgery, or only as the name of a procedure.\", \"criteria\": null}, {\"key\": \"non_doctor_clinician\", \"question_type\": \"noul\", \"instructions\": \"Is this person presented as a clinician who is not a doctor \\u2014 for example referred to as Mr., Ms., or Mrs. rather than Dr., or described as a physician assistant or nurse practitioner \\u2014 even if their specialty is named with the word 'surgery'?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

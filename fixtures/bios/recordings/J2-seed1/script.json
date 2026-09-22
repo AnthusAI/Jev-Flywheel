@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_gender J2, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard decides everything from one holistic answer, and the disagreements show that answer is confidently wrong in both directions: it says 'physician' at 0.99 on directory boilerplate whose only surgical cue is a practice name, board certification, or training detail (Orthopaedic Center, Surgical Group, 'board certified in Surgery', 'MD - Thoracic Surgery'), and it says 'surgeon' whenever the word 'surgery' appears even in non-surgeon contexts (a surgery-center affiliation, 'refractive surgery' in an ophthalmology interest list, a PA trained under plastic surgeons). The holistic question cannot weigh explicit surgical practice against merely incidental mentions of surgery, and it has no signal at all when the text is generic, so it falls back to the prior.\", \"add_elements\": [{\"key\": \"explicit_surgical_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person performs surgery, works as a surgeon, specializes in or is board certified in a surgical field (such as general, orthopaedic, plastic, neurological, cardiothoracic, vascular, hand, urological or transplant surgery), or completed a surgical residency or fellowship? Answer yes only on explicit statements about this person's own practice, training or certification, not on passing references to surgery.\", \"criteria\": null}, {\"key\": \"nonsurgical_medical_focus\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person's own medical work or training as a non-surgical specialty or non-operative care (for example internal medicine, pediatrics, dermatology, cardiology, gastroenterology, ophthalmology, obstetrics and gynecology, preventive or sports medicine, research, or physician-assistant practice)? Answer based only on statements about this person, ignoring mentions of other people or of surgical procedures.\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

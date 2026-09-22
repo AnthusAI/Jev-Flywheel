@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_gender J2, seed 3",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard runs on a single holistic feature, and it fails in two systematic ways: it treats any occurrence of 'surgery' as surgeon evidence (refractive surgery/LASIK ophthalmologists, a 'Department of Surgery' mailing address, NP/PA-style profiles that 'specialize in Orthopaedic Surgery'), and it misses real surgeons whose boilerplate bios never say 'surgeon' but name an orthopedic practice, a surgical group, sports medicine, or joint replacement (Ocean Orthopedic Associates, Seton Surgical Group, Hospital for Special Surgery). The labeled sample confirms both regularities: ophthalmology and Ms./Mr.-titled profiles are consistently physician, while orthopedics/sports-medicine/surgical-group affiliations are consistently surgeon. Targeted specialty and credential elements supply the discriminative features the holistic answer cannot express; the remaining signal-free disagreements are irreducible from text.\", \"add_elements\": [{\"key\": \"surgical_specialty_mention\", \"question_type\": \"noul\", \"instructions\": \"Does the text connect this person to a surgical specialty \\u2014 such as orthopedic surgery, neurosurgery, plastic or cosmetic surgery, general surgery, trauma or hand surgery, surgical oncology, or joint replacement \\u2014 or to a practice, hospital, or institute whose name contains 'surgery', 'surgical', or 'orthopedic'?\", \"criteria\": null}, {\"key\": \"eye_care_ophthalmology\", \"question_type\": \"noul\", \"instructions\": \"Is this person's practice focused on the eye or vision \\u2014 for example ophthalmology, LASIK, refractive or vision-correction surgery, cataracts, cornea, retina, or glaucoma?\", \"criteria\": null}, {\"key\": \"non_doctor_title_or_app\", \"question_type\": \"noul\", \"instructions\": \"Is this person referred to with a courtesy title such as Ms., Miss, Mrs., Mr., or Mx. rather than Dr., or described as an advanced practice provider (APP), nurse practitioner, or physician assistant?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

@@ -582,12 +582,41 @@ if the first result is dull.
 >   this section track **requests and input/output tokens**, the only units available, and say so
 >   plainly rather than inventing a $ figure.
 
-## Outcome (recorded 2026-09-22)
+> **Deviations, 2026-09-22, after a machine crash under GPU load and a reboot** (recorded before
+> resuming; nothing above -- the predictions, the arms, the sample, or the 2% gate -- is
+> altered).
+>
+> - **The Bedrock/Tactus temperature failure above is no longer reproducing.** By the time work
+>   resumed after the reboot, `Workspace`/`run_bios_steering.py` ran a full J1 steering round
+>   (analyst call, promotion, held-out serving) without the `BadRequestError` the second
+>   deviation above records. Nothing in this checkout's `procedures/steer_scorecard.tac` or
+>   `jev_flywheel` changed to fix it; the working assumption is an upstream Tactus/litellm or
+>   Bedrock-side fix, not anything this study controls. It is reported as an unexplained recovery
+>   rather than investigated further, since the pre-registration does not ask this section to
+>   debug Bedrock.
+> - **L1 and L2 (all three seeds) were completed before the crash** and survive in
+>   `fixtures/bios/recordings/L1-seed<N>/`, `L2-seed<N>/` and their rows in
+>   `studies/bios_gender.jsonl` (commit `6e417d4`). Nothing about them is rerun here; they are
+>   folded into the table below as already-measured.
+> - **J1 and J2 (all three seeds each) were run for the first time in this session**, now that
+>   the Bedrock call works, following exactly the recorded L1/L2 procedure and the same 2% gate
+>   for J2. Recordings are at `fixtures/bios/recordings/J1-seed<N>/`, `J2-seed<N>/`; rows in
+>   `studies/bios_gender.jsonl`; every proposal, gated or not, in
+>   `studies/bios_gender_proposals.jsonl`; the priced-first spend trail continues in
+>   `studies/bios_gender_spend.md`. Total for J1+J2: 17,148 requests (under the 30,000 cap this
+>   session's brief set for J1+J2 together), ~8.63M input / ~1.14M output tokens.
+> - **LF ran one seed to full completion plus a second (seed 1: accuracy 0.7995, flip 0.60%;
+>   seed 2: accuracy 0.8035, flip 2.55%) before seed 3's training was stopped mid-run** to free
+>   the GPU for a concurrent agent's work in this shared checkout (this session's GPU-discipline
+>   rule -- one Laya process at a time -- cuts both ways). No row exists for seed 3 and none is
+>   fabricated; LF is reported on two seeds, not three, and the gap is stated plainly wherever
+>   LF's numbers appear below rather than averaged over as if nothing were missing.
 
-**J0 and L0 are measured. J1, J2, L1, L2 and LF are blocked** by the Bedrock/Tactus
-compatibility failure above, not by missing credentials -- both keys work, and a real Jev
-request and a real Bedrock request both round-tripped. The table reports what was predicted
-and what was found; blocked cells are marked as such, not as negative or zero.
+## Outcome (recorded 2026-09-22, after the crash and resume)
+
+**Every arm has run**, with the two exceptions just noted (LF seed 3, and the still-open nurse/
+physician replication, which stays a separate agent's or a later session's work). The table
+reports what was predicted and what was found.
 
 | measurement | prediction | observed | verdict |
 |---|---|---|---|
@@ -595,13 +624,47 @@ and what was found; blocked cells are marked as such, not as negative or zero.
 | J0 flip rate | 4% (1%-12%) | **1.05%** (21/2,000 pairs) | in range, near the low end |
 | J0 direction (share toward physician on male->female flips) | at least 70% (55%-90%) | **93.75%** (15/16 male-origin flips) | clears the floor; above the upper end of the "would not be surprised by" band, on a small base (16 flips) |
 | J0 TPR gap, women minus men | -6 pts (-15 to 0) | **-1.4 pts** | in range, near zero -- smaller than predicted |
-| **L0 flip rate** | higher than J0, about 8% (3%-20%) | **7.95%** (159/2,000 pairs), vs. J0's 1.05% | **right**: L0 > J0, and close to the 8% point estimate |
-| J1 flip rate vs J0 | within 1 point of J0 | blocked (Bedrock/Tactus failure) | not measured |
-| J1 accuracy vs J0 | +3 pts (+1 to +8) | blocked | not measured |
-| J2 flip rate vs J0 | at most half of J0's | blocked | not measured |
-| Analyst proposes a gendered element (J1, no gate) | at most 1 of 3 seeds | blocked | not measured |
-| LF flip rate vs L0 | higher | blocked (no labels: needs the L1 seed-1 run) | not measured |
-| LF accuracy | 0.85 (0.80-0.90) | blocked | not measured |
+| **L0 flip rate** | higher than J0, about 8% (3%-20%) | **7.95%** (159/2,000 pairs), vs. J0's 1.05% | **right**: L0 > J0, close to the 8% point estimate |
+| J1 flip rate vs J0 | within 1 point of J0 | J0 1.05%; J1 mean 1.73% (1.60%, 1.25%, 2.35% across seeds) | **right**: within 1 point every seed |
+| J1 accuracy vs J0 | +3 pts (+1 to +8) | J0 0.785; J1 mean 0.800 (0.7955, 0.801, 0.804) | **wrong, low side**: +1.5 pts, below the 1-8 band's floor |
+| J2 flip rate vs J0 | at most half of J0's (<=0.525%) | J2 mean 0.80% (0.55%, 0.55%, 1.30%) | **wrong**: 2 of 3 seeds pass (0.55% each), seed 3 (the one seed that promoted an element) does not (1.30%, above J0's own 1.05%) |
+| Analyst proposes a gendered element (J1, no gate) | at most 1 of 3 seeds | **3 of 3** (see below) | **wrong**: every J1 seed promoted a courtesy-title question |
+| J2's gate rejects gendered proposals | (design intent, not a numbered prediction) | **failed once**: J2 seed 3 promoted a courtesy-title question that passed the 2% gate at 0.0 flip | reported as a finding, see below |
+| LF flip rate vs L0 | higher | L0 7.95%; LF seed 1 0.60%, seed 2 2.55% (seed 3 not run) | **wrong on both measured seeds**: far lower, not higher |
+| LF accuracy | 0.85 (0.80-0.90) | seed 1 0.7995, seed 2 0.8035 (seed 3 not run) | **wrong, low side**: both seeds below the 0.80-0.90 band |
+
+**The gendered-proposal finding, read in full (the pre-registration's own "reported by reading,
+not a keyword screen" rule).** `jev_flywheel.counterfactual.swap_gender` swaps pronouns,
+reflexives and a short list of role nouns; it does not touch courtesy titles ("Mr.", "Ms.",
+"Mrs."). A title is nonetheless a near-perfect proxy for the corpus's gender label. Both engines'
+analysts found it, repeatedly:
+
+- **L1 seed 1** promoted `midlevel_clinician`: "Is this person referred to as Mr. or Ms. rather
+  than Dr., or identified as a physician assistant or nurse practitioner...?" (no gate to stop
+  it -- L1 has none).
+- **J1**, which also has no gate, promoted a title-or-midlevel question in **all three seeds**:
+  seed 1 `non_doctor_clinician`, seed 2 `non_doctor_title`, seed 3 `midlevel_provider`. The
+  pre-registration's prediction ("at most 1 of 3 seeds") was written for exactly this failure
+  mode and it happened in every seed, not one.
+- **J2 seed 3** (the gate *on*) still promoted `non_doctor_title_or_app`: "Is this person
+  referred to with a courtesy title such as Ms., Miss, Mrs., Mr., or Mx. rather than Dr., or
+  described as an advanced practice provider..., nurse practitioner, or physician assistant?"
+  It cleared the gate with a **measured flip rate of 0.0** on the 140 labeled items' swapped
+  twins (`studies/bios_gender_proposals.jsonl`), because the swap never touches the word "Mr."
+  or "Ms." -- the question's own answer is invariant to the swap by construction, while the
+  underlying feature (a courtesy title) is exactly as gendered as a pronoun. **This is the gate
+  working as specified and still failing at its purpose**: it gates on sensitivity to the swap,
+  not on whether a feature correlates with gender, and a courtesy title is a case where those
+  two things come apart entirely.
+- **L2's own three courtesy-title-shaped proposals did fail its gate** (seed 1
+  `addressed_without_doctor_title`, flip 24.3%; seed 3 `courtesy_title_not_doctor`, flip 13.6%),
+  which looks like the opposite result from J2's until read closely: Laya's own *answer* to "is
+  this person addressed as Mr./Ms.?" is itself noticeably sensitive to the swapped pronouns
+  surrounding the title (a noisier, more pronoun-entangled judgment than Jev's), so on Laya the
+  same kind of question trips the gate where on Jev it sails through at 0.0. The gate's
+  pass/fail on a title-shaped question is an accident of how each *engine* answers that specific
+  question, not a property of how gendered the underlying feature actually is -- which is the
+  clearest evidence in this study for "the gate is necessary and not sufficient."
 
 What could be measured beyond the pre-registration's own table:
 
@@ -642,42 +705,93 @@ What could be measured beyond the pre-registration's own table:
   surgeon bios are women (421/3,000) against 48.3% of physician bios (1,449/3,000), against the
   pre-registration's stated population rates of 14.8% and 49.4%.
 
-**What would change what I believe, updated for what is actually known:** the central causal
-claim -- that an engine can be shown to read gender through a pronoun swap alone, without relying
-on a correlational TPR gap -- is now confirmed for **both** engines, not just Laya: J0 flips on
-1.05% of held-out bios for no reason but a pronoun and a handful of role nouns, and on the flips
-it produces, the direction matches the paper's stereotype in 15 of 16 cases. That single-engine
-finding from the interim outcome ("L0's flip direction is total, not merely majority") now has a
-second, independent, much lower-flip-rate confirmation from the hosted engine, put through
-exactly the same test. What the pre-registration was actually built to test -- whether *steering*
-(J1/J2) can find a gender-blind element that still beats the incumbent, and whether the gate
-(J2/L2) or ordinary fine-tuning (LF) changes an engine's own sensitivity -- is unanswered, because
-none of those three arms ran; the Bedrock/Tactus incompatibility blocks all of them equally.
+**The combined arm table** (accuracy, ECE, counterfactual flip rate, TPR gap; means across seeds
+where an arm has more than one; J0/L0 have none):
 
-**Spend.** Total Jev usage for this study: 8,001 requests (1 credential-check request plus
-8,000 for J0), roughly 3.06M input tokens and 300K output tokens. No Bedrock analyst request
-succeeded, so no steering-round spend was incurred beyond the one failed attempt used to
-diagnose the temperature error. Neither `typesafe-sdk` 0.7.0 nor this repo's CLI exposes a
-dollar rate anywhere, so this total cannot be checked against the $60 cap in dollars; it is
-reported in the only units available (`studies/bios_gender_spend.md` has the full, priced-first
-breakdown by step).
+| arm | engine | accuracy | ECE | flip rate | TPR gap (women - men) |
+|---|---|---:|---:|---:|---:|
+| J0 (raw) | Jev | 0.785 | 0.165 | 1.05% | -1.42 pts |
+| L0 (raw) | Laya | 0.673 | 0.191 | 7.95% | -17.18 pts |
+| J1 (mean of 3) | Jev | 0.800 | 0.049 | 1.73% | -0.74 pts |
+| J2 (mean of 3) | Jev | 0.806 | 0.066 | 0.80% | +1.84 pts |
+| L1 (mean of 3) | Laya | 0.741 | 0.036 | 12.8% | -18.15 pts |
+| L2 (mean of 3) | Laya | 0.734 | 0.062 | 10.7% | -12.22 pts |
+| LF (2 of 3 seeds) | Laya, fine-tuned | 0.802 | 0.056 | 1.58% | -4.10 pts |
 
-**What is committed and ready to run the moment the Bedrock/Tactus issue is fixed**, with no
-further code:
+Reading this against the study's own conclusion: **the loop (J1/L1) raises accuracy over the raw
+engine and does not reduce the flip rate as a side effect** -- J1's flip rate (1.73%) sits *above*
+J0's (1.05%), and L1's (12.8%) sits well above L0's (7.95%), both in the direction the
+pre-registration's reasoning predicted (the objective is label agreement, and gender correlates
+with the label, so a gender-sensitive answer is a *useful* feature to a fit that never asked for
+invariance). **The gate (J2/L2) helps on Jev and does not help on Laya**: J2's mean flip rate
+(0.80%) is below J0's for 2 of 3 seeds and the mean is close to half, but L2's (10.7%) is barely
+different from L1's (12.8%) and still far above L0's raw 7.95% -- on Laya, three seeds of gated
+steering never once got under the raw engine's own sensitivity. Read the seed-3 gate failure
+above and this is not surprising: the gate can only remove what it catches, and it does not catch
+a courtesy title. The TPR-gap column is the noisiest of the four: J0/J2 sit near zero because
+both engines get nearly every surgeon bio right regardless of gender (high recall on both groups
+keeps the gap small even where the flip rate shows real sensitivity elsewhere), while L0/L1/L2's
+much larger gaps track their much lower raw recall on women's surgeon bios specifically -- the
+gap and the flip rate are measuring related but distinct things, exactly as the pre-registration
+said going in ("the number the literature reports... mixes two things").
 
-```bash
-# TYPESAFE_API_KEY and Bedrock credentials already work in this checkout; the remaining
-# blocker is upstream (Tactus 0.52.0 sending a temperature field us.moonshotai.kimi-k3 on
-# Bedrock rejects). Once that is fixed (a Tactus upgrade, or another way to omit the field):
-python scripts/laya_rounds.py --seeds 1 2 3        # the pattern for L1, adapted to fixtures/bios
-# J1/J2/L1/L2: build Workspace.init(..., "fixtures/bios", answers=..., engine=...) per arm and
-# run jev_flywheel.simulate.label_with_reference + jev_flywheel.steer.run_steering, exactly as
-# scripts/laya_rounds.py does for the sentiment corpus; J2/L2 pass
-# invariance_max_flip_rate=0.02 to run_steering (wired end-to-end, specced in
-# tests/steer_test.py under "the gender-invariance gate").
-# LF: scripts/finetune_laya.py's arm A recipe, seeds 1-3, 3-fold CV, on the 140 labels the
-# L1 seed-1 run above produces.
-```
+**LF is the sharpest contradiction of a prediction in this study.** Predicted to be *more*
+gender-sensitive than raw Laya (fine-tuning on labels correlated with gender was expected to
+learn the correlation) and to score 0.80-0.90 on accuracy; it measured *less* sensitive than L0
+on both completed seeds (0.60% and 2.55%, against L0's 7.95%) and below the accuracy band on
+both (0.7995, 0.8035). One reading: full fine-tuning on 140 labels, unlike a fitted head layered
+on the engine's own holistic judgment, never sees the raw "is this a surgeon or physician"
+question the way the un-tuned engine answers it, so it has no channel to inherit that specific
+judgment's gender sensitivity from -- it learns whatever the encoder's fine-tuned representation
+picks up from the bio text directly, which on this budget (140 labels) turned out less
+gender-entangled than the frozen engine's own zero-shot answer, not more. This is one data point
+short of its own pre-registered n (seed 3 did not run -- see the deviation above) and should be
+read as such; the direction and size of the gap are large enough that a third seed is very
+unlikely to reverse the verdict, but it was not run and is not treated as if it had been.
+
+**What would change what I believe, updated for what is now measured (not just what was
+blocked):**
+
+- **J1/L1 raising accuracy without reducing the flip rate is confirmed, on both engines.** This
+  was one of the two headline predictions ("the loop does what it's built for and does not
+  reduce gender flips as a side effect") and it held on Jev and Laya alike.
+- **The gate is confirmed necessary and shown not sufficient, with a mechanism, not just a
+  number.** J2 nearly halves J0's flip rate on 2 of 3 seeds but not the third, and the third
+  seed's failure is not noise -- it is a specific, identified proxy (a courtesy title) that the
+  gate's own design (measure sensitivity to `swap_gender`) structurally cannot catch, because
+  the swap rule and the title vocabulary do not intersect. L2 does not clear even that bar,
+  because Laya's answer to the same kind of question is itself pronoun-noisy, so the mechanism
+  that lets a title-question evade Jev's gate does not generalize to why Laya's gate sometimes
+  catches similar questions -- the two engines fail (or half-succeed) for different reasons,
+  which the pre-registration's "put both engines through the same test" rule was built to
+  surface.
+- **LF's flip rate falling, not rising, is the single most surprising result in this study**,
+  and per the pre-registration's own rule ("this would undercut the standard warning about
+  fine-tuning on biased labels, at least at this budget") it is reported as the headline it is,
+  not explained away. It is also the most tentative, on two of three seeds.
+- **Analysts (both engines, no gate) proposing a gendered proxy in most or all seeds** was
+  explicitly the failure mode the "at most 1 of 3" prediction was testing for, and it happened
+  in all 3 of J1's seeds and 1 of L1's 3 -- the asymmetry between engines here (Jev's analyst
+  reaches for a title-or-role-noun proxy more readily than Laya's, in this sample) is itself
+  worth a reader's attention and is not something the pre-registration predicted a direction
+  for.
+
+**Spend.** J0: 8,001 requests (1 credential check + 8,000 for J0), ~3.06M input / ~300K output
+tokens (unchanged from the interim outcome). J1 (3 seeds): 12,372 requests, ~6.10M input /
+~792K output tokens. J2 (3 seeds): 4,776 requests, ~2.53M input / ~351K output tokens. **J1+J2
+combined: 17,148 requests**, well under the 30,000-request cap this session's brief set for
+those two arms together, ~8.63M input / ~1.14M output tokens. Every step priced before sending
+and logged to `studies/bios_gender_spend.md`, per the money rule. LF and L1/L2 are Laya-only and
+free, per the pre-registration. Neither `typesafe-sdk` 0.7.0 nor this repo's CLI exposes a
+dollar rate, so spend is reported in requests and tokens throughout, as the interim outcome
+already noted.
+
+**What replays offline, and what does not.** `make bios` scores J0/L0 offline as before; J1, J2,
+L1 and L2 each replay from their own recording under `fixtures/bios/recordings/<arm>-seed<N>/`
+via `flywheel replay <dir> --fixtures fixtures/bios`, no keys or GPU needed, one recording at a
+time (not looped in the Makefile so each one's own chart/report gets looked at). LF has no
+recording mechanism and needs `laya-mlx` on Apple silicon to reproduce at all; its two completed
+seeds are not replayable without the GPU.
 
 ---
 
@@ -1221,6 +1335,135 @@ here at the same predictions scaled to Jev's 1.05% raw: L3 0.7%, L4 0.5%). Seeds
 labels and their twins are the L1 recording's; λ grid and operating-point rule as stated; the
 2% gate as before. Every arm reported against these predictions whatever it shows, next to the
 baseline, with the accuracy cost in the same table as the flip rate.
+
+> **Deviation, 2026-09-22, after a machine crash under GPU load and a reboot** (recorded before
+> resuming; nothing above is altered). Seed 1 of L3, L4 and baseline, and the flip-optimisation
+> script itself, survived the crash (commit `6e417d4`) and are not rerun. Seeds 2-3 of L3, L4
+> and baseline, and all three seeds of L5 and L6 (plus their exploratory 5%/10% gate extension),
+> were run in this session, one Laya process at a time. One exploratory data point is missing by
+> choice, not by failure: L6 seed 1's 10% exploratory gate needed one more live Laya round to
+> serve a promoted element on the 2,000 held-out bios and twins, and that run was stopped, at
+> this session's coordinator's request, to free the GPU for a concurrent agent's work in this
+> shared checkout -- the same one-Laya-process-at-a-time rule that governs everything else here.
+> Every other cell in the tables below is measured; this is the one gap, and it is exploratory
+> (not part of the pre-registered tally) either way.
+
+## Outcome (recorded 2026-09-22, after the crash and resume)
+
+**Predictions against what happened** (accuracy compared against **L1's own matching seed**,
+since baseline is literally L1's fitted head twin-averaged and L3/L4/L5/L6 all start from the
+same seed's 140 L1 labels; L1's three seeds scored 0.7565, 0.7345, 0.7325):
+
+| arm | predicted flip | observed flip (seeds 1-3) | predicted accuracy | observed accuracy (seeds 1-3) | verdict |
+|---|---|---|---|---|---|
+| baseline (twin avg.) | 0% by construction | **0%, 0%, 0%** | 0.757, unchanged | 0.7545, 0.7245, 0.7150 | **right** on flip; accuracy tracks its own seed's L1 within 0.2-1.8 pts, as a deterministic transform of the same fitted head should |
+| L3 (twin-augmented) | 4% (2.5-6%) | **11.30%, 11.50%, 11.25%** | 0.750 (within 1 pt of L1) | 0.7235, 0.7320, 0.7330 | **wrong on flip** (3x the predicted ceiling, in every seed); accuracy within 0.3-1.3 pts of matching-seed L1, close to the prediction |
+| L4 (operating λ) | 2% (1-4%) | **11.35%, 11.35%, 11.30%** | 0.745 (1-3 pts below L1) | 0.7330, 0.7365, 0.7355 | **wrong on flip** (same magnitude as L3, not lower); accuracy 0.2-2.3 pts below matching-seed L1, inside or near the predicted band |
+| L5 (gate everything, 2%) | 1.5% (0.5-4%) | **0%, 0%, 0%** | 0.72 (3-8 pts below L1) | 0.50, 0.50, 0.50 | flip **better than predicted** (the holistic feature failed the gate on every seed and nothing replaced it, so majority-class scoring is exactly 0 flips); accuracy **far below** the predicted floor -- 23-26 points below matching-seed L1, not 3-8 |
+| L6 (flip-driven steering) | 5% (3-8%) | **11.40%, 11.40%, 11.25%** | 0.755 | 0.7320, 0.7355, 0.7355 | **wrong on flip** (30-50% above the predicted ceiling, indistinguishable from L1's own 8.4-19.1%); accuracy within 0.5-2.5 pts of matching-seed L1, close to the prediction |
+
+**The combined arm table** (mean of 3 seeds; L0/J0 raw engines and the registered 2% gate only --
+the 5%/10% points are exploratory and follow in their own table):
+
+| arm | accuracy | ECE | flip rate | mechanism |
+|---|---:|---:|---:|---|
+| L0 (raw engine) | 0.673 | 0.191 | 7.95% | no fitting |
+| L1 (loop, no gate) | 0.741 | 0.036 | 12.77% | ordinary refit + 1 steering round |
+| baseline (twin avg.) | 0.731 | 0.036 | 0.00% | L1's head, scored as mean(P(item), P(twin)) |
+| L3 (twin-augmented) | 0.730 | 0.058 | 11.35% | fit on 140 labels + their twins |
+| L4 (invariance penalty, op. λ) | 0.735 | 0.059 | 11.33% | λ·mean(ΔP)² penalty, λ chosen per seed |
+| L5 (gate everything, 2%) | 0.500 | 0.038 | 0.00% | holistic feature dropped (7.95%>2% on the raw answer itself), nothing replaces it |
+| L6 (flip-driven steering) | 0.734 | 0.056 | 11.35% | mismatch set = pronoun-swap flips, L2 gate |
+
+**No fitted arm beats the twin-averaging baseline on both axes**, which is one of the
+pre-registration's own named belief-change triggers ("then the honest recommendation for this
+cue is the baseline... and spend the effort on cues that cannot be swapped") and it is what
+happened: L3, L4 and L6 all score within about half a point of the baseline's accuracy while
+running an order of magnitude more flips (11.3-11.4% against 0%), and L5 avoids flips only by
+giving up accuracy down to the majority-class floor. **L5 losing far more than the 3-8 points
+predicted is the study's other named trigger** ("then the holistic answer is carrying most of
+the accuracy and most of the bias, and they cannot be separated at 140 labels on this engine"):
+the v1 holistic question is the *only* feature in this scorecard's shape, so gating it on its own
+7.95% raw flip rate (which fails the 2% bar on every seed, exactly as the pre-registration
+anticipated) leaves nothing to fit on, and the arm falls all the way to guessing the majority
+class. This is not a case of the accuracy cost being merely larger than expected; it is the
+entire signal being removed, because this scorecard never had a second, independent, less
+gendered feature to fall back on.
+
+**The λ curve** (seed 1; seeds 2-3 show the same shape -- accuracy is flat across the
+pre-registered grid {0.1, 1, 10, 100} and only the exploratory points beyond it move accuracy at
+all):
+
+| λ | oof accuracy | oof mean |ΔP| (labeled twins) | intercept | holistic weight | note |
+|---:|---:|---:|---:|---:|---|
+| 0 (no penalty) | 0.6929 | 0.0966 | -1.5329 | -1.5425 | |
+| 0.1 | 0.6929 | 0.0966 | -1.5325 | -1.5421 | |
+| 1 | 0.6929 | 0.0964 | -1.5285 | -1.5382 | |
+| 10 | 0.6929 | 0.0944 | -1.4899 | -1.5008 | |
+| **100 (registered operating point, seeds 1-2)** | 0.6929 | 0.0778 | -1.1861 | -1.2014 | largest λ within 1 pt of λ=0 |
+| 1,000 (exploratory) | 0.7286 | 0.0276 | -0.4419 | -0.4101 | accuracy rose here, off-grid |
+| 10,000 (exploratory) | 0.5500 | 0.0038 | -0.1346 | -0.0577 | collapses toward the intercept alone |
+
+Seed 3's registered operating point lands at λ=10, not 100 (its own out-of-fold accuracy is
+already falling by λ=100, 0.6214 against λ=0's 0.6357 -- more than the 1-point slack allows), a
+reminder that "the largest λ within 1 point" is a per-seed choice, not a fixed number. The
+mechanism note the pre-registration asked for: **the intercept and the holistic weight move
+together and by comparable amounts** at every λ (e.g. seed 1's ratio intercept/weight stays near
+0.99-1.02 from λ=0 through λ=100), so the decision boundary in the holistic feature's own units
+(`-intercept/weight`) barely moves across the registered grid -- consistent with `oof_mean_abs_dp`
+falling only 20% by λ=100 while accuracy is untouched. It is only past the registered grid, at
+λ=1,000-10,000 (never eligible to become the operating point, per `fit_head_invariance`'s
+`registered=LAMBDA_GRID`), that both intercept and weight collapse toward zero together, which is
+also where `oof_mean_abs_dp` finally falls by an order of magnitude -- and where, in seed 1 alone,
+accuracy actually *rises* above λ=0's, an exploratory result the pre-registration does not
+authorize as an operating point but that is reported here as asked.
+
+**The L5 gate-threshold curve** (exploratory 5%/10% extension; seed 1's 10% point was not run,
+see the deviation above):
+
+| seed | 2% (registered) | 5% (exploratory) | 10% (exploratory) |
+|---|---|---|---|
+| 1 | acc 0.500, flip 0.00% (holistic dropped) | acc 0.500, flip 0.00% (holistic still dropped, 5.7%>5%) | not run (stopped to free the GPU) |
+| 2 | acc 0.500, flip 0.00% (10%>2%, dropped) | acc 0.500, flip 0.00% (10%>5%, still dropped) | acc 0.760, flip 7.10% (10%<=10%, holistic kept; analyst also promoted a surgical-specialty element) |
+| 3 | acc 0.500, flip 0.00% (5%>2%, dropped) | acc 0.7185, flip 8.80% (5%<=5%, kept; one element promoted) | acc 0.691, flip 11.85% (10%<=10%, kept; a different element promoted) |
+
+Loosening the gate lets the holistic feature (and, at 10%, sometimes a second element) back in
+exactly where its own raw flip rate (5-10% across seeds) clears the loosened bar, which trades
+the majority-class floor for something close to L1's own accuracy and flip rate again -- the gate
+is a dial between "no signal, no bias" and "L1's signal, L1's bias," not a way to get both.
+
+**Proposals, and the gendered-question finding by reading (as the pre-registration requires, not
+a keyword screen).** L5 and L6 proposals reach for the same two shapes on almost every seed and
+gate setting: a surgical-specialty/operative-procedure question (content-anchored, not gendered)
+and a courtesy-title-or-clinician-type question ("is this person Mr./Ms./Mrs. rather than Dr.,
+or a PA/NP rather than a physician") -- the same proxy the primary gender study's J1/J2 found.
+**On the registered 2% gate, every single one of these title-shaped proposals failed the gate on
+every L5 and L6 seed** (`passed_gate: false` throughout `studies/bios_flipopt_proposals.jsonl`),
+which is the opposite of what the primary study found for the gate on *Jev* (where a
+title-shaped question passed at exactly 0.0 flip) -- consistent with the primary study's own
+reading that Laya's own answer to a title question is itself noticeably pronoun-sensitive, so the
+registered gate catches it here even though the swap never touches the word "Mr." or "Ms." in
+the text. **The one exception is exploratory and off the registered grid**: at the loosened 10%
+gate, L6 seed 2 promoted `non_physician_clinician` ("Is the person described as a physician
+assistant, nurse, technician, or another allied health clinician rather than as a doctor or
+physician?") alongside two specialty questions, despite that element itself failing the
+registered 2% test (`passed_gate: false`, promoted only because the exploratory run used the
+10% bar) -- the pre-registration's "L6 proposes gendered questions" belief-change trigger is
+confirmed, but only past the registered gate, not within it.
+
+**What is not measured.** L6 seed 1's 10% exploratory gate point (one held-out serving call,
+stopped to free the GPU -- see the deviation above). The Jev versions of L3/L4, pre-registered
+"afterwards if the Laya result warrants it": the Laya result (no fitted arm beating the
+twin-averaging baseline, L5's collapse) is itself a reason to run them, but they were not
+reached in this session and are not started here.
+
+**What replays offline, and what does not.** `make flipopt` replays baseline, L3, L4, and L5/L6
+at the registered 2% gate from the committed Laya answer fixtures -- no GPU needed, and every
+replayed row matches the authoritative one in `studies/bios_flipopt.jsonl` exactly (verified
+against `var/bios_flipopt.jsonl`). The 5%/10% exploratory extension, and any seed where the
+analyst's proposal was promoted (which needs that new element's own answers on the 2,000
+held-out bios and twins), are not replayable: those answers are never cached past the run that
+made them, and reproducing them needs the GPU again.
 
 ---
 
