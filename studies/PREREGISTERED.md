@@ -280,3 +280,80 @@ including if the stated risk (a lexical shortcut winning at 140 labels) turns ou
 happened. Held-out items (paper-600 and the full 3,521) are never used to pick a learning
 rate, an epoch count, or a checkpoint; only the training labels' own cross-validation folds do
 that.
+
+> **Deviations, 2026-09-21** (recorded plainly, before the study is written up; nothing above --
+> the predictions or the rules as stated -- is altered).
+>
+> - **3-fold CV, not the pre-registered 5-fold.** `scripts/finetune_laya.py` uses 3 folds
+>   throughout (`--folds`, default 3) to keep wall-clock affordable on one M1 Max GPU. This is a
+>   documented reduction, not a silent one; `cv_folds` in every row records how many folds ran
+>   (0 means the row reused a rate rather than running its own CV -- see below).
+> - **The learning rate was reused across sizes, not re-chosen at every (arm, n).** For arms A,
+>   B and D (all at the single recorded n=140) CV ran once each, as pre-registered. For arm C,
+>   only the anchor sizes ran their own 3-fold CV; every other size reused the nearest smaller
+>   anchor's chosen learning rate (and its temperature). The recorded run used
+>   `--cv-anchors 140 800`, so:
+>   - **n = 140 and n = 800 ran their own CV** (one anchor per epoch regime: 10 epochs at and
+>     below 500, 3 epochs above).
+>   - **n = 300 and n = 500 reused the lr and temperature chosen at n = 140.**
+>   - **n = 2,000 and n = 5,140 reuse the lr and temperature chosen at n = 800** -- reusing
+>     n=5,140's rate from a smaller anchor is within what the pre-registration already allowed
+>     (from n=2,000); reusing it from n=800 as well, and doing the same for n=2,000, is a further
+>     wall-clock cut made here and recorded rather than left implicit. Every such row's
+>     `cv_note` field says which n its rate came from, and `cv_folds: 0` marks it as not having
+>     run its own CV, distinguishing it from a row that did (`cv_folds: 3`).
+> - **The first M2 attempt was killed before producing a single row.** Left alone, MLX's buffer
+>   cache grew to roughly 24 GB over the course of a training run on this 32 GB machine, pushed
+>   the system into swap, and made a fold take about five times as long as it should. That
+>   attempt was killed with nothing written to `studies/finetune_laya.jsonl`. M2 was restarted
+>   after `scripts/finetune_laya.py`'s `fresh_agent()` was changed to call `mx.clear_cache()` and
+>   `mx.set_cache_limit(4 * 1024 ** 3)` before loading each fresh checkpoint, bounding the cache
+>   to 4 GB; the rows in `studies/finetune_laya.jsonl` are from the restarted run.
+> - **The arm C job crashed once, and only the missing cells were rerun.** Partway through
+>   n = 5,140, seed 1, the run died with a Metal command-buffer error ("Impacting
+>   Interactivity": macOS stops GPU work that starves the display; the machine was also rendering
+>   charts and serving a Gatsby build at the time). Every row up to n = 2,000 was already on disk.
+>   The three n = 5,140 seeds were rerun with the learning rate and temperature the interrupted
+>   run would have used (n = 800's). No row was duplicated or replaced.
+> - **`cv_note` is missing from the earlier rows.** Arms A, B and D and arm C up to n = 2,000 were
+>   written by a process that had loaded the script before `cv_note` was added. `cv_folds` (3, or
+>   0 for a reused rate) is present in every row and is the field to trust.
+
+## Outcome (recorded 2026-09-21; `studies/finetune_laya.jsonl`, 3 seeds per cell, paper-600)
+
+| Prediction | Verdict | What happened |
+|---|---|---|
+| Arm A lands at 0.74 to 0.80, at or below the flywheel on Laya's 0.802 | **Wrong** | 0.896 (0.887 to 0.903); above Jev with the layer (0.870) too |
+| Arm A's seed spread is at least 3 points | **Wrong** | 1.7 points |
+| Arm B (head-only) beats arm A at 140 labels | **Wrong** | 0.659 (0.620 to 0.712), below untuned Laya's 0.722 |
+| Arm C first exceeds 0.802 at 300 to 500 labels | **Wrong** | 0.884 at 140, the smallest pre-registered size |
+| Arm C first exceeds 0.870 at 800 to 2,000 labels | **Wrong** | on average at 140; in every seed by 300 |
+| Arm C reaches about 0.93 at 5,140 labels | **Right** | 0.942 (0.935 to 0.947); 0.939 on all 3,521 |
+| After arm A, more than 10% of top answers to the other questions change | **Right, with one exception** | 7 of 8 untrained questions moved on more than 10% of items (irony 8.6%; intensity 74.8%; mean 42%); `topic_domain` 35.4%; the trained Sentiment question 28.7% (`studies/finetune_laya_drift.jsonl`) |
+| Stated risk: a lexical planted cue lets full fine-tuning win at 140 | **It did** | reported as the headline, not explained away |
+
+Arm D (DistilBERT on the same 140) scored 0.835 (0.818 to 0.848) and was the best system on the
+neutral tier (0.782). The layer keeps calibration (ECE 0.015 on Laya, 0.030 on Jev, against 0.087
+for arm A) and the engine's other answers.
+
+**What the calibration numbers for the fine-tuned arms are worth.** One temperature per (arm, n)
+was fitted on out-of-fold predictions from CV models trained on about two thirds of the labels,
+with the CV's own fixed seed, and applied to three differently seeded final models trained on all
+of them. For arm A it came out at 5.07 and made seed 1 worse (ECE 0.108 to 0.116) while improving
+seed 3. It is not stacked on Laya's shipped calibration: the script reads raw logits. Retraining
+the same seeds for the drift probe reproduced accuracy within about a point but not calibration
+(seed 1: ECE 0.046 against the recorded 0.116), so gradient fine-tuning here is not run-to-run
+deterministic on this GPU, and at 140 labels calibration is sensitive to that. Treat the
+fine-tuned arms' ECE as loose.
+
+**Exploratory, outside the tally** (`"exploratory": true`): head-only at gentler learning rates
+did not rescue arm B (0.722 at 1e-5, which is untuned Laya; 0.679 at 2e-5). Full fine-tunes on 20,
+40 and 80 random labels scored 0.819, 0.833 and 0.852: on this corpus fine-tuning is above the
+flywheel on Laya at every budget tried, and passes Jev with the layer between 80 and 140 labels.
+Those rows reused lr 2e-5 without CV and have no honest calibration. Auto-accept coverage at 95%
+accuracy and AUROC for all six systems are in `studies/selective_prediction.jsonl`: Jev with the
+layer 72.5% / 0.853; arm A 71% on average (59% to 82% by seed) / 0.800; arm D 63% / 0.839; Laya
+with the layer 54.5% / 0.799; Jev alone 46% (on a 277-item tie block) / 0.762; Laya alone
+34.5% / 0.740. The arm A and D models in that file were retrained for the probe, so their
+accuracies differ from the rows above by up to a point.
+

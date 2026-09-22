@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student test diagrams
+.PHONY: help install demo laya student finetune test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
@@ -8,6 +8,7 @@ help:
 	@echo "  make demo      1. the flywheel with Jev, replayed offline from a recording (~10 s)"
 	@echo "  make laya      2. the same recording answered by a local Laya model (downloads ~843 MB)"
 	@echo "  make student   3. distil the result into a small local BERT classifier (downloads ~1.2 GB in all)"
+	@echo "  make finetune  4. does gradient fine-tuning of Laya itself beat the fitted head? (one seed, quick)"
 	@echo "  make test      run the test suite"
 	@echo ""
 	@echo "What each one does, what it needs and what to expect: README.md, section 'Try it'."
@@ -60,6 +61,24 @@ student:
 	@echo ""
 	@echo "Each line: a student's accuracy against the human labels on 3,521 held-out items,"
 	@echo "and how often it agrees with the teacher. Next: README.md, 'Moving off the hosted model'."
+
+# Stage 4. Fine-tune Laya's own weights on the same 140 labels the flywheel's head is fit on,
+# and compare: full fine-tune, head-only fine-tune, and a DistilBERT baseline. One seed, arms
+# A/B/D only, to keep this quick; `studies/PREREGISTERED.md` and `studies/finetune_laya.jsonl`
+# have the full pre-registered study (multiple seeds, and the Arm C learning curve).
+finetune:
+	.venv/bin/pip install -e '.[laya,student]'
+	@echo ""
+	@echo "Fine-tuning Laya (full and head-only) and DistilBERT on the same 140 human labels the"
+	@echo "flywheel's fitted head uses, one seed each. This mutates a fresh copy of Laya's weights"
+	@echo "in memory only -- nothing is written back to the checkpoint."
+	@echo ""
+	.venv/bin/python scripts/finetune_laya.py --arms A B D --seeds 1 --folds 3 \
+		--out var/finetune_laya_quick.jsonl
+	@echo ""
+	@echo "Each line: an arm's accuracy on paper600 and the full 3,521 held-out items, next to the"
+	@echo "chosen learning rate and its cross-validation scores. Compare paper600 accuracy against"
+	@echo "the flywheel's own 0.802 (README, 'The same layer on a local model')."
 
 test:
 	.venv/bin/python -m pytest -q
