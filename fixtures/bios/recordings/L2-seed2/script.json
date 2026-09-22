@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_gender L2, seed 2",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The label turns almost entirely on the person's medical specialty, but the scorecard relies on a single holistic surgeon-or-physician judgment. That judgment misses specialty evidence when it appears indirectly (an orthopaedic practice name, a neurosurgery residency, a plastic-surgery fellowship, a urology focus) and is misled by the word 'surgery' in non-surgical contexts (a Mohs fellowship in dermatology, an aesthetician in a plastics department, an OB/GYN doing amniocentesis, an interventional cardiologist). Text-anchored questions about surgical training, non-surgical specialty, and dental practice give the model the evidence the human label actually follows.\", \"add_elements\": [{\"key\": \"surgical_specialty_training\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person performs surgery, is board certified in a surgical field, or trained or works in a surgical specialty such as general, orthopaedic, neurological, plastic, reconstructive, cosmetic, vascular, hand, or pediatric surgery?\", \"criteria\": null}, {\"key\": \"nonsurgical_specialty_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person practices or specializes in a non-surgical field of medicine, such as internal medicine, family medicine, cardiology, dermatology, ophthalmology, obstetrics or gynecology, hospitalist care, or primary care?\", \"criteria\": null}, {\"key\": \"dental_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person as a dentist or dental surgeon, for example holding a BDS or DDS degree or practicing at a dental clinic?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

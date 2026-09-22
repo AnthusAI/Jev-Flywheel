@@ -32,6 +32,12 @@ charts = ["matplotlib>=3.7"]
 laya = ["laya-mlx==0.1.0"]
 # A small local text classifier distilled from the calibrated head (scripts/distill_student.py).
 student = ["torch", "transformers"]
+# Name redaction for the Bias-in-Bios gender-swap study (jev_flywheel.counterfactual.redact_names).
+# en_core_web_sm is not on PyPI; spaCy publishes it as a GitHub-hosted wheel instead.
+bios = [
+  "spacy>=3.8,<3.9",
+  "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "pyflakes"]
 
 [project.scripts]

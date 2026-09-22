@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_gender L2, seed 1",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and it misses two reliable, text-visible patterns. First, many surgeon bios contain explicit surgical evidence (board certification in Plastic/Orthopaedic Surgery, residency in orthopedics, procedures like valve replacement or facial reconstruction, 'specialize in Surgery') yet were called physician because the holistic answer ignored them. Second, a directory-template bio ('Mr./Ms. X practices medicine and specializes in Orthopaedic Surgery') is consistently labeled physician in both the disagreements and the labeled sample, but the holistic keeps calling these surgeon; a title cue separates them cleanly.\", \"add_elements\": [{\"key\": \"surgical_practice_evidence\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that the person performs surgery or has formal surgical credentials, for example mentioning surgical procedures they perform or focus on (such as joint replacement, valve replacement, or reconstruction), working in an operating room, being board certified in a surgical specialty, or completing a residency or fellowship in a surgical field such as general, orthopedic, plastic, vascular, cardiac, hand, or neurosurgery?\", \"criteria\": null}, {\"key\": \"addressed_without_doctor_title\", \"question_type\": \"noul\", \"instructions\": \"Is the person referred to with the title Mr., Ms., Mrs., or Miss rather than with the title Dr.?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

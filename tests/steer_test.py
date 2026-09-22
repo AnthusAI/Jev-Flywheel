@@ -12,7 +12,7 @@ import pytest
 from jev_flywheel.steer import ScriptedApprover, SteerError, render_source, run_steering
 from jev_flywheel.workspace import Workspace
 from tests.host_test import (  # noqa: F401  (fixtures)
-    SARCASM, Client, labeled, labeled_template, reply, template, workspace)
+    SARCASM, Client, Response, labeled, labeled_template, reply, template, workspace)
 from tests.loop_test import SCORE
 
 pytest.importorskip("tactus")
@@ -290,3 +290,114 @@ def test_an_evaluation_that_could_not_run_records_why_in_the_event(labeled):
     assert event["decision"] == "not_evaluable"
     assert event["status"] == "top_up_failed"
     assert "engine fell over" in event["reason"]
+
+
+# ---- the gender-invariance gate (studies/PREREGISTERED.md's J2/L2 arms) --------------------
+#
+# The sentiment fixture's own texts (AI-generated workplace/sports snippets) have no personal
+# subject and so no pronoun swap_gender can touch -- true of the corpus these specs otherwise
+# share, and not something to fix here. These tests append an unambiguous sentence with a
+# pronoun to each labeled item's text before steering, so the swap has something to flip.
+
+GENDERED_TONE = {"key": "gendered_tone", "question_type": "noul",
+                 "instructions": "Does the text read as forceful or assertive?"}
+
+
+def _give_labeled_items_a_pronoun(workspace):
+    """Append "He said this himself." to every labeled item whose reference label is
+    "positive" and "She said this herself." to every "negative" one (in place), so a pronoun
+    a client can key off of is coupled to the label it is trying to predict -- otherwise an
+    element that reads the pronoun would have no signal to lose and the ordinary fit test
+    would reject it whether or not the invariance gate did. Returns the labeled item ids."""
+    ids = sorted({f.item_id for f in workspace.feedback()})
+    for item_id in ids:
+        item = workspace.item(item_id)
+        pronoun_sentence = (" He said this himself." if item.reference_label == "positive"
+                            else " She said this herself.")
+        item.text = item.text + pronoun_sentence
+    return ids
+
+
+_PRONOUN_SUFFIX = __import__("re").compile(r" (He|She) said this (himself|herself)\.$")
+
+
+class GenderReader(Client):
+    """Every element answers from the corpus label except ``gendered_tone``, which reads
+    a masculine pronoun straight off the text -- so its own answer flips whenever
+    ``swap_gender`` changes one, and every other element's does not.
+
+    ``_truth`` is keyed by the *unswapped* text (``Client.__init__``'s dict), so looking the
+    corpus label up under the swapped twin's text -- which differs only in the pronoun
+    ``_give_labeled_items_a_pronoun`` appended -- would always miss. Stripping that suffix
+    before the lookup is what makes "positive" a property of the corpus label alone, the way a
+    real engine reading actual content would answer it; the miss otherwise has nothing to do
+    with the invariance gate under test.
+    """
+
+    def __init__(self, workspace):
+        super().__init__(workspace)
+        self._truth = {_PRONOUN_SUFFIX.sub("", text): label for text, label in self._truth.items()}
+
+    async def system_one(self, *, state, questions):
+        import re
+
+        self.calls.append(sorted(questions))
+        stripped = _PRONOUN_SUFFIX.sub("", state["text"])
+        positive = self._truth.get(stripped) == "positive"
+        masculine = bool(re.search(r"\b(he|him|his|himself)\b", state["text"], re.IGNORECASE))
+        return Response({
+            name: {"type": "noul",
+                  "noul": (0.9 if masculine else 0.1) if name.endswith("gendered_tone")
+                  else (0.15 if positive else 0.85)}
+            for name in questions})
+
+
+def test_the_gate_rejects_an_element_that_reads_gender(labeled):
+    _give_labeled_items_a_pronoun(labeled)
+
+    outcome, client, approver = steer(
+        labeled, [reply(add_elements=[GENDERED_TONE])], client=GenderReader(labeled),
+        invariance_max_flip_rate=0.02)
+
+    assert outcome.decision == "rejected_by_metrics"
+    assert "invariance gate" in outcome.detail["reasons"]      # evaluation.summary_text, a string
+    assert approver.asked == []                 # never reached a human: gated first
+    # The gate's own number is on the outcome too, not just summarized as prose -- this is
+    # what a study recording every proposal's flip rate on the labeled items reads.
+    assert outcome.invariance_flip_rates["sentiment.gendered_tone"] > 0.02
+
+
+def test_the_gate_lets_through_an_element_that_does_not_read_gender(labeled):
+    _give_labeled_items_a_pronoun(labeled)
+
+    # SARCASM's answers correlate with the corpus label only, never with pronouns, so its
+    # own flip rate under the swap is zero regardless of the pronoun added above.
+    outcome, client, _ = steer(
+        labeled, [reply(add_elements=[SARCASM])], client=GenderReader(labeled),
+        invariance_max_flip_rate=0.02)
+
+    assert outcome.decision == "promoted"
+    assert outcome.invariance_flip_rates["sentiment.sarcasm"] == 0.0
+
+
+def test_with_no_gate_the_same_gendered_element_is_promoted(labeled):
+    _give_labeled_items_a_pronoun(labeled)
+
+    # invariance_max_flip_rate=None (the default) must reproduce the pre-gate behaviour
+    # exactly: the same element that the gate rejects above is free to be promoted here.
+    outcome, _, _ = steer(
+        labeled, [reply(add_elements=[GENDERED_TONE])], client=GenderReader(labeled))
+
+    assert outcome.decision == "promoted"
+
+
+def test_the_analyst_is_told_the_gate_exists_when_it_is_on():
+    from jev_flywheel.steer import render_source
+
+    off = render_source()
+    on = render_source(invariance_max_flip_rate=0.02)
+
+    assert "gate" not in off.lower()
+    assert "gate will reject" in on
+    assert "2%" in on
+    assert "{{" not in on

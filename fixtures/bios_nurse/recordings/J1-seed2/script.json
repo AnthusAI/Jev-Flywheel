@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_nurse J1, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 34,
+      "op": "refit"
+    },
+    {
+      "after_labels": 39,
+      "op": "refit"
+    },
+    {
+      "after_labels": 44,
+      "op": "refit"
+    },
+    {
+      "after_labels": 49,
+      "op": "refit"
+    },
+    {
+      "after_labels": 54,
+      "op": "refit"
+    },
+    {
+      "after_labels": 59,
+      "op": "refit"
+    },
+    {
+      "after_labels": 64,
+      "op": "refit"
+    },
+    {
+      "after_labels": 69,
+      "op": "refit"
+    },
+    {
+      "after_labels": 74,
+      "op": "refit"
+    },
+    {
+      "after_labels": 79,
+      "op": "refit"
+    },
+    {
+      "after_labels": 84,
+      "op": "refit"
+    },
+    {
+      "after_labels": 89,
+      "op": "refit"
+    },
+    {
+      "after_labels": 94,
+      "op": "refit"
+    },
+    {
+      "after_labels": 99,
+      "op": "refit"
+    },
+    {
+      "after_labels": 104,
+      "op": "refit"
+    },
+    {
+      "after_labels": 109,
+      "op": "refit"
+    },
+    {
+      "after_labels": 114,
+      "op": "refit"
+    },
+    {
+      "after_labels": 119,
+      "op": "refit"
+    },
+    {
+      "after_labels": 124,
+      "op": "refit"
+    },
+    {
+      "after_labels": 129,
+      "op": "refit"
+    },
+    {
+      "after_labels": 134,
+      "op": "refit"
+    },
+    {
+      "after_labels": 139,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"Two systematic patterns drive the errors. First, bare NPI-registry listings (name, NPI number, address, phone, no specialty or credentials) are always labeled nurse in this data (11/11 across the labeled sample and disagreements), but the single holistic question defaults to physician on them because they contain no nursing language. Second, physician-assistant texts are consistently labeled physician here, yet the holistic element often calls them nurse because PA language ('cooperates with other doctors', mid-level phrasing) resembles nurse-practitioner language. The scorecard has only one element, so these format- and role-specific cues have no way to reach the fit; the remaining errors (fiction blurbs, a practice manager, an ultramarathon runner) carry no occupational signal in the text and cannot be fixed.\", \"add_elements\": [{\"key\": \"bare_npi_listing\", \"question_type\": \"noul\", \"instructions\": \"Is this text an NPI registry or directory listing (giving an NPI number, practice address, or phone number) that does not state the person's medical specialty, role, degrees, or credentials anywhere in the text?\", \"criteria\": null}, {\"key\": \"physician_assistant\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person as a physician assistant or mention physician assistant studies, a PA program, or PA certification?\", \"criteria\": null}, {\"key\": \"explicit_physician_evidence\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly identify the person as a physician, for example by using the title 'Dr.', mentioning an MD, DO, or MBBS degree, medical school, or a medical residency?\", \"criteria\": null}, {\"key\": \"explicit_nurse_evidence\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly identify the person as a nurse, for example by using the words nurse or nursing, or mentioning credentials or degrees such as RN, NP, CRNP, CNM, MSN in nursing, or a Bachelor of Science in Nursing?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

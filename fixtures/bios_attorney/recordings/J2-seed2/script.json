@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney J2, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic choice, so it fails in two repeatable ways: (1) texts with no legal-profession content at all (fiction writer, firefighter, airboat rescuer, parent, sports professional) get called paralegal even though the labeled data overwhelmingly defaults such items to attorney; (2) texts describing current law students or explicit paralegal/support roles ('was a paralegal', 'assisted attorneys') get called attorney because the holistic answer latches onto practice-area language. The model has no factual evidence features to override the holistic guess in these two regimes.\", \"add_elements\": [{\"key\": \"mentions_legal_work\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that this person works, trains, or is otherwise professionally involved in the legal field (for example as a lawyer, paralegal, legal assistant, law student, or staff member of a law firm or legal organization)? Answer no if the text is only about non-legal work, hobbies, family, or personal life.\", \"criteria\": null}, {\"key\": \"paralegal_or_support_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person as being, training as, or having previously worked as a paralegal or legal assistant, or as assisting or supporting lawyers or attorneys in their work?\", \"criteria\": null}, {\"key\": \"currently_law_student\", \"question_type\": \"noul\", \"instructions\": \"Is this person described as currently studying law or completing legal training (for example enrolled in law school, an LPC, or a legal practice diploma), rather than as someone who has already completed their legal qualification and practices law?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

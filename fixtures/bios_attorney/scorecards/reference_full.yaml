@@ -1,0 +1,23 @@
+# The scorecard this study starts from: the engine's own holistic answer, nothing else.
+# Mirrors fixtures/bios/scorecards/v1.yaml's shape -- a weight of 2.0 on the two-option centered
+# log-ratio equals the log-odds, so this head reproduces the engine's own probability exactly.
+# No fitted head is used in this study; the scorecard exists only so the engine can be asked
+# the one question through the same machinery as every other bios study.
+name: Occupation
+version: 1
+scores:
+  - name: Occupation
+    key: occupation
+    question_type: choice
+    instructions: Is this person a paralegal or a attorney?
+    criteria: {attorney: null, paralegal: null}
+    decision:
+      model: linear_threshold
+      classes: ["attorney", "paralegal"]
+      positive_class: "attorney"
+      threshold: 0.0
+      features: [self.holistic.clr.attorney]
+      parameters:
+        weights:
+          intercept: 0.0
+          self.holistic.clr.attorney: 2.0

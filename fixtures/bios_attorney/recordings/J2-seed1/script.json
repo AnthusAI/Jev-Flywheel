@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney J2, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"Every decision rides on one holistic judgment, and the disagreements cluster in two places that judgment cannot see. Bios with no legal content at all (hometown, hobbies, unrelated degrees) are called paralegal even though such bios in this corpus are almost always attorneys, while bios with explicit support-role markers ('assisted attorneys', 'responded to an opening', current law student) are called attorney because the legal subject matter reads as attorney-like. A targeted question about explicit non-attorney or support-role signals supplies the missing negative evidence and lets content-free bios default the right way.\", \"add_elements\": [{\"key\": \"support_role_signals\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that the person is a paralegal, legal assistant, or current law student, or that they work in a support role to attorneys, for example by saying they assist or support lawyers?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

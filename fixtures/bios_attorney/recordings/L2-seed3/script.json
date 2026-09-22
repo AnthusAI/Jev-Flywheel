@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L2, seed 3",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question that answers unreliably: it said 'attorney' for texts that literally state the person is a paralegal ('practicing as a paralegal since 2006', 'senior immigration paralegal', 'Accelerated Paralegal program graduate') and said 'paralegal' for texts stating the person holds a J.D. or practices law. The errors cluster on checkable facts the scorecard never asks about \\u2014 explicit paralegal titles/credentials/associations, bar admission or a J.D., representing clients versus assisting a legal team \\u2014 so adding factual elements lets the fit override the noisy holistic. A residual set of errors (student-government organizer, Catholic blogger, organic farmer, childbirth advocate) contains no occupational signal at all and is not fixable from the text.\", \"add_elements\": [{\"key\": \"explicit_paralegal_identification\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly identify the person as a paralegal or legal assistant, for example through a current or past paralegal job title, a paralegal certificate or paralegal-studies degree, or membership or leadership in a paralegal association or paralegal publication?\", \"criteria\": null}, {\"key\": \"law_degree_or_bar_admission\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that the person holds a Juris Doctor (J.D.) or other law-school degree, is admitted to or a member of a bar, or is licensed to practice law?\", \"criteria\": null}, {\"key\": \"represents_clients_or_own_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person representing or counseling their own clients, practicing law, or having their own practice or caseload (for example 'her practice focuses on', 'represents', 'counsels clients', 'practicing law')?\", \"criteria\": null}, {\"key\": \"assists_or_supports_legal_team\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person's work as assisting, supporting, or helping attorneys, a law firm, or a legal team (for example 'assists with', 'provides legal support', 'background support') rather than leading the matters themselves?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

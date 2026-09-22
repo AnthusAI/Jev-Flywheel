@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_gender J2, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 37,
+      "op": "refit"
+    },
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The classifier relies on a single holistic surgeon-vs-physician judgment that effectively keys on the word 'surgery', so it fails in both directions on specialty content: it calls orthopedic/sports-medicine/spine bios 'physician' when they never say surgery (Ortho Arkansas, Bone & Joint, sports medicine, back/joint conditions), and it calls OB/GYN bios 'surgeon' because they mention pelvic, gynecologic, or laser surgery even though women's-health specialists are labeled physician. A third, smaller cluster of errors is short directory-template profiles ('X practices medicine in... and specializes in...') that state a surgical specialty yet are consistently labeled physician, a source regularity the holistic cannot see.\", \"add_elements\": [{\"key\": \"musculoskeletal_sports_spine\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that this person treats bones, joints, muscles, the spine, or sports- or activity-related injuries, for example by mentioning orthopedics, sports medicine, a bone-and-joint or spine practice, or conditions such as joint replacements, fractures, sprains, or back and shoulder problems?\", \"criteria\": null}, {\"key\": \"obgyn_womens_health\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that this person specializes in obstetrics, gynecology, or women's reproductive health, for example by mentioning pregnancy or prenatal care, pap tests, pelvic or gynecologic conditions, infertility, or an OB/GYN or women's hospital affiliation?\", \"criteria\": null}, {\"key\": \"directory_listing_format\", \"question_type\": \"noul\", \"instructions\": \"Is this text a brief directory-style profile that only states where the person practices, their specialty, hospital affiliations, and languages spoken, without any narrative description of their career, procedures, research, or treatment philosophy?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

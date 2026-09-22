@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_nurse J1, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic feature cannot see the credential distinction this label actually turns on: in this data, physician assistants are labeled physician while nurse practitioners and nursing-trained clinicians are labeled nurse. The model repeatedly calls explicit PA-training bios 'nurse' (Duke/MUSC PA programs, PA studies degrees, the literal PA job definition) and calls senior-sounding nurse bios 'physician' (NP program faculty, clinic directors who 'provide care'), because the holistic impression of responsibility level overrides the stated credential. Both error types have explicit textual signals that a targeted question can capture.\", \"add_elements\": [{\"key\": \"mentions_physician_assistant\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person is a physician assistant, or mention physician assistant training or credentials (for example a PA program, PA-C, or a degree in physician assistant studies)?\", \"criteria\": null}, {\"key\": \"mentions_nursing_training\", \"question_type\": \"noul\", \"instructions\": \"Does the text mention nursing-related roles, degrees, training, or programs for this person (for example registered nurse, nurse practitioner, nursing students or nursing programs, BSN, MSN, or DNP)?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

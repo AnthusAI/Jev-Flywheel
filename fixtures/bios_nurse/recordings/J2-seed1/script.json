@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_nurse J2, seed 1",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"Two systematic gaps drive the errors. First, this dataset labels physician assistants as physicians, but the single holistic element reads PA language ('physician assistant studies', 'practice medicine under supervision') as nurse-adjacent, producing a consistent cluster of nurse predictions on PA bios that the human always overturns. Second, bare NPI/directory listings (NPI number, address, phone, no credentials or specialty) are mostly nurses in the labeled data, yet the holistic treats the registry format as physician-ish, so every such listing is predicted physician; a text-type element lets the model learn the correct base rate for that format. A smaller residual case is a person whose nursing identity appears only as faculty of a nurse practitioner/DNP program, which the holistic misses when physician-sounding duties ('owner of a family practice') are present.\", \"add_elements\": [{\"key\": \"physician_assistant_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person as a physician assistant (for example, a physician assistant studies degree or program, a PA credential, or practicing medicine under the supervision of a physician)?\", \"criteria\": null}, {\"key\": \"directory_listing_only\", \"question_type\": \"noul\", \"instructions\": \"Is the text only a directory or NPI registry listing (such as an NPI number, practice address, or phone number) that does not describe the person's education, credentials, specialty, or work activities?\", \"criteria\": null}, {\"key\": \"holds_nursing_credential\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that the person themself holds a nursing credential or nursing academic role, such as registered nurse, nurse practitioner, a nursing degree, or faculty of a nursing or nurse practitioner program? Answer based only on the person's own stated credentials, not on people they work with or teach.\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

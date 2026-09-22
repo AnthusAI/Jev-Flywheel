@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_nurse J1, seed 3",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 36,
+      "op": "refit"
+    },
+    {
+      "after_labels": 41,
+      "op": "refit"
+    },
+    {
+      "after_labels": 46,
+      "op": "refit"
+    },
+    {
+      "after_labels": 51,
+      "op": "refit"
+    },
+    {
+      "after_labels": 56,
+      "op": "refit"
+    },
+    {
+      "after_labels": 61,
+      "op": "refit"
+    },
+    {
+      "after_labels": 66,
+      "op": "refit"
+    },
+    {
+      "after_labels": 71,
+      "op": "refit"
+    },
+    {
+      "after_labels": 76,
+      "op": "refit"
+    },
+    {
+      "after_labels": 81,
+      "op": "refit"
+    },
+    {
+      "after_labels": 86,
+      "op": "refit"
+    },
+    {
+      "after_labels": 91,
+      "op": "refit"
+    },
+    {
+      "after_labels": 96,
+      "op": "refit"
+    },
+    {
+      "after_labels": 101,
+      "op": "refit"
+    },
+    {
+      "after_labels": 106,
+      "op": "refit"
+    },
+    {
+      "after_labels": 111,
+      "op": "refit"
+    },
+    {
+      "after_labels": 116,
+      "op": "refit"
+    },
+    {
+      "after_labels": 121,
+      "op": "refit"
+    },
+    {
+      "after_labels": 126,
+      "op": "refit"
+    },
+    {
+      "after_labels": 131,
+      "op": "refit"
+    },
+    {
+      "after_labels": 136,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic nurse-vs-physician judgment, so it leans on medical-topic words (pediatrics, oncology, BOTOX) as physician cues and has no representation of explicit credentials or of the text's genre. The largest error cluster is boilerplate NPI registry listings, which contain no professional information at all but are consistently labeled nurse in this data, while the holistic feature calls them physician with high confidence; the remaining errors are bios that never state a credential, where the holistic guess goes whichever way the topic words push. Giving the fit explicit features for nursing credentials, physician credentials, and the registry-listing format lets it override the holistic topic-word bias exactly where it fails.\", \"add_elements\": [{\"key\": \"npi_registry_listing\", \"question_type\": \"noul\", \"instructions\": \"Is this text a registry or directory listing that reports the person's NPI number, practice address, or phone number rather than describing their career, training, or clinical work?\", \"criteria\": null}, {\"key\": \"nursing_credentials\", \"question_type\": \"noul\", \"instructions\": \"Does the text say that the person attended nursing school, earned a nursing degree such as a BSN, MSN, or DNP, or holds a nursing role such as registered nurse, nurse practitioner, or nurse midwife?\", \"criteria\": null}, {\"key\": \"physician_credentials\", \"question_type\": \"noul\", \"instructions\": \"Does the text say that the person attended medical school, earned a medical degree, completed a residency or fellowship, or practices medicine as a physician or physician assistant?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

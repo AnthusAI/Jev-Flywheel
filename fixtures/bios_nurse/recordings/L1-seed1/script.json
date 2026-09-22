@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "title": "bios_nurse L1, seed 1",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The dominant pattern is directory-style bios that explicitly print a nursing credential ('especially in NURSE PRACTITIONER', 'professional credentials of APRN', CNM/midwife, adult-gerontology primary care certification) yet were classified physician, often with high confidence, because the single holistic feature gets pulled by physician-flavored distractors in the same text ('Dr.', 'School of Medicine', hospital affiliations, 'cooperates with other doctors'). The scorecard has no element that reads the stated credential directly, so the most decisive and literally-printed signal in these texts never reaches the model. The physician-side errors mostly contain no explicit credential at all (genealogy hobbyist, pharma VP, medical writer) and are largely not decidable from the text alone, so I am not proposing an element for them.\", \"add_elements\": [{\"key\": \"explicit_nursing_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly state that the person's profession, specialty, license, or certification is a nursing role \\u2014 for example registered nurse (RN), nurse practitioner (NP), APRN, APNP, clinical nurse specialist, certified nurse midwife, midwife, or a nurse practitioner certification such as adult-gerontology primary care \\u2014 even if the person is also called 'Dr.' or attended a school of medicine?\", \"criteria\": null}, {\"key\": \"explicit_physician_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly state that the person is a physician \\u2014 for example by giving a credential such as MD, DO, or MBBS, a medical degree, board certification in a medical specialty, or completion of a medical residency \\u2014 rather than merely using the title 'Dr.'?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

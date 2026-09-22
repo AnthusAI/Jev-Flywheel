@@ -1,0 +1,97 @@
+{
+  "format": 1,
+  "title": "bios_nurse L1, seed 2",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic judgment, which is being fooled by surface cues: nurse-practitioner boilerplate that mentions 'School of Medicine' and 'cooperates with other doctors' is called physician even when the text explicitly says NURSE PRACTITIONER, and bare NPI-registry listings (no role stated at all) are confidently called physician when every such labeled example is a nurse. The model also lacks the dataset's conventions that physician assistants are labeled physician and that signals like practicing a specialty, medical school, or residency indicate a physician. Targeted elements for these explicit, text-visible signals cover the large majority of the disagreements.\", \"add_elements\": [{\"key\": \"explicit_nursing_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly identify the person as a nurse or as holding a nursing role or credential, such as nurse practitioner, clinical nurse specialist, registered nurse, staff nurse, or a nursing degree?\", \"criteria\": null}, {\"key\": \"physician_assistant\", \"question_type\": \"noul\", \"instructions\": \"Does the text identify the person as a physician assistant, for example by mentioning PA, PA-C, or certification by the National Commission on Certification of Physician Assistants (NCCPA)?\", \"criteria\": null}, {\"key\": \"physician_markers\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that the person is a physician, for example by mentioning an MD or DO credential, attending medical school, completing a medical residency, or stating that they practice medicine or a medical specialty such as dermatology, gynecology, or surgery?\", \"criteria\": null}, {\"key\": \"directory_listing_only\", \"question_type\": \"noul\", \"instructions\": \"Is the text limited to directory or registry information about the person, such as an NPI number, practice address, and phone number, without stating their medical role, specialty, education, or experience?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

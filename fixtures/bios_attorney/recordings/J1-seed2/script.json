@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney J1, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 38,
+      "op": "refit"
+    },
+    {
+      "after_labels": 43,
+      "op": "refit"
+    },
+    {
+      "after_labels": 48,
+      "op": "refit"
+    },
+    {
+      "after_labels": 53,
+      "op": "refit"
+    },
+    {
+      "after_labels": 58,
+      "op": "refit"
+    },
+    {
+      "after_labels": 63,
+      "op": "refit"
+    },
+    {
+      "after_labels": 68,
+      "op": "refit"
+    },
+    {
+      "after_labels": 73,
+      "op": "refit"
+    },
+    {
+      "after_labels": 78,
+      "op": "refit"
+    },
+    {
+      "after_labels": 83,
+      "op": "refit"
+    },
+    {
+      "after_labels": 88,
+      "op": "refit"
+    },
+    {
+      "after_labels": 93,
+      "op": "refit"
+    },
+    {
+      "after_labels": 98,
+      "op": "refit"
+    },
+    {
+      "after_labels": 103,
+      "op": "refit"
+    },
+    {
+      "after_labels": 108,
+      "op": "refit"
+    },
+    {
+      "after_labels": 113,
+      "op": "refit"
+    },
+    {
+      "after_labels": 118,
+      "op": "refit"
+    },
+    {
+      "after_labels": 123,
+      "op": "refit"
+    },
+    {
+      "after_labels": 128,
+      "op": "refit"
+    },
+    {
+      "after_labels": 133,
+      "op": "refit"
+    },
+    {
+      "after_labels": 138,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard has only the holistic attorney-vs-paralegal read, and the model treats the absence of attorney language as evidence for paralegal. In this data the opposite holds: bios with no legal-role content at all (hobbies, family, non-legal jobs like fire chief or fiction writer) are almost always attorneys, while genuine paralegals are given away by explicit markers -- the text calling them a paralegal, saying they 'assist attorneys', or describing them as a law student / not yet licensed. That single conflated signal produces both error directions in the disagreements: signal-free attorney bios get called paralegal, and texts with explicit subordinate-role or student markers get called attorney.\", \"add_elements\": [{\"key\": \"stated_legal_role\", \"question_type\": \"choice\", \"instructions\": \"Which option best matches what the text explicitly says about the person's legal role? Answer 'paralegal' if the text calls the person a paralegal or legal assistant, says they assist or support attorneys, or describes them as a law student or otherwise not yet licensed to practice law. Answer 'attorney' if the text describes the person as a practicing or licensed lawyer (e.g., holds a J.D., is a law firm partner or associate, represents or advises clients). Answer 'not_stated' if the text gives no clear indication of the person's legal role.\", \"criteria\": {\"attorney\": null, \"paralegal\": null, \"not_stated\": null}}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_gender J1, seed 2",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 37,
+      "op": "refit"
+    },
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The single holistic question forces the model to guess the occupation from surface wording, and the errors split into three clean clusters: (1) surgeon bios that never say 'surgery' but signal it through orthopedics, sports medicine, spine/brain, or joint work (called physician); (2) physician bios that do say 'surgery' via OB/GYN or women's-health procedures like pelvic, gynecologic, or laser surgery (called surgeon); (3) 'Ms./Mr.' listings that 'specialize in' a surgical field such as neurological, orthopaedic, or plastic surgery but are labeled physician, a title regularity that holds in every labeled sample too. Targeted evidence questions on these three cues attack the majority of the 25 disagreements without touching the well-calibrated holistic feature.\", \"add_elements\": [{\"key\": \"orthopedic_sports_spine_focus\", \"question_type\": \"noul\", \"instructions\": \"Does the text say this person treats or specializes in orthopedics, sports medicine, bones, joints, the spine, or the brain (for example orthopedics, sports medicine, joint replacement, musculoskeletal injuries, or a brain-and-spine practice)?\", \"criteria\": null}, {\"key\": \"obgyn_womens_health_focus\", \"question_type\": \"noul\", \"instructions\": \"Does the text say this person practices obstetrics or gynecology or focuses on women's health (for example pap tests, infertility, or pelvic, gynecologic, or vaginal procedures)?\", \"criteria\": null}, {\"key\": \"non_doctor_title\", \"question_type\": \"noul\", \"instructions\": \"Does the text refer to this person with the title Ms., Mrs., or Mr. instead of Dr.?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

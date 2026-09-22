@@ -65,7 +65,7 @@ How to think:
   without needing to see the other questions.
 - If the evidence does not support any change, propose nothing and say so. Do not change
   things just to have something to report.
-
+{{GATE_NOTE}}
 Reply with ONE JSON object and nothing else, in exactly this form:
 
 {

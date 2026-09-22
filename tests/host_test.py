@@ -142,6 +142,29 @@ def test_the_number_of_disagreements_shown_is_capped(labeled):
     assert len(host_for(labeled, max_mismatches=3).briefing()["mismatches"]) == 3
 
 
+def test_flip_mismatches_are_shown_alongside_not_instead_of_reviewer_disagreements(labeled):
+    # L6 ("flip-driven steering", studies/PREREGISTERED.md): a labeled pair whose verdict
+    # differs under the gender swap is appended to the ordinary mismatch list, not swapped in
+    # for it.
+    plain = host_for(labeled, max_mismatches=3).briefing()["mismatches"]
+    flip_entry = {"item_id": "flip-1", "text": "she trained at...", "we_said": "surgeon",
+                 "confidence_when_shown": 0.6, "human_said": "physician",
+                 "human_comment": "only the pronouns differ", "element_answers": {},
+                 "top_drivers_now": []}
+
+    brief = host_for(labeled, max_mismatches=3, flip_mismatches=[flip_entry]).briefing()
+
+    assert len(brief["mismatches"]) == len(plain) + 1
+    assert brief["mismatches"][-1] == flip_entry
+    assert brief["summary"]["disagreements"] == len(plain) + 1
+
+
+def test_no_flip_mismatches_reproduces_the_briefing_exactly(labeled):
+    assert (host_for(labeled).briefing()["mismatches"]
+           == host_for(labeled, flip_mismatches=None).briefing()["mismatches"]
+           == host_for(labeled, flip_mismatches=[]).briefing()["mismatches"])
+
+
 def test_the_briefing_includes_which_elements_matter_by_permutation_importance(labeled):
     inventory = host_for(labeled).briefing()["element_inventory"]
 

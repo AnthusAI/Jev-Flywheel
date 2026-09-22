@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L1, seed 1",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 37,
+      "op": "refit"
+    },
+    {
+      "after_labels": 42,
+      "op": "refit"
+    },
+    {
+      "after_labels": 47,
+      "op": "refit"
+    },
+    {
+      "after_labels": 52,
+      "op": "refit"
+    },
+    {
+      "after_labels": 57,
+      "op": "refit"
+    },
+    {
+      "after_labels": 62,
+      "op": "refit"
+    },
+    {
+      "after_labels": 67,
+      "op": "refit"
+    },
+    {
+      "after_labels": 72,
+      "op": "refit"
+    },
+    {
+      "after_labels": 77,
+      "op": "refit"
+    },
+    {
+      "after_labels": 82,
+      "op": "refit"
+    },
+    {
+      "after_labels": 87,
+      "op": "refit"
+    },
+    {
+      "after_labels": 92,
+      "op": "refit"
+    },
+    {
+      "after_labels": 97,
+      "op": "refit"
+    },
+    {
+      "after_labels": 102,
+      "op": "refit"
+    },
+    {
+      "after_labels": 107,
+      "op": "refit"
+    },
+    {
+      "after_labels": 112,
+      "op": "refit"
+    },
+    {
+      "after_labels": 117,
+      "op": "refit"
+    },
+    {
+      "after_labels": 122,
+      "op": "refit"
+    },
+    {
+      "after_labels": 127,
+      "op": "refit"
+    },
+    {
+      "after_labels": 132,
+      "op": "refit"
+    },
+    {
+      "after_labels": 137,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"Seventeen of the twenty-one disagreements are missed paralegals, and almost all of those texts explicitly call the person a paralegal, cite a paralegal certificate, or describe assisting attorneys -- yet the scorecard has only a single holistic impression feature, whose lean is too weak to overcome the crushing attorney prior, so it defaults to attorney. The same forced-choice holistic also flips to paralegal on texts with no legal content at all (the four reverse errors), because there is no element that lets the model ground its decision in stated credentials. The fix is to give the model concrete, high-signal evidence features in both directions rather than rewording the holistic question.\", \"add_elements\": [{\"key\": \"explicit_paralegal_identification\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly identify this person as a paralegal or legal assistant, or state that they hold or are pursuing a paralegal certificate, diploma, or degree?\", \"criteria\": null}, {\"key\": \"supports_attorneys_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe this person's job as assisting or supporting attorneys or a law firm's lawyers (for example, doing research, drafting, or case preparation for them) rather than serving their own clients as the lawyer in charge?\", \"criteria\": null}, {\"key\": \"attorney_license_stated\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person is licensed to practice law, has been admitted to a bar, or currently works as an attorney or lawyer, as opposed to merely having studied law?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": true,
+      "recorded_decision": "promoted"
+    }
+  ]
+}

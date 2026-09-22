@@ -19,8 +19,10 @@ Three things differ from Jev, and they are why this is a module and not a config
 * **It truncates silently.** The state is cut to fit the 512-token window, each option to 48
   tokens, and the instruction head to what is left, with no error. An answer computed on half
   an item looks exactly like one computed on all of it, so this module counts first and refuses.
-* **It is a small, weak-zero-shot model that ships over-confident.** That is the point of the
-  experiment, not a defect to hide: the layer above it is what the repo demonstrates.
+* **It is a small, weak-zero-shot model, and its raw confidence needs calibrating** (as Jev's
+  does; we had it down as the more over-confident of the two and measured the opposite). That
+  is the point of the experiment, not a defect to hide: the layer above it is what the repo
+  demonstrates.
 """
 from __future__ import annotations
 

@@ -1,0 +1,101 @@
+{
+  "format": 1,
+  "title": "bios_attorney L2, seed 2",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic choice, and the errors split into two clean groups. Paralegals with heavy legal experience (specialization, 'assists with', paralegal-studies degrees, current law students) get called attorney because nothing encodes support-role status or paralegal-specific credentials; attorneys whose bios are about writing, personal life, or other work get called paralegal because nothing tells the model that a bio with no legal content at all is usually an attorney's off-topic bio rather than evidence of paralegal work. The fix is to give the fit explicit, text-verifiable signals for each group: support-for-attorneys language, paralegal title/training or student status, independent client representation, and whether the text describes legal work at all.\", \"add_elements\": [{\"key\": \"support_role_for_attorneys\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person performing support work for attorneys or under an attorney's supervision, such as assisting attorneys, trial-preparation assistance, drafting or managing documents for attorneys, or providing litigation or administrative support to a legal team?\", \"criteria\": null}, {\"key\": \"paralegal_title_training_or_student\", \"question_type\": \"noul\", \"instructions\": \"Does the text identify the person as a paralegal or legal assistant, mention a paralegal-studies degree or certificate, or indicate the person is still completing their legal education (for example, a current law student)?\", \"criteria\": null}, {\"key\": \"represents_own_clients\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person representing or advising their own clients as the responsible lawyer, such as handling clients' cases, litigation, negotiations, settlements, or transactions, or running their own practice?\", \"criteria\": null}, {\"key\": \"legal_work_mentioned\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person's legal work, legal education, or membership in the legal profession in any way, as opposed to being entirely about other topics such as personal life, creative writing, or an unrelated career?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

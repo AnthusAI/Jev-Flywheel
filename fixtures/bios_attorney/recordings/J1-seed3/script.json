@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_attorney J1, seed 3",
+  "score": "Occupation",
+  "engine": "jev",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and it fails in two recurring situations: (1) texts with zero legal content (hobbies, novels, comedy, personal life) get pushed toward paralegal even though such snippets are mostly attorney bios by base rate, and (2) texts heavy on legal-practice language get called attorney even when the person is explicitly a paralegal or legal-support staffer ('paralegal duties', 'assists attorneys', e-discovery/trial-prep support, nonprofit legal staff without a J.D.). The holistic answer cannot be decomposed, so the fit has no way to separate 'sounds legal' from 'is a practicing attorney' or to fall back to the prior when there is no legal content at all.\", \"add_elements\": [{\"key\": \"explicit_paralegal_or_support_role\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person as a paralegal or legal assistant, or describe their job as supporting attorneys or a law firm (for example assisting attorneys, trial or motion preparation, e-discovery, drafting documents, or managing the firm's calendar)?\", \"criteria\": null}, {\"key\": \"practices_law_as_attorney\", \"question_type\": \"noul\", \"instructions\": \"Does the text describe the person practicing law as an attorney (for example 'practices law', 'represents clients', 'his/her practice focuses', or being called an attorney, lawyer, counsel, or partner in a law firm)?\", \"criteria\": null}, {\"key\": \"has_law_degree_or_bar\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that the person has a law degree (such as a J.D.) or that they are admitted to a bar or licensed to practice law?\", \"criteria\": null}, {\"key\": \"mentions_legal_career_at_all\", \"question_type\": \"noul\", \"instructions\": \"Does the text mention anything about a legal career at all, such as legal work, a law firm, courts, law school, or legal issues (as opposed to only hobbies, personal life, or non-legal jobs)?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

@@ -16,11 +16,12 @@ from jev_flywheel.fit import (
     build_training_set,
     compare,
     fit_head,
+    fit_head_invariance,
     latest_feedback,
     serve_summary,
     with_fit,
 )
-from jev_flywheel.head import decide
+from jev_flywheel.head import decide, validate_head
 from jev_flywheel.items import (
     LABEL_SOURCE_FINAL,
     LABEL_SOURCE_SCORE_RESULT_OR_IMPORTED,
@@ -543,3 +544,116 @@ def test_the_accuracy_tolerance_tightens_as_labels_accumulate():
 
     # Two effective items is 0.2 points at 1000 labels, so 1.2 points is real.
     assert not compare(dip, incumbent).promote
+
+
+# ---- L3/L4: optimising the head against the flip (studies/PREREGISTERED.md) ----------------
+
+def _twin_rows(training, *, flip_feature="a.logit_p", noise=0.05, seed=99):
+    """Synthetic twins: every feature carries over except ``flip_feature``, whose sign is
+    reversed -- standing in for a feature that "reads gender" and answers the opposite way once
+    the item's gender is swapped. This is enough to test the L3/L4 machinery without a real
+    counterfactual corpus: an invariance penalty should learn to lean on it less."""
+    rng = random.Random(seed)
+    return {item_id: {**row, flip_feature: -row[flip_feature] + rng.gauss(0, noise)}
+            for item_id, row in zip(training.item_ids, training.rows)}
+
+
+def test_l3_twin_augmented_training_set_doubles_the_labeled_items_with_matching_weights():
+    training, scorecard = training_from(40, propensity=0.4)
+    twin_rows = _twin_rows(training)
+
+    scorecard2 = card()
+    data = world(40, 0, holistic=0.25, element=0.8)
+    cache = AnswerCache()
+    load(cache, scorecard2, data)
+    augmented = build_training_set(scorecard2.score("Outcome"), scorecard2.questions(), cache,
+                                   feedback_for(data, propensity=0.4), twin_rows=twin_rows)
+
+    assert augmented.n == training.n * 2
+    assert set(training.item_ids) <= set(augmented.item_ids)
+    for item_id, row, label, weight in zip(training.item_ids, training.rows, training.labels,
+                                           training.weights):
+        twin_index = augmented.item_ids.index(f"{item_id}__twin")
+        assert augmented.rows[twin_index] == twin_rows[item_id]
+        assert augmented.labels[twin_index] == label
+        assert augmented.weights[twin_index] == pytest.approx(weight)
+
+
+def test_l3_twin_rows_none_reproduces_ordinary_training_set_exactly():
+    training_plain, _ = training_from(30)
+    scorecard = card()
+    data = world(30, 0, holistic=0.25, element=0.8)
+    cache = AnswerCache()
+    load(cache, scorecard, data)
+    training_explicit = build_training_set(scorecard.score("Outcome"), scorecard.questions(),
+                                           cache, feedback_for(data), twin_rows=None)
+
+    assert training_explicit.item_ids == training_plain.item_ids
+    assert training_explicit.rows == training_plain.rows
+
+
+def test_l4_invariance_penalty_shrinks_the_item_twin_gap_as_lambda_grows():
+    training, scorecard = training_from(140, seed=3, holistic=0.15, element=0.9)
+    twin_rows = _twin_rows(training)
+
+    result = fit_head_invariance(training, scorecard.score("Outcome"), twin_rows,
+                                 lambdas=(1.0, 10.0, 100.0), seed=0)
+
+    by_lambda = {p.lam: p for p in result.points}
+    assert 0.0 in by_lambda
+    # A larger penalty should never leave the item/twin gap larger than a smaller one -- that
+    # is the one thing the penalty term is directly optimising for.
+    ordered = [by_lambda[lam].oof_mean_abs_dp for lam in (0.0, 1.0, 10.0, 100.0)]
+    assert ordered == sorted(ordered, reverse=True)
+    assert by_lambda[100.0].oof_mean_abs_dp < by_lambda[0.0].oof_mean_abs_dp
+
+    # The operating point is the largest lambda within the accuracy slack of lambda = 0.
+    assert result.operating_lambda in (0.0, 1.0, 10.0, 100.0)
+    if result.operating_lambda:
+        assert (by_lambda[0.0].oof_accuracy - by_lambda[result.operating_lambda].oof_accuracy
+               <= 0.01 + 1e-9)
+
+    problems = validate_head(result.head, features=scorecard.score("Outcome").decision.features)
+    assert not problems, problems
+
+
+def test_l4_exploratory_lambdas_are_reported_but_never_chosen_as_the_operating_point():
+    # A lambda beyond the pre-registered grid must be swept and reported (so the curve shows
+    # what it does) but must never become the operating point -- only the registered grid may.
+    training, scorecard = training_from(140, seed=3, holistic=0.15, element=0.9)
+    twin_rows = _twin_rows(training)
+
+    result = fit_head_invariance(training, scorecard.score("Outcome"), twin_rows,
+                                 lambdas=(1.0, 10.0, 100.0, 10000.0),
+                                 registered=(1.0, 10.0, 100.0), seed=0)
+
+    lambdas_swept = {p.lam for p in result.points}
+    assert 10000.0 in lambdas_swept
+    assert result.operating_lambda in (0.0, 1.0, 10.0, 100.0)
+
+
+def test_l4_lambda_points_carry_the_full_data_intercept_and_weights():
+    training, scorecard = training_from(140, seed=3, holistic=0.15, element=0.9)
+    twin_rows = _twin_rows(training)
+
+    result = fit_head_invariance(training, scorecard.score("Outcome"), twin_rows,
+                                 lambdas=(1.0, 100.0), seed=0)
+
+    for point in result.points:
+        assert isinstance(point.intercept, float)
+        assert set(point.weights) == set(scorecard.score("Outcome").decision.features)
+
+
+def test_l4_needs_exactly_two_classes():
+    scorecard = Scorecard.from_yaml(CARD.replace(
+        'classes: ["yes", "no"]', 'classes: ["yes", "no", "maybe"]'))
+    data = world(12)
+    cache = AnswerCache()
+    load(cache, scorecard, data)
+    training = build_training_set(scorecard.score("Outcome"), scorecard.questions(), cache,
+                                  feedback_for(data))
+    # Only two labels were ever produced, so bend the training set to claim a third exists.
+    training.labels[0] = "maybe"
+
+    with pytest.raises(ValueError, match="two classes"):
+        fit_head_invariance(training, scorecard.score("Outcome"), {})
