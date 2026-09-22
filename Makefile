@@ -223,6 +223,25 @@ attorney:
 	@echo "  --fixtures fixtures/bios_attorney"
 	@echo "Next: studies/PREREGISTERED.md, 'the learning loop on the pair that matters'"
 
+# The learning loop on nurse vs physician (studies/PREREGISTERED.md, final section). Stopped by
+# the author after J0/L0/J1/L1/J2; see that section's Deviations. J0/L0 (the engines alone) are
+# scored offline from committed fixtures, no keys, no network, no spend. J1/J2/L1 (140 labels,
+# one steering round, the invariance gate on J2) are recorded to
+# fixtures/bios_nurse/recordings/<arm>-seed<N>/ and can be replayed from there with no keys via
+# `flywheel replay <recording-dir> --fixtures fixtures/bios_nurse`, one recording at a time.
+nurse:
+	@echo "Scoring Jev's and Laya's own answers (no labels, no fitted head) on the nurse/"
+	@echo "physician held-out bios and their amended-rule gender-swapped, name-redacted twins."
+	@echo ""
+	.venv/bin/python scripts/run_bios_nurse_loop.py --arm J0
+	.venv/bin/python scripts/run_bios_nurse_loop.py --arm L0
+	@echo ""
+	@echo "J1/J2/L1 need a steering round (Jev for J1/J2; Laya locally for L1) and are not part"
+	@echo "of this offline target. L2 and the twin-averaging baseline were not run (stopped by"
+	@echo "the author). Replay a committed recording with:"
+	@echo "  flywheel replay fixtures/bios_nurse/recordings/<arm>-seed<N> --fixtures fixtures/bios_nurse"
+	@echo "Next: studies/PREREGISTERED.md, 'the learning loop on nurse vs physician'"
+
 test:
 	.venv/bin/python -m pytest -q
 

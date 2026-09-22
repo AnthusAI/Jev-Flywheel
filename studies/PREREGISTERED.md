@@ -1988,3 +1988,98 @@ first and logged; hard cap 24,000.
 > neutralised, women physicians' bios read *more* physician-like to Laya than men's do (the
 > content asymmetry runs the other way). The counterfactual columns in the twin-averaged
 > rows are not meaningful (a twin of an average is undefined) and should be ignored.
+
+> **Deviations, 2026-09-22.**
+>
+> - **Stopped by the author after J0/J1/J2 and L0/L1.** The loop is reported on the
+>   surgeon/physician pair only; the rows recorded here (nurse/physician) are kept as recorded
+>   and are not part of the article. L2 (seeds 1-3) and the twin-averaging baseline were not
+>   run; `var/bios_nurse_loop/L2-seed1/` holds an empty scratch workspace from the interrupted
+>   attempt and is not committed.
+> - **Cumulative Jev requests for this section reached 25,152 against the pre-registered 24,000
+>   hard cap.** Breakdown (`studies/bios_nurse_spend.md`): 4,020 pool + changed-twin requests;
+>   J1 (seeds 1-3): 140 steering + 3,984 serve per seed = 12,372; J2 (seeds 1-3): 264 steering +
+>   3,984 serve for seeds 1-2, 264 steering only for seed 3 (rejected before serving) = 8,760.
+>   Total sent: 4,020 + 12,372 + 8,760 = 25,152. The overage comes from `score_held_out`
+>   re-sending the full ~4,000-item held-out-and-twin set from a cold per-arm-per-seed
+>   workspace cache on every seed, rather than reusing answers across seeds within an arm --
+>   the same pattern already present in `scripts/run_bios_attorney_loop.py`, which this
+>   section's `scripts/run_bios_nurse_loop.py` was copied from per the pre-registration's reuse
+>   rule. Priced before every send, per the money rule; the overage was only visible against
+>   the cap in total, after the fact, not per step. No further Jev requests were sent once this
+>   was found.
+
+## Outcome (recorded 2026-09-22; partial -- J0/J1/J2, L0/L1 only, per the deviation above)
+
+Minimal report of the rows that exist. No baseline, no L2, and no further analysis beyond what
+these rows show directly.
+
+**Prediction-by-verdict**, against the predictions table above (J2/L2 rows marked n/a where the
+arm did not run; baseline n/a, not run):
+
+| measurement | Laya alone (L0: 0.837, 13.45%) | Jev alone (J0: 0.943, 3.25%) | verdict |
+|---|---|---|---|
+| L0/J0 four-fifths ratio at top 500 | 0.6519 (predicted **under 0.8**) | 0.9723 (predicted **0.9-1.0**) | **confirmed**, both engines |
+| L1/J1 accuracy vs alone | +8.2 to +8.55 pts (seeds 1-3; predicted **+4**) | +0.4 to +1.35 pts (seeds 1-3; predicted **+1**) | Laya **exceeded** prediction's direction and magnitude; Jev **confirmed** |
+| Raw vs. prior-corrected accuracy | within 0.05 pt on every seed that has a correction (predicted **within 1 point**) | within 0.1 pt on every seed that has a correction | **confirmed**, both engines -- the balanced pool does what the attorney-pair diagnosis said it should |
+| L1/J1 flip rate vs alone | seeds 8.25-12.55% vs 13.45% alone: **below**, not at/above (predicted **at or above**) | seeds 3.5-6.2% vs 3.25% alone: **at or above**, confirmed | Laya **contradicted**; Jev **confirmed** |
+| L2: proposals passing the gate | not run | 2 of 3 seeds promoted (seed 3 rejected_by_metrics); predicted **at least one in at least 2 of 3** | Jev **confirmed**; Laya **n/a (not run)** |
+| J2 four-fifths ratio vs J0 | n/a | seed 1: 0.992 (+0.02); seed 2: **0.4475 (-0.52)**; seed 3: 0.9723 (unchanged, rejected) -- predicted **no worse than -0.05** | **contradicted** on seed 2, by far more than the -0.05 margin -- the pre-registration's own fallback: "the attorney-pair finding (cue-invariant, group-correlated) is confirmed and reported as the headline" |
+| Twin-averaging baseline ratio | not run | not run | n/a |
+| Promoted elements' answer rate by gender | see below | see below | **confirmed** on at least one element, both engines |
+
+**Note on J1** (no ratio prediction was registered for J1, but it shows the same pattern as J2):
+top-500 ratio swings from J0's 0.9723 to 0.585 (seed 1), 0.42 (seed 2), and 0.8762 (seed 3),
+tracking which element got promoted, not accuracy (which barely moves, 0.947-0.9565).
+
+**Tie diagnostic** (`scripts/bios_nurse_shortlist.tie_diagnostic`, added exploratorily this
+run): J0's top-500 cut sits inside a block of 838 held-out bios (of 2,000) tied at exactly
+P(physician) = 1.000 (92 distinct rounded values total), so J0's own ratio (0.9723) is itself
+partly a tie-break artifact -- the tie-fair estimate (expected ratio under random tie-breaking)
+is 0.9471, a real but modest ~0.025 gap. J2 seed 3 (rejected, scorecard reverted to v1) shows
+the identical 838-tied block and the identical 0.9471 tie-fair value. Everywhere an element was
+actually promoted (J1 all seeds, J2 seeds 1-2), the tied block collapses to 1-328 items and the
+tie-fair ratio sits within 0.01 of the as-run ratio (e.g. J1 seed 1: 0.585 vs 0.5807, n_tied=328;
+J2 seed 2: 0.4475 vs 0.4494, n_tied=11) -- so the large ratio swings across seeds are
+predominantly the promoted element genuinely reranking who lands in the top 500, not an
+artifact of how ties are broken among a fixed saturated block.
+
+**Proposals** (`studies/bios_nurse_proposals.jsonl`): every J1/J2 seed promoted or evaluated an
+element built from one of two cues -- explicit credential/title language ("Dr.", "MD",
+"physician assistant", "nursing degree/training/license") or document *form* ("NPI registry or
+directory listing"). Both cues recur across engines and seeds (e.g. `physician_assistant`-type
+questions in J1 seeds 1-2 and L1 seeds 2-3; `directory_listing_only`/`bare_npi_listing`/
+`registry_listing_only` in J1 seed 2, J2 seeds 1-2, L1 seed 2). L1 seed 1 and J2 seed 3 rejected
+their proposals by metrics; J2's gate itself was never the rejection reason recorded (flip
+rates on labeled items were 0.0-0.032, all under the 0.02-0.03 gate band except one at 0.0323).
+
+**Element diagnostic** (`studies/bios_nurse_elements.jsonl`): among real physicians, several
+promoted elements show a large gender gap in their own answer, as written -- `explicit_physician
+_evidence` (J1 seed 2): mean logit -0.22 (female) vs. +2.17 (male); `physician_title_or_degree`
+(J2 seed 2): -0.89 (female) vs. +2.16 (male). Both exceed the pre-registration's 5-point
+threshold by a wide margin (these are logit units, not probability points, but the sign and
+size of the gap are unambiguous: real male physicians' bios use "Dr."/"MD"/explicit-title
+language far more often than real female physicians' bios do, as written). Other elements
+(credential/training mentions, registry-listing form) show smaller, single-digit-point gaps in
+the same direction. The `fitted_weight_nurse_logit` field was not populated by this run's
+diagnostic code (`head["weights"].get("nurse", ...)` returned `None` for every row) -- a defect
+in the diagnostic script, not investigated further per the stop instruction; the mechanism-
+separation rows (`four_fifths_ratio_top500_new_element_zeroed` vs. `_as_fitted` vs.
+`_holistic_reset_to_v1`) are unaffected and show, e.g. for J1 seed 2, that zeroing the new
+element alone would restore J0's 0.9723 ratio (new_element_zeroed = 0.9723) while the fitted
+weights as they stand give 0.42 -- the new element, not the holistic-weight refit, is what
+moves the ratio.
+
+**Plain paragraph.** Raw and prior-corrected accuracy agree closely everywhere a correction was
+recorded (within 0.1 point), confirming the attorney-pair diagnosis: a pool balanced to match
+the held-out set's 50/50 split removes the population-mismatch problem found there. Separately,
+at least one promoted element (on both engines, e.g. Jev's `explicit_physician_evidence` /
+`physician_title_or_degree`, an explicit-title/credential cue) lowered the top-500 four-fifths
+ratio far below J0/L0's own -- J2 seed 2 by 0.52, well past the -0.05 margin the pre-registration
+set as the line for "the attorney-pair finding is confirmed and reported as the headline." That
+headline is what this partial run shows: a cue that passes the pronoun-invariance gate (flip
+rate 0.0 on labeled items) can still carry a gender correlation through content, on a second
+pair, exactly as the paralegal/attorney loop found. The tie diagnostic added this run shows
+that mechanism operating through the ranking directly (the element becomes the deciding factor
+for who crosses the cut) rather than through the pre-existing tied block, which stays fixed at
+J0's own (already slightly gender-unequal) composition whenever no element is promoted.
