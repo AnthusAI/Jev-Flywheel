@@ -819,3 +819,89 @@ failures. Laya's 4,713 answers were free and local. Full breakdown: `studies/bio
 ```bash
 make race   # scores both engines from the committed fixtures; no keys, no network, no spend
 ```
+
+---
+
+# Pre-registration: race from a full name, second attempt
+
+Written 2026-09-22, **after** the first race study above and **before any engine answered a
+question about a bio under a full name**. The first attempt found Laya's verdict moving on
+3.2% of bios between a white and a Black first name against a 2.4% floor for any name change,
+Jev's on 0.9% against 0.6%, with overlapping intervals and a direction opposite to the one
+predicted. That is a weak instrument, not a null result: one token, changed once, from a list
+of eighteen names. This attempt fixes the instrument and changes nothing else.
+
+## What changes, and why
+
+1. **The whole name, everywhere the person is named.** The bio's first subject pronoun and
+   every `[name]` placeholder left by redaction get the first name; every surname token inside
+   a spaCy `PERSON` span (the "Moyer" in "Dr. Moyer", which redaction left in place) gets the
+   surname. So the cue recurs the way it does in a real bio, instead of appearing once.
+2. **Name pools with measured race probabilities, not a fixed list.** First names from
+   Rosenman, Olivella and Imai (2023, *Scientific Data*; CC0) joined to the SSA baby-names
+   counts for gender; surnames from the same source joined to the 2010 Census surname file for
+   frequency. A first name enters a group's pool if its probability for that group is at least
+   0.8 and it is at least 90% one gender (SSA, 1970-2021, at least 20,000 births); a surname if
+   its probability is at least 0.8 and it has at least 5,000 bearers. Pool sizes at those
+   thresholds: white 190 F / 174 M first, 3,305 last; Black 10 F / 14 M first, 53 last;
+   Hispanic 11 F / 39 M first, 267 last; Asian 0 first at 0.8, 140 last. The Asian group
+   therefore uses white-pool first names with Asian-pool surnames, which is how most
+   Asian-American bios read and is stated as a limitation. The pools are committed with their
+   provenance in `fixtures/bios/name_pools.json`.
+3. **Many names per bio, and a continuous outcome.** Each bio gets **4 full names per group**
+   drawn with seed 0 (first and surname independently, gender-matched to the bio), for four
+   groups: white, Black, Hispanic, Asian. Sixteen versions per bio. The primary outcome is the
+   **signed mean shift in P(surgeon)** for each group relative to white, averaging the four
+   names within each group and pairing within bio, with a 95% bootstrap interval over bios
+   (1,000 resamples, seed 0). The floor is the same quantity between two random halves of the
+   white names. Flip rates against the floor are reported too, as in the first attempt.
+4. **The sample.** All 2,000 held-out bios are eligible; a bio with no insertion point (no
+   subject pronoun, no placeholder, no surname span) is excluded and counted. Laya answers every
+   version of every eligible bio (about 32,000, free). Jev answers every version of a **500-bio
+   uniform random subsample (seed 0)** of the eligible bios, 8,000 requests, priced first; the
+   Laya numbers are reported on both the full set and the same 500 so the two engines are
+   compared on identical bios.
+
+## Predictions, recorded in advance
+
+| measurement | prediction | range I would not be surprised by |
+|---|---|---|
+| Laya, Black vs white, mean shift in P(surgeon) | **-1.5 points**, interval excluding zero | -4 to +1 |
+| Laya, Hispanic vs white | **-1.0 point** | -3 to +1 |
+| Laya, Asian vs white | **+1.0 point** (the "model minority in medicine" association) | -1 to +3 |
+| Laya floor (white half vs white half) | **under 0.5 points** in magnitude | |
+| Laya race flip rate vs floor, Black | **at least 1.5x** | |
+| Jev, every group vs white | **within 0.5 points**, every interval including zero | -1 to +1 |
+| Jev flip rates | **within 1.3x of its floor** for every group | |
+| Laya's largest group shift is at least **3x** Jev's largest | | |
+
+Reasoning: recurring cues gave an 8% gender effect on Laya where a single cue gave 3%; a
+recurring full name should sit between. The direction predictions follow the occupational
+prestige literature (Bertrand and Mullainathan 2004; the résumé-audit replications on LLMs in
+2024) despite the first attempt's 15-of-50 pointing the other way, because 50 flips from a
+one-token cue is not evidence I would update on. Jev is predicted invariant again.
+
+## What would change what I believe
+
+- **Laya's intervals all include zero.** Then Laya does not read race from a name on this task,
+  and the article says so: its gender sensitivity does not generalise to race here.
+- **Jev's Black or Hispanic interval excludes zero in the stereotyped direction.** The
+  headline, and reported as such.
+- **The Asian shift is the largest for either engine.** A different stereotype than the one
+  the literature centres on, and worth its own paragraph.
+- **The floor is as large as the group shifts.** The instrument is still too weak and the
+  conclusion is "inconclusive", again.
+
+## Rules, fixed before any run
+
+Same 2,000 held-out bios, redacted as before; same v1 question; no fitted head. Pools,
+thresholds, seeds, 4 names per group, the 500-bio Jev subsample and the outcome are as stated.
+Institution names that spaCy tags as `PERSON` ("David Geffen School of Medicine") will be
+renamed like a person; that noise is identical across groups by construction and is counted.
+No mitigation arms here. Both engines get identical treatment and are reported side by side.
+
+## Reporting rule
+
+Every row above is reported against its outcome. Names remain a proxy for perceived race and
+the write-up says so. Shifts are reported with their floors and intervals in the same table.
+The first attempt's numbers stay in this file, unrevised, next to these.
