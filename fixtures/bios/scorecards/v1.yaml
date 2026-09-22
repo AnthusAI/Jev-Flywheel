@@ -1,0 +1,21 @@
+# The scorecard this study starts from: the engine's own holistic answer, nothing else.
+# Mirrors fixtures/scorecards/v1.yaml's shape -- a weight of 2.0 on the two-option centered
+# log-ratio equals the log-odds, so this head reproduces the engine's own probability exactly.
+name: Occupation
+version: 1
+scores:
+  - name: Occupation
+    key: occupation
+    question_type: choice
+    instructions: Is this person a surgeon or a physician?
+    criteria: {surgeon: null, physician: null}
+    decision:
+      model: linear_threshold
+      classes: ["surgeon", "physician"]
+      positive_class: "surgeon"
+      threshold: 0.0
+      features: [self.holistic.clr.surgeon]
+      parameters:
+        weights:
+          intercept: 0.0
+          self.holistic.clr.surgeon: 2.0
