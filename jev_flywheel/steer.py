@@ -146,6 +146,7 @@ def run_steering(
     discovery: bool = False,
     taxonomy: bool = False,
     invariance_max_flip_rate: Optional[float] = None,
+    flip_mismatches: Optional[List[Dict[str, Any]]] = None,
 ) -> SteerOutcome:
     """Run one round of meta-cognition and record it.
 
@@ -166,13 +167,13 @@ def run_steering(
         mock_replies=mock_replies, max_auto_requests=max_auto_requests,
         max_revisions=max_revisions, region=region, max_mismatches=max_mismatches,
         discovery=discovery, taxonomy=taxonomy,
-        invariance_max_flip_rate=invariance_max_flip_rate))
+        invariance_max_flip_rate=invariance_max_flip_rate, flip_mismatches=flip_mismatches))
 
 
 async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spend,
                client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions,
                region=None, max_mismatches=25, discovery=False, taxonomy=False,
-               invariance_max_flip_rate=None):
+               invariance_max_flip_rate=None, flip_mismatches=None):
     try:
         from tactus.adapters.memory import MemoryStorage
         from tactus.core.runtime import TactusRuntime
@@ -184,7 +185,8 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         apply_region(provider, region)
     host = FlywheelHost(workspace, score_name, allow_spend=allow_spend,
                         client_factory=client_factory, max_mismatches=max_mismatches,
-                        invariance_max_flip_rate=invariance_max_flip_rate)
+                        invariance_max_flip_rate=invariance_max_flip_rate,
+                        flip_mismatches=flip_mismatches)
     if hitl_handler is None:
         from tactus.adapters.cli_hitl import CLIHITLHandler
         hitl_handler = CLIHITLHandler()

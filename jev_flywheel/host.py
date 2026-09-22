@@ -82,6 +82,7 @@ class FlywheelHost:
         max_agreement_notes: int = 5,
         max_labeled_sample: int = 40,
         invariance_max_flip_rate: Optional[float] = None,
+        flip_mismatches: Optional[List[Dict[str, Any]]] = None,
     ):
         self.workspace = workspace
         self.score_name = score_name
@@ -93,6 +94,12 @@ class FlywheelHost:
         # The gender-invariance gate (jev_flywheel.invariance, studies/PREREGISTERED.md's J2/L2
         # arms). None reproduces every existing caller's behaviour exactly.
         self.invariance_max_flip_rate = invariance_max_flip_rate
+        # L6 ("flip-driven steering"): mismatch-shaped entries built from labeled pairs whose
+        # verdict differs under jev_flywheel.counterfactual.swap_gender, each carrying the
+        # comment "only the pronouns differ" (see the caller, scripts/run_bios_flipopt.py).
+        # Shown to the analyst alongside the ordinary reviewer disagreements, never in place of
+        # them. None (the default) reproduces every existing caller's behaviour exactly.
+        self.flip_mismatches = list(flip_mismatches) if flip_mismatches else []
         self.last_invariance_flip_rates: Optional[Dict[str, float]] = None
         self._proposal: Optional[Proposal] = None
         self._candidate: Optional[Scorecard] = None
@@ -118,6 +125,7 @@ class FlywheelHost:
         inventory = element_inventory(
             score, training.rows, training.labels, training.weights) if training.n else []
         mismatches, agreements = self._feedback_examples(card, score, questions)
+        mismatches = mismatches + self.flip_mismatches
         return {
             "score": name,
             "scorecard_yaml": card.to_yaml(),

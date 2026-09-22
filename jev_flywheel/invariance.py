@@ -23,7 +23,7 @@ round; nothing about the existing recording or its tests changes unless that par
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Iterable, List, Mapping
 
 DEFAULT_MAX_FLIP_RATE = 0.02   # fixed in the pre-registration: "no more than 2%"
 
@@ -99,3 +99,41 @@ def gate_new_elements(
 
 def all_pass(results: Mapping[str, GateResult]) -> bool:
     return all(r.passed for r in results.values())
+
+
+def flip_rates_by_element(
+    before: Mapping[str, Mapping[str, Mapping[str, Any]]],
+    after: Mapping[str, Mapping[str, Mapping[str, Any]]],
+    element_names: Iterable[str],
+) -> Dict[str, float]:
+    """L5's own measurement, for ``studies/PREREGISTERED.md``'s "gate every feature" arm.
+
+    L2's gate (``gate_new_elements``, above) is asked only of a candidate's *newly proposed*
+    elements. L5 asks the same question of every element already in the scorecard, including
+    the v1 holistic answer, before a fit ever runs -- so an existing element that reads gender
+    is dropped exactly as a new one would be rejected, rather than being grandfathered in.
+
+    ``before``/``after`` are ``{item_id: {question_name: answer}}`` -- the labeled items'
+    answers as written, and on their gender-swapped twins -- covering every name in
+    ``element_names`` for every item both mappings share. One ``flip_rate`` call per element,
+    so the per-question item-set-mismatch check still applies to each one individually.
+    """
+    names = list(element_names)
+    return {name: flip_rate({item: answers[name] for item, answers in before.items()
+                             if name in answers},
+                            {item: answers[name] for item, answers in after.items()
+                             if name in answers})
+            for name in names}
+
+
+def elements_over_gate(
+    flip_rates: Mapping[str, float], *, max_flip_rate: float = DEFAULT_MAX_FLIP_RATE,
+) -> List[str]:
+    """The subset of ``flip_rates_by_element``'s keys that fail the gate, in a stable order.
+
+    What L5 drops from the feature list before fitting: ``[name for name, rate in
+    sorted(flip_rates.items()) if rate > max_flip_rate]``, spelled out as its own function so
+    the drop rule has one definition a test can pin directly, independent of how the caller
+    iterates.
+    """
+    return [name for name, rate in sorted(flip_rates.items()) if rate > max_flip_rate]

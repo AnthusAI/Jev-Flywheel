@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_gender L1, seed 2",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and it fails in two recurring ways. First, it misses explicit surgical signals that appear as practice names, residencies, fellowships, or awards (Orthopaedic Specialists, Hand to Shoulder Centers, neurosurgery residency, paediatric plastic surgery fellowship, 'Top Plastic Surgeon' awards, dental surgery degrees), defaulting to physician. Second, it is fooled by surgery-adjacent keywords in texts about non-surgeons: an interventional cardiologist (angioplasty, pacemaker), a dermatologist with a Mohs surgery fellowship, an OB/GYN (amniocentesis), a PA who 'specializes in Orthopaedic Surgery', an aesthetician in a plastics department, and non-medical texts (art dealer, academic executive) all get called surgeon. Targeted elements for explicit surgical training/practice, for a stated non-surgical specialty, and for not being a practicing MD at all would let the model correct both failure modes; the remaining errors are generic template bios with no specialty cues, which are irreducible from the text alone.\", \"add_elements\": [{\"key\": \"explicit_surgical_training_or_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text explicitly state that this person is a surgeon, is board certified in a surgical specialty, completed a residency or fellowship in a surgical specialty (such as general, orthopaedic, plastic, neurological, hand, pediatric, transplant, or vascular surgery), or practices at a clinic whose name contains a surgical specialty (such as orthopaedics, hand, or plastic surgery)?\", \"criteria\": null}, {\"key\": \"stated_non_surgical_specialty\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that this person's specialty is a non-surgical field of medicine (such as family medicine, internal medicine, cardiology, dermatology, obstetrics and gynecology, ophthalmology, or hospitalist medicine), even if it also mentions procedures, interventions, or surgery-related training?\", \"criteria\": null}, {\"key\": \"not_practicing_md_bio\", \"question_type\": \"noul\", \"instructions\": \"Is this text about someone who is not a practicing physician or surgeon (for example a nurse, physician assistant, aesthetician, technician, medical executive, or researcher), or is it not a medical professional's biography at all (for example a news quote, a novel excerpt, a registry listing, or a text about a non-medical profession)?\", \"criteria\": null}, {\"key\": \"dental_degree_or_practice\", \"question_type\": \"noul\", \"instructions\": \"Does the text indicate that this person is a dentist or dental surgeon, for example by mentioning a BDS, DDS, or DMD degree or a dental clinic?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}

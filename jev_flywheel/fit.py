@@ -82,6 +82,7 @@ def build_training_set(
     *,
     default_propensity: Optional[float] = None,
     max_ratio: Optional[float] = 20.0,
+    twin_rows: Optional[Mapping[str, Mapping[str, float]]] = None,
 ) -> TrainingSet:
     """Assemble what a fit needs, counting everything it had to leave out.
 
@@ -89,6 +90,16 @@ def build_training_set(
     cached answers -- typically because a new element was just proposed. They are
     left out of the fit and reported, so the caller can top up the cache and try
     again, rather than have the fit quietly train on fewer items than it appears to.
+
+    ``twin_rows`` is ``studies/PREREGISTERED.md``'s L3 arm ("twin-augmented refit"): an
+    optional ``{item_id: feature_row}`` map, one entry per labeled item, giving that item's
+    *gender-swapped counterfactual twin*'s already-computed feature vector (``score.
+    feature_vector`` on the twin's own answers -- computing those answers is the caller's job,
+    since it needs an engine). When an item that made it into the training set has an entry
+    here, its twin is appended as one more training row, carrying the *same* label and the
+    *same* inverse-propensity weight as the original -- the twin is not an independent draw
+    from the sampling design, so it must not get a weight of its own. ``None`` (the default)
+    reproduces every existing caller's behaviour exactly.
     """
     if score.decision is None:
         raise ValueError(f"score {score.name!r} has no decision block, so there is nothing to fit")
@@ -121,6 +132,13 @@ def build_training_set(
         training.labels.append(cls)
         training.cells.append(record.confusion_cell)
         propensities.append(propensity)
+
+        if twin_rows is not None and item_id in twin_rows:
+            training.item_ids.append(f"{item_id}__twin")
+            training.rows.append(dict(twin_rows[item_id]))
+            training.labels.append(cls)
+            training.cells.append(record.confusion_cell)
+            propensities.append(propensity)
 
     training.weights = inverse_propensity_weights(propensities, max_ratio=max_ratio)
     return training
@@ -387,3 +405,277 @@ def compare(candidate: FitResult, incumbent: Summary, *, min_brier_gain: float =
             if not result.passed:
                 reasons.append(f"element {key!r} failed the invariance gate: {result.reason}")
     return Comparison(candidate.metrics, incumbent, not reasons, reasons)
+
+
+# ---------------------------------------------------------------------------------------------
+# L4 -- the invariance penalty (studies/PREREGISTERED.md, "optimising the head against the
+# flip"). A fit variant whose loss adds lambda * mean((P(surgeon|item) - P(surgeon|twin))^2)
+# over the labeled pairs, on top of the ordinary weighted, L2-regularised logistic loss.
+# sklearn's LogisticRegression cannot express a custom penalty term, so this is a small,
+# hand-rolled binary logistic regression (numpy + scipy), used only behind this function --
+# every other caller of fit_head is untouched.
+# ---------------------------------------------------------------------------------------------
+
+DEFAULT_LAMBDA_GRID: Tuple[float, ...] = (0.1, 1.0, 10.0, 100.0)
+
+
+@dataclass
+class LambdaPoint:
+    """One point on the L4 lambda sweep: what a given penalty strength costs and buys.
+
+    ``intercept``/``weights`` are the *full-data* (non-CV) fit at this point -- not used for
+    any of the out-of-fold numbers above them, but reported so a reader can see the mechanism
+    directly: the penalty term can only ever move ``weights`` and ``intercept`` together, and
+    for a head with one feature, whether a labeled pair *flips* depends only on whether the
+    item and its twin fall on opposite sides of the decision boundary (``weight * x +
+    intercept == 0``). Shrinking ``weight`` while ``intercept`` barely moves relocates that
+    boundary, but does not by itself change *which* pairs straddle it -- only a shift in
+    ``intercept`` (relative to the spread of ``x``) does that.
+    """
+
+    lam: float
+    oof_accuracy: float
+    oof_log_loss: float
+    oof_mean_abs_dp: float   # mean |P(item) - P(twin)| on the labeled pairs, out-of-fold
+    intercept: float = 0.0
+    weights: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass
+class InvarianceFitResult:
+    """The full L4 sweep, plus the fitted head at the chosen operating point.
+
+    ``points`` includes lambda = 0 first (the same objective ``fit_head`` optimises, at the
+    same chosen C, refit here so it is directly comparable to the penalized points on the same
+    CV splits) so "within 1 point of lambda=0" has a same-methodology baseline to compare
+    against, not ``fit_head``'s own (differently split) out-of-fold number.
+    """
+
+    tier: Tier
+    n: int
+    n_effective: float
+    chosen_c: float
+    points: List[LambdaPoint]
+    operating_lambda: float
+    head: Dict[str, Any]
+    provenance: Dict[str, Any]
+
+
+def _sigmoid(z):
+    import numpy as np
+    return 1.0 / (1.0 + np.exp(-np.clip(z, -35, 35)))
+
+
+def _penalized_binary_fit(X, y, w, c: float, lam: float, Xt=None, pair_mask=None,
+                          max_iter: int = 500):
+    """Fit a weighted, L2-regularised binary logistic regression with an optional invariance
+    penalty, by direct minimisation (analytic gradient).
+
+    ``y`` is 0/1 (class 1 is the "positive" class the returned coefficients score). ``w`` is
+    per-row weight, already normalised to sum n (as ``sampling.inverse_propensity_weights``
+    returns, and as sklearn's own ``sample_weight`` is used unmodified). ``Xt``/``pair_mask``
+    are the twin feature matrix and a boolean mask over rows that have a twin (rows without one
+    are still trained on ordinarily; they just contribute nothing to the penalty term). The
+    objective, minimised over ``(intercept, coef)``, matches sklearn's ``LogisticRegression``
+    parametrisation (``C`` scales the data term rather than dividing the regulariser, and the
+    intercept is left unregularised) with the penalty term added on:
+
+        c * sum_i w_i * log_loss_i  +  0.5 * ||coef||^2
+                                     +  lam * mean_{i in pair_mask} (p_i - p_twin_i)^2
+    """
+    import numpy as np
+    from scipy.optimize import minimize
+
+    n, d = X.shape
+    has_pairs = Xt is not None and pair_mask is not None and pair_mask.any()
+
+    def objective(params):
+        b, coef = params[0], params[1:]
+        z = X @ coef + b
+        p = _sigmoid(z)
+        eps = 1e-9
+        log_loss = c * float((w * -(y * np.log(np.clip(p, eps, 1))
+                                    + (1 - y) * np.log(np.clip(1 - p, eps, 1)))).sum())
+        grad_b = c * float((w * (p - y)).sum())
+        grad_coef = c * (X.T @ (w * (p - y)))
+
+        reg = 0.5 * float((coef ** 2).sum())
+        grad_coef = grad_coef + coef
+
+        penalty = 0.0
+        if has_pairs:
+            xi, xt = X[pair_mask], Xt[pair_mask]
+            pi = _sigmoid(xi @ coef + b)
+            pt = _sigmoid(xt @ coef + b)
+            diff = pi - pt
+            m = pair_mask.sum()
+            penalty = lam * float((diff ** 2).mean())
+            d_pi = pi * (1 - pi)
+            d_pt = pt * (1 - pt)
+            common = (2.0 * lam / m) * diff
+            grad_b += float((common * (d_pi - d_pt)).sum())
+            grad_coef = grad_coef + xi.T @ (common * d_pi) - xt.T @ (common * d_pt)
+
+        loss = log_loss + reg + penalty
+        grad = np.concatenate([[grad_b], grad_coef])
+        return loss, grad
+
+    x0 = np.zeros(d + 1)
+    result = minimize(objective, x0, jac=True, method="L-BFGS-B",
+                      options={"maxiter": max_iter})
+    return result.x[0], result.x[1:]
+
+
+def fit_head_invariance(
+    training: TrainingSet,
+    score: Score,
+    twin_rows: Mapping[str, Mapping[str, float]],
+    *,
+    lambdas: Sequence[float] = DEFAULT_LAMBDA_GRID,
+    registered: Optional[Sequence[float]] = None,
+    ladder: Tuple[Tier, ...] = CAPABILITY_LADDER_V1,
+    folds: int = 5,
+    seed: int = 0,
+    accuracy_slack: float = 0.01,
+) -> InvarianceFitResult:
+    """L4: fit with the pairwise invariance penalty, swept over ``lambdas``.
+
+    Only defined for a two-class decision (the penalty is stated in ``studies/
+    PREREGISTERED.md`` as a difference of P(surgeon), a single number). ``twin_rows`` is
+    ``{item_id: feature_row}`` for each labeled item's counterfactual twin -- exactly what
+    ``build_training_set``'s own ``twin_rows`` argument takes for L3, but used here for the
+    penalty rather than as extra rows.
+
+    C is chosen once, via the same cross-validated, weighted-log-loss selection ``fit_head``
+    uses (at lambda = 0, i.e. no penalty), and then reused for every lambda in the sweep --
+    "the cross-validation that chooses C already exists and is reused" (the pre-registration).
+    Every lambda is scored out-of-fold on the *same* CV splits, so the sweep is an
+    apples-to-apples comparison. The operating point is the largest lambda whose out-of-fold
+    accuracy is within ``accuracy_slack`` (one point, by default) of lambda = 0's.
+
+    ``registered`` restricts which lambdas the operating point is chosen *from*, defaulting to
+    ``lambdas`` itself (every existing caller's behaviour). Pass a subset when ``lambdas``
+    carries extra, exploratory points beyond the pre-registered grid (``studies/
+    PREREGISTERED.md``'s "optimising the head against the flip" section fixes the grid at
+    {0.1, 1, 10, 100} in advance; an exploratory point past it must never move the operating
+    point the pre-registration promised) -- every lambda in ``lambdas`` is still swept and
+    reported, exploratory ones included.
+    """
+    import numpy as np
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import StratifiedKFold
+
+    decision = score.decision
+    if decision is None:
+        raise ValueError(f"score {score.name!r} has no decision block")
+    classes = sorted(set(training.labels))
+    if len(classes) != 2:
+        raise ValueError(f"the invariance penalty (L4) needs exactly two classes, got {classes}")
+    # decision.classes gives the declared order; keep it if both are present, so the positive
+    # class matches the convention the ordinary (sklearn) fit uses in ``_serving_head``.
+    ordered = [c for c in decision.classes if c in classes] or classes
+    positive = ordered[-1]
+    negative = ordered[0]
+
+    n, n_eff = training.n, training.n_effective
+    tier = tier_for(n_eff, ladder)
+    features = list(decision.features)
+    X = build_matrix(training.rows, features)
+    y = np.array([1 if label == positive else 0 for label in training.labels])
+    w = np.array(training.weights, dtype=float)
+
+    Xt = np.zeros_like(X)
+    pair_mask = np.zeros(n, dtype=bool)
+    for i, item_id in enumerate(training.item_ids):
+        row = twin_rows.get(item_id)
+        if row is not None:
+            Xt[i] = [row.get(name, 0.0) for name in features]
+            pair_mask[i] = True
+
+    counts = Counter(training.labels)
+    splitter = StratifiedKFold(n_splits=min(folds, min(counts.values())), shuffle=True,
+                               random_state=seed)
+    splits = list(splitter.split(X, y))
+
+    # Reuse fit_head's own C selection: plain (lambda = 0) weighted log-loss CV over the tier's
+    # C grid.
+    def oof_proba_sklearn(c: float):
+        out = np.zeros(n)
+        for train, test in splits:
+            model = LogisticRegression(C=c, max_iter=2000)
+            model.fit(X[train], y[train], sample_weight=w[train])
+            out[test] = model.predict_proba(X[test])[:, list(model.classes_).index(1)]
+        return out
+
+    def weighted_log_loss(p, y_, w_):
+        eps = 1e-9
+        return float(-(w_ * (y_ * np.log(np.clip(p, eps, 1)) + (1 - y_) * np.log(np.clip(1 - p, eps, 1)))).sum()
+                     / w_.sum())
+
+    c_grid = tier.c_grid or (1.0,)
+    scored_c = {c: oof_proba_sklearn(c) for c in c_grid}
+    chosen_c = min(scored_c, key=lambda c: weighted_log_loss(scored_c[c], y, w))
+
+    def oof_for_lambda(lam: float):
+        """One pass of the CV splits at this lambda: out-of-fold P(item) and, wherever the
+        held-out item has a twin, out-of-fold P(twin) too (scored with the same fold's model,
+        so it is exactly as out-of-fold as the item prediction it is compared against)."""
+        proba = np.zeros(n)
+        twin_pred = np.full(n, np.nan)
+        for train, test in splits:
+            train_mask = np.zeros(n, dtype=bool)
+            train_mask[train] = True
+            fold_pair_mask = pair_mask & train_mask
+            b, coef = _penalized_binary_fit(
+                X[train], y[train], w[train], chosen_c, lam,
+                Xt=Xt[train] if lam and fold_pair_mask.any() else None,
+                pair_mask=fold_pair_mask[train] if lam else None)
+            proba[test] = _sigmoid(X[test] @ coef + b)
+            test = np.array(test)
+            test_pairs = pair_mask[test]
+            if test_pairs.any():
+                twin_pred[test[test_pairs]] = _sigmoid(Xt[test[test_pairs]] @ coef + b)
+        return proba, twin_pred
+
+    points: List[LambdaPoint] = []
+    full_lambda_grid = (0.0,) + tuple(lam for lam in lambdas if lam != 0.0)
+    for lam in full_lambda_grid:
+        proba, twin_pred = oof_for_lambda(lam)
+        predicted = (proba >= 0.5).astype(int)
+        acc = float((predicted == y).mean())
+        ll = weighted_log_loss(proba, y, w)
+        both = pair_mask & ~np.isnan(twin_pred)
+        mean_abs_dp = float(np.abs(proba[both] - twin_pred[both]).mean()) if both.any() else 0.0
+        # The full-data (non-CV) fit at this point too -- cheap at this sample size, and it is
+        # what lets a reader see the mechanism (see LambdaPoint's docstring): does the penalty
+        # move the intercept, or only the weight?
+        b_point, coef_point = _penalized_binary_fit(
+            X, y, w, chosen_c, lam, Xt=Xt if lam and pair_mask.any() else None,
+            pair_mask=pair_mask if lam else None)
+        points.append(LambdaPoint(
+            lam=lam, oof_accuracy=acc, oof_log_loss=ll, oof_mean_abs_dp=mean_abs_dp,
+            intercept=float(b_point),
+            weights={name: float(v) for name, v in zip(features, coef_point)}))
+
+    registered_set = set(registered if registered is not None else lambdas) | {0.0}
+    base_accuracy = points[0].oof_accuracy
+    candidates = [p for p in points if p.lam > 0 and p.lam in registered_set
+                 and p.oof_accuracy >= base_accuracy - accuracy_slack]
+    operating_lambda = max((p.lam for p in candidates), default=0.0)
+
+    operating_point = next(p for p in points if p.lam == operating_lambda)
+    head = {
+        "model": "multinomial_logistic",
+        "classes": list(decision.classes),
+        "weights": {positive: {"intercept": operating_point.intercept,
+                               **operating_point.weights}},
+    }
+    provenance = {
+        "ladder": LADDER_NAME, "tier": tier.name, "n_train": n, "n_effective": round(n_eff, 2),
+        "model": "multinomial_logistic", "regularization_c": chosen_c, "features": features,
+        "arm": "L4", "lambda_grid": list(full_lambda_grid), "operating_lambda": operating_lambda,
+        "accuracy_slack": accuracy_slack, "cv": {"folds": splitter.get_n_splits(), "seed": seed},
+    }
+    return InvarianceFitResult(tier=tier, n=n, n_effective=n_eff, chosen_c=chosen_c,
+                               points=points, operating_lambda=operating_lambda, head=head,
+                               provenance=provenance)

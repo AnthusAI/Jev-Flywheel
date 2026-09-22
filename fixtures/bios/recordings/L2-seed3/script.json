@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "title": "bios_gender L2, seed 3",
+  "score": "Occupation",
+  "engine": "laya",
+  "n_labels": 140,
+  "steps": [
+    {
+      "after_labels": 35,
+      "op": "refit"
+    },
+    {
+      "after_labels": 40,
+      "op": "refit"
+    },
+    {
+      "after_labels": 45,
+      "op": "refit"
+    },
+    {
+      "after_labels": 50,
+      "op": "refit"
+    },
+    {
+      "after_labels": 55,
+      "op": "refit"
+    },
+    {
+      "after_labels": 60,
+      "op": "refit"
+    },
+    {
+      "after_labels": 65,
+      "op": "refit"
+    },
+    {
+      "after_labels": 70,
+      "op": "refit"
+    },
+    {
+      "after_labels": 75,
+      "op": "refit"
+    },
+    {
+      "after_labels": 80,
+      "op": "refit"
+    },
+    {
+      "after_labels": 85,
+      "op": "refit"
+    },
+    {
+      "after_labels": 90,
+      "op": "refit"
+    },
+    {
+      "after_labels": 95,
+      "op": "refit"
+    },
+    {
+      "after_labels": 100,
+      "op": "refit"
+    },
+    {
+      "after_labels": 105,
+      "op": "refit"
+    },
+    {
+      "after_labels": 110,
+      "op": "refit"
+    },
+    {
+      "after_labels": 115,
+      "op": "refit"
+    },
+    {
+      "after_labels": 120,
+      "op": "refit"
+    },
+    {
+      "after_labels": 125,
+      "op": "refit"
+    },
+    {
+      "after_labels": 130,
+      "op": "refit"
+    },
+    {
+      "after_labels": 135,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "refit"
+    },
+    {
+      "after_labels": 140,
+      "op": "steer",
+      "analyst_reply": "{\"root_cause\": \"The scorecard relies on a single holistic question, and 22 of the 25 disagreements are surgeons predicted as physician even when the text carries explicit surgical evidence (board certified in Plastic/Orthopaedic Surgery, bariatric surgery, neurosurgical and endovascular procedures, an orthopedic-surgery practice). A complementary regularity runs the other way: directory-template bios that use a courtesy title (Mr./Ms./Mrs.) instead of Dr. are labeled physician even when they name a surgical specialty (Urological/Neurological Surgery), and the holistic answer gets fooled by the specialty word. Targeted elements for these two signals should fix the keyword-driven errors in both directions; the remaining errors are content-free registry blurbs whose labels carry no textual signal.\", \"add_elements\": [{\"key\": \"surgical_practice_evidence\", \"question_type\": \"noul\", \"instructions\": \"Does the text state that the person performs surgery or practices a surgical specialty, for example by naming a surgical board certification, a surgery residency or fellowship, a surgical practice or department, or specific operations (such as joint replacement, tumor or tissue removal, or cosmetic surgery)? Answer yes only on explicit surgical mentions, not on general medical care, research, or non-surgical treatments such as injections.\", \"criteria\": null}, {\"key\": \"courtesy_title_not_doctor\", \"question_type\": \"noul\", \"instructions\": \"Is the person referred to with a courtesy title such as Mr., Ms., Mrs., or Miss rather than a professional title such as Dr. or Professor?\", \"criteria\": null}], \"retire_elements\": [], \"reword_elements\": []}",
+      "model": "us.moonshotai.kimi-k3",
+      "approve": false,
+      "recorded_decision": "rejected_by_metrics"
+    }
+  ]
+}
