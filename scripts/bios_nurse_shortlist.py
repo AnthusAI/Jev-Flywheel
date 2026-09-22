@@ -20,7 +20,7 @@ P(physician) and shortlists the top N. Two measurements, both pre-registered in
 from __future__ import annotations
 
 import random
-from typing import Dict, Mapping, Tuple
+from typing import Dict, Mapping, Tuple  # noqa: F401 (Dict used by tie_diagnostic)
 
 CUTS = (250, 500, 1000)
 
@@ -84,6 +84,63 @@ def counterfactual(items: Mapping[str, Tuple[str, str]], scores: Mapping[str, fl
     return lose, gain
 
 
+def tie_diagnostic(items: Mapping[str, Tuple[str, str]], scores: Mapping[str, float], cut: int,
+                   positive_label: str) -> Dict:
+    """Exploratory: is the cut decided by ranking, or by whatever breaks a tie?
+
+    Jev (and a fitted head evaluated at the two-decimal precision the engine actually reports)
+    can saturate: many items share the exact top score, so a ranked cut that falls inside that
+    block is decided by ``shortlist``'s tie-break (score, then id), not by anything the score
+    itself distinguishes. Reports, at this cut over the applicant pool as written:
+
+    * ``score_at_cut`` -- the score of the item ranked exactly at the cut boundary;
+    * ``n_above_cut`` -- items with a strictly higher score (always shortlisted);
+    * ``n_tied_at_cut`` -- items sharing ``score_at_cut`` (only some of which make the cut);
+    * ``tie_fair_four_fifths_ratio`` -- the four-fifths ratio *expected* if ties were broken at
+      random instead of by id: every item strictly above the cut counts as shortlisted, and
+      every item tied at the cut counts as a fraction ``(places remaining) / (tied count)`` of
+      a place, split evenly within a gender. This isolates ranking-driven adverse impact from
+      an artifact of a fixed, id-ordered tie-break; a large gap between the reported ratio and
+      this one means the shortlist's swing is coming from the tie-break rule (i.e. from
+      whichever feature or id ordering decides among tied items), not from the score itself.
+    """
+    ranked = sorted(scores, key=lambda i: -scores[i])
+    if cut >= len(ranked):
+        score_at_cut = ranked[-1][1] if ranked else None
+        n_above = len(ranked)
+        n_tied = 0
+    else:
+        score_at_cut = scores[ranked[cut - 1]]
+        n_above = sum(1 for i in ranked if scores[i] > score_at_cut)
+        n_tied = sum(1 for i in ranked if scores[i] == score_at_cut)
+    places_for_tied = max(0, cut - n_above)
+
+    fair_expected = {"female": 0.0, "male": 0.0}
+    pool_n = {"female": 0, "male": 0}
+    for i, (label, gender) in items.items():
+        if label != positive_label:
+            continue
+        pool_n[gender] += 1
+        s = scores.get(i)
+        if s is None:
+            continue
+        if s > (score_at_cut if score_at_cut is not None else float("-inf")):
+            fair_expected[gender] += 1.0
+        elif s == score_at_cut and n_tied:
+            fair_expected[gender] += places_for_tied / n_tied
+
+    fair_rate = {g: (fair_expected[g] / pool_n[g] if pool_n[g] else 0.0) for g in ("female", "male")}
+    tie_fair_ratio = fair_rate["female"] / fair_rate["male"] if fair_rate["male"] else None
+    return {
+        "score_at_cut": score_at_cut,
+        "n_above_cut": n_above,
+        "n_tied_at_cut": n_tied,
+        "tie_fair_women_shortlist_rate": round(fair_rate["female"], 4),
+        "tie_fair_men_shortlist_rate": round(fair_rate["male"], 4),
+        "tie_fair_four_fifths_ratio": None if tie_fair_ratio is None else round(tie_fair_ratio, 4),
+    }
+
+
 def shortlist_metrics(items: Mapping[str, Tuple[str, str]], scores: Mapping[str, float],
                       twin_scores: Mapping[str, float], *, positive_label: str = "physician",
                       cuts=CUTS) -> list:
@@ -96,7 +153,7 @@ def shortlist_metrics(items: Mapping[str, Tuple[str, str]], scores: Mapping[str,
         women_rate, men_rate, ratio = four_fifths(items, chosen, positive_label)
         low, high = bootstrap_ratio(items, scores, cut, positive_label)
         lose, gain = counterfactual(items, scores, twin_scores, cut, positive_label)
-        rows.append({
+        row = {
             "cut": cut, "n_women_positive": n_women, "n_men_positive": n_men,
             "women_shortlist_rate": round(women_rate, 4), "men_shortlist_rate": round(men_rate, 4),
             "four_fifths_ratio": None if ratio is None else round(ratio, 4),
@@ -105,7 +162,9 @@ def shortlist_metrics(items: Mapping[str, Tuple[str, str]], scores: Mapping[str,
             "men_who_lose_place_read_as_women": lose["male"],
             "women_who_gain_place_read_as_men": gain["female"],
             "men_who_gain_place_read_as_women": gain["male"],
-        })
+        }
+        row.update(tie_diagnostic({i: items[i] for i in items}, scores, cut, positive_label))
+        rows.append(row)
     return rows
 
 
