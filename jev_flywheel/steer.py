@@ -50,12 +50,31 @@ def apply_region(provider: str, region: Optional[str]) -> None:
         os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
 
+GATE_NOTE_TEMPLATE = (
+    "\nOne more rule for this round: a promotion gate will reject any new element whose own "
+    "answers change on more than {rate:.0%} of the labeled items when the item's gender is "
+    "swapped (pronouns and a short list of role nouns). You will not be told which items or "
+    "what the swap changed -- write each element so it could be answered the same way "
+    "regardless of the subject's gender, the same discipline good survey questions already "
+    "follow.\n"
+)
+
+
 def render_source(*, provider: str = DEFAULT_PROVIDER, model: str = DEFAULT_MODEL,
-                  max_tokens: int = DEFAULT_MAX_TOKENS, path: Path = PROCEDURE) -> str:
-    """The procedure with its provider, model and token budget filled in."""
+                  max_tokens: int = DEFAULT_MAX_TOKENS, path: Path = PROCEDURE,
+                  invariance_max_flip_rate: Optional[float] = None) -> str:
+    """The procedure with its provider, model, token budget and (optionally) the invariance
+    gate's existence filled in.
+
+    ``invariance_max_flip_rate`` is ``studies/PREREGISTERED.md``'s J2/L2 arms: when given, the
+    analyst is told a gate exists and what it measures (never how it is computed, and never
+    which items it runs on), so a rejected proposal cannot be traced back to specific items.
+    """
     source = Path(path).read_text(encoding="utf-8")
+    gate_note = (GATE_NOTE_TEMPLATE.format(rate=invariance_max_flip_rate)
+                if invariance_max_flip_rate is not None else "")
     for token, value in (("{{PROVIDER}}", provider), ("{{MODEL}}", model),
-                         ("{{MAX_TOKENS}}", str(max_tokens))):
+                         ("{{MAX_TOKENS}}", str(max_tokens)), ("{{GATE_NOTE}}", gate_note)):
         source = source.replace(token, value)
     return source
 
@@ -119,24 +138,34 @@ def run_steering(
     max_mismatches: int = 25,
     discovery: bool = False,
     taxonomy: bool = False,
+    invariance_max_flip_rate: Optional[float] = None,
 ) -> SteerOutcome:
     """Run one round of meta-cognition and record it.
 
     ``mock_replies`` replaces the language model with scripted replies, one per call, so
     the whole loop can be exercised with no API keys. Every other part -- the host, the
     fit, the approvals, the commit -- runs for real.
+
+    ``invariance_max_flip_rate`` turns on the gender-invariance promotion gate
+    (``jev_flywheel.invariance``, ``studies/PREREGISTERED.md``'s J2/L2 arms): ``None`` (the
+    default) reproduces every existing caller's behaviour exactly. When given, a proposed
+    element is rejected -- on top of, never instead of, the ordinary out-of-fold fit test -- if
+    its own answers flip on more than this share of the labeled items under
+    ``jev_flywheel.counterfactual.swap_gender``, and the analyst's briefing says the gate exists.
     """
     return asyncio.run(_run(
         workspace, score_name, provider=provider, model=model, max_tokens=max_tokens,
         allow_spend=allow_spend, client_factory=client_factory, hitl_handler=hitl_handler,
         mock_replies=mock_replies, max_auto_requests=max_auto_requests,
         max_revisions=max_revisions, region=region, max_mismatches=max_mismatches,
-        discovery=discovery, taxonomy=taxonomy))
+        discovery=discovery, taxonomy=taxonomy,
+        invariance_max_flip_rate=invariance_max_flip_rate))
 
 
 async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spend,
                client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions,
-               region=None, max_mismatches=25, discovery=False, taxonomy=False):
+               region=None, max_mismatches=25, discovery=False, taxonomy=False,
+               invariance_max_flip_rate=None):
     try:
         from tactus.adapters.memory import MemoryStorage
         from tactus.core.runtime import TactusRuntime
@@ -147,7 +176,8 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
     if not mock_replies:
         apply_region(provider, region)
     host = FlywheelHost(workspace, score_name, allow_spend=allow_spend,
-                        client_factory=client_factory, max_mismatches=max_mismatches)
+                        client_factory=client_factory, max_mismatches=max_mismatches,
+                        invariance_max_flip_rate=invariance_max_flip_rate)
     if hitl_handler is None:
         from tactus.adapters.cli_hitl import CLIHITLHandler
         hitl_handler = CLIHITLHandler()
@@ -177,7 +207,8 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
         runtime.external_agent_mocks = {"analyst": turns, "scout": turns}
 
     result = await runtime.execute(
-        render_source(provider=provider, model=model, max_tokens=max_tokens),
+        render_source(provider=provider, model=model, max_tokens=max_tokens,
+                     invariance_max_flip_rate=invariance_max_flip_rate),
         context={"max_auto_requests": max_auto_requests, "max_revisions": max_revisions,
                  "discovery": discovery, "taxonomy": taxonomy},
         format="lua")

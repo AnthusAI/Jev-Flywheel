@@ -81,6 +81,7 @@ class FlywheelHost:
         max_mismatches: int = 25,
         max_agreement_notes: int = 5,
         max_labeled_sample: int = 40,
+        invariance_max_flip_rate: Optional[float] = None,
     ):
         self.workspace = workspace
         self.score_name = score_name
@@ -89,6 +90,10 @@ class FlywheelHost:
         self.max_mismatches = max_mismatches
         self.max_agreement_notes = max_agreement_notes
         self.max_labeled_sample = max_labeled_sample
+        # The gender-invariance gate (jev_flywheel.invariance, studies/PREREGISTERED.md's J2/L2
+        # arms). None reproduces every existing caller's behaviour exactly.
+        self.invariance_max_flip_rate = invariance_max_flip_rate
+        self.last_invariance_flip_rates: Optional[Dict[str, float]] = None
         self._proposal: Optional[Proposal] = None
         self._candidate: Optional[Scorecard] = None
         self._fit: Optional[FitResult] = None
@@ -371,7 +376,22 @@ class FlywheelHost:
         incumbent_card = self.workspace.scorecard()
         incumbent = serve_summary(
             incumbent_card.score(name), incumbent_card.questions(), self.workspace.cache, training)
-        comparison = compare(result, incumbent)
+
+        flip_rates = None
+        if self.invariance_max_flip_rate is not None and self._proposal is not None:
+            new_keys = {added.key for added in self._proposal.add}
+            # An element's key is bare ("gendered_tone"); its wire name is namespaced by score
+            # ("sentiment.gendered_tone", see Score.element_questions). Map through that, not
+            # through the bare key, or a newly added element is never found in `questions`.
+            new_wire_names = {wire for _, wire, spec in score.element_questions()
+                              if spec.key in new_keys}
+            new_questions = {k: v for k, v in questions.items() if k in new_wire_names}
+            if new_questions:
+                flip_rates = self._invariance_flip_rates(training.item_ids, new_questions)
+        self.last_invariance_flip_rates = flip_rates
+
+        comparison = compare(result, incumbent, invariance_flip_rates=flip_rates,
+                            max_flip_rate=self.invariance_max_flip_rate or 0.02)
         self._fit, self._comparison = result, comparison
         return {
             "status": "fitted", "promote": comparison.promote, "reasons": comparison.reasons,
@@ -379,7 +399,45 @@ class FlywheelHost:
             "candidate": _metrics(comparison.candidate),
             "incumbent": _metrics(comparison.incumbent),
             "summary_text": _evaluation_text(result, comparison),
+            "invariance_flip_rates": flip_rates,
         }
+
+    def _invariance_flip_rates(self, item_ids: List[str],
+                               new_questions: Mapping[str, Any]) -> Dict[str, float]:
+        """The gender-invariance gate's own measurement: for each newly proposed element, the
+        share of the currently labeled items whose answer to *that element alone* changes when
+        the item's gender is swapped (``jev_flywheel.counterfactual.swap_gender``).
+
+        Costs one request per labeled item that lacks a cached answer for the swapped twin,
+        carrying only the new elements' questions -- at most ``len(item_ids)`` requests per
+        proposal, never the whole corpus. The swapped twins are asked about through a scratch,
+        in-memory cache (never written to the workspace's own answer file), since they are not
+        real corpus items and must not leak into anything else that reads the workspace's cache.
+        """
+        from jev_flywheel.answers import AnswerCache
+        from jev_flywheel.counterfactual import swap_gender
+        from jev_flywheel.invariance import flip_rate
+        from jev_flywheel.items import Item
+
+        twins = [
+            Item(id=f"{item_id}::genderswap",
+                text=swap_gender(self.workspace.item(item_id).text).text)
+            for item_id in item_ids]
+        scratch = AnswerCache()
+        session = JevSession(client_factory=self.client_factory) if self.client_factory \
+            else JevSession()
+        run_sync(scratch.fill(session, twins, new_questions))
+
+        rates: Dict[str, float] = {}
+        for key, question in new_questions.items():
+            before, after = {}, {}
+            for item_id in item_ids:
+                b = self.workspace.cache.get(item_id, key, question)
+                a = scratch.get(f"{item_id}::genderswap", key, question)
+                if b is not None and a is not None:
+                    before[item_id], after[item_id] = b, a
+            rates[key] = flip_rate(before, after) if before else 0.0
+        return rates
 
     def _engine_problems(self, candidate: Scorecard) -> List[str]:
         """What the answering engine says it cannot answer, found before anything is asked.
