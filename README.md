@@ -216,7 +216,7 @@ This repo started as the third of three articles, and has since grown four of it
 ([fine-tuning Jev](https://anth.us/blog/fine-tuning-jev/),
 [Jev vs Laya](https://anth.us/blog/jev-vs-laya/),
 [distilling into a classifier you own](https://anth.us/blog/distilling-jev-into-a-classifier/) and
-[encoding prejudice](https://anth.us/blog/encoding-prejudice/)). The
+[We Told the AI She Was a Woman. It Demoted Her.](https://anth.us/blog/encoding-prejudice/), with its technical companions [The One-Word Test](https://anth.us/blog/one-word-test/) and [Can You Fix It?](https://anth.us/blog/can-you-fix-it/)). The
 [first](https://anth.us/blog/fine-tuned-classification-with-confidence/) (September 2025)
 planted the pattern and fine-tuned a model to absorb it. The
 [second](https://anth.us/blog/can-you-trust-jev-confidence/) asked whether Jev's confidence can be
@@ -961,7 +961,7 @@ python scripts/exploratory_finetune.py          # head-only at low lr; 20, 40 an
 Everything above uses a corpus we built and a bias we planted. This chapter uses a public one
 with a bias the field already documented, so the answer key is somebody else's. It is the
 subject of a fourth article,
-[Encoding Prejudice](https://anth.us/blog/encoding-prejudice/), and the full pre-registration,
+[We Told the AI She Was a Woman. It Demoted Her.](https://anth.us/blog/encoding-prejudice/) (the general-reader story) with [The One-Word Test](https://anth.us/blog/one-word-test/) and [Can You Fix It?](https://anth.us/blog/can-you-fix-it/) (the technical companions), and the full pre-registration,
 predictions and outcomes are in
 [`studies/PREREGISTERED.md`](studies/PREREGISTERED.md) from "does the engine read gender, and
 can the layer refuse to?" onward.
