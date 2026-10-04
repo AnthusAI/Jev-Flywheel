@@ -32,6 +32,11 @@ DEFAULT_MAX_TOKENS = 8000
 PROCEDURE = Path(__file__).resolve().parents[1] / "procedures" / "steer_scorecard.tac"
 
 
+def omits_temperature(model: str) -> bool:
+    """Whether this Bedrock model rejects a temperature request entirely."""
+    return "moonshotai.kimi-k3" in model.lower()
+
+
 class SteerError(RuntimeError):
     """The steering round could not run. The message says why."""
 
@@ -145,6 +150,7 @@ def run_steering(
     max_mismatches: int = 25,
     discovery: bool = False,
     taxonomy: bool = False,
+    require_single_addition: bool = False,
     invariance_max_flip_rate: Optional[float] = None,
     flip_mismatches: Optional[List[Dict[str, Any]]] = None,
 ) -> SteerOutcome:
@@ -167,12 +173,14 @@ def run_steering(
         mock_replies=mock_replies, max_auto_requests=max_auto_requests,
         max_revisions=max_revisions, region=region, max_mismatches=max_mismatches,
         discovery=discovery, taxonomy=taxonomy,
+        require_single_addition=require_single_addition,
         invariance_max_flip_rate=invariance_max_flip_rate, flip_mismatches=flip_mismatches))
 
 
 async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spend,
                client_factory, hitl_handler, mock_replies, max_auto_requests, max_revisions,
                region=None, max_mismatches=25, discovery=False, taxonomy=False,
+               require_single_addition=False,
                invariance_max_flip_rate=None, flip_mismatches=None):
     try:
         from tactus.adapters.memory import MemoryStorage
@@ -180,11 +188,20 @@ async def _run(workspace, score_name, *, provider, model, max_tokens, allow_spen
     except ImportError as error:
         raise SteerError(
             "steering needs Tactus. Install it with: pip install 'jev-flywheel[steer]'") from error
+    if omits_temperature(model):
+        # Tactus 0.52 defaults every non-GPT-5 model to temperature=0. Bedrock's
+        # Kimi K3 rejects that field, including zero, so both call paths omit it.
+        import tactus.dspy.config as tactus_dspy_config
+        import tactus.model_params as tactus_model_params
+
+        tactus_dspy_config.default_temperature_for_model = lambda _: None
+        tactus_model_params.default_temperature_for_model = lambda _: None
 
     if not mock_replies:
         apply_region(provider, region)
     host = FlywheelHost(workspace, score_name, allow_spend=allow_spend,
                         client_factory=client_factory, max_mismatches=max_mismatches,
+                        require_single_addition=require_single_addition,
                         invariance_max_flip_rate=invariance_max_flip_rate,
                         flip_mismatches=flip_mismatches)
     if hitl_handler is None:

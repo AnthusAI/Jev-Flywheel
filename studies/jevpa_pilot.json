@@ -1,0 +1,386 @@
+{
+  "analyst_calls": 0,
+  "answer_coverage": {
+    "sentiment.criticism": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.expectation": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.intensity": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.irony": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.mixed": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.praise": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    },
+    "sentiment.recommend": {
+      "selection_answered": 500,
+      "selection_items": 500,
+      "test_answered": 600,
+      "test_items": 600
+    }
+  },
+  "candidate_fits": {
+    "greedy:merge-1:single:praise+single:mixed": {
+      "candidate_id": "greedy:merge-1:single:praise+single:mixed",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "praise",
+        "mixed"
+      ],
+      "selection": {
+        "accuracy": 0.798,
+        "brier": 0.13398089189872572,
+        "ece": 0.0418452063633264,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.12038126971354565,
+        "positive": 0.14510785550478217
+      }
+    },
+    "greedy:merge-2:single:praise+single:expectation": {
+      "candidate_id": "greedy:merge-2:single:praise+single:expectation",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "praise",
+        "expectation"
+      ],
+      "selection": {
+        "accuracy": 0.792,
+        "brier": 0.12517808422599885,
+        "ece": 0.042138884138019424,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.10169253332147632,
+        "positive": 0.14439353496606275
+      }
+    },
+    "jevpa:merge-1:single:mixed+single:praise": {
+      "candidate_id": "jevpa:merge-1:single:mixed+single:praise",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "mixed",
+        "praise"
+      ],
+      "selection": {
+        "accuracy": 0.798,
+        "brier": 0.13398089189872553,
+        "ece": 0.04184520636332879,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.12038126971354575,
+        "positive": 0.14510785550478172
+      }
+    },
+    "single:criticism": {
+      "candidate_id": "single:criticism",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "criticism"
+      ],
+      "selection": {
+        "accuracy": 0.738,
+        "brier": 0.16301742573198497,
+        "ece": 0.08719542635080615,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.16506214558364152,
+        "positive": 0.16134447312608413
+      }
+    },
+    "single:expectation": {
+      "candidate_id": "single:expectation",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "expectation"
+      ],
+      "selection": {
+        "accuracy": 0.75,
+        "brier": 0.15177489738830013,
+        "ece": 0.07078416160650272,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.1465250266406691,
+        "positive": 0.15607024618181642
+      }
+    },
+    "single:intensity": {
+      "candidate_id": "single:intensity",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "intensity"
+      ],
+      "selection": {
+        "accuracy": 0.744,
+        "brier": 0.1602884166344831,
+        "ece": 0.06674489455037687,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.15731579582084768,
+        "positive": 0.1627205609365484
+      }
+    },
+    "single:irony": {
+      "candidate_id": "single:irony",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "irony"
+      ],
+      "selection": {
+        "accuracy": 0.748,
+        "brier": 0.15777978429538791,
+        "ece": 0.07869018944349392,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.1635586458312411,
+        "positive": 0.15305162485696255
+      }
+    },
+    "single:mixed": {
+      "candidate_id": "single:mixed",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "mixed"
+      ],
+      "selection": {
+        "accuracy": 0.778,
+        "brier": 0.1423685886195677,
+        "ece": 0.04552526336012456,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.1500201449539972,
+        "positive": 0.13610822434594358
+      }
+    },
+    "single:praise": {
+      "candidate_id": "single:praise",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "praise"
+      ],
+      "selection": {
+        "accuracy": 0.792,
+        "brier": 0.13475481957164523,
+        "ece": 0.04516734229046309,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.1197140841157395,
+        "positive": 0.14706087585374994
+      }
+    },
+    "single:recommend": {
+      "candidate_id": "single:recommend",
+      "fit_n": 140,
+      "fit_n_effective": 110.58937204095021,
+      "fit_status": "fitted",
+      "question_keys": [
+        "recommend"
+      ],
+      "selection": {
+        "accuracy": 0.732,
+        "brier": 0.15689293270015064,
+        "ece": 0.07908704989402876,
+        "missing_items": 0,
+        "n": 500
+      },
+      "selection_slices": {
+        "negative": 0.15267856204071986,
+        "positive": 0.16034105414877584
+      }
+    }
+  },
+  "evidence_status": "exploratory_scripted_reference_labels",
+  "experiment": "JEVPA offline sentiment search mechanics pilot",
+  "fit_failures": [],
+  "greedy": {
+    "candidate_fits": 9,
+    "candidates": [
+      "single:praise",
+      "single:criticism",
+      "single:mixed",
+      "single:irony",
+      "single:recommend",
+      "single:expectation",
+      "single:intensity",
+      "greedy:merge-1:single:praise+single:mixed",
+      "greedy:merge-2:single:praise+single:expectation"
+    ],
+    "exploratory_test": {
+      "accuracy": 0.815,
+      "brier": 0.11072342863672593,
+      "ece": 0.03884079532480801,
+      "missing_items": 0,
+      "n": 600
+    },
+    "winner": "greedy:merge-2:single:praise+single:expectation",
+    "winner_question_keys": [
+      "praise",
+      "expectation"
+    ],
+    "winner_selection": {
+      "accuracy": 0.792,
+      "brier": 0.12517808422599885,
+      "ece": 0.042138884138019424,
+      "missing_items": 0,
+      "n": 500
+    }
+  },
+  "greedy_merge_question_sets": [
+    [
+      "expectation",
+      "praise"
+    ],
+    [
+      "mixed",
+      "praise"
+    ]
+  ],
+  "incumbent_context": {
+    "candidate": "frozen_v1_holistic_only",
+    "exploratory_test": {
+      "accuracy": 0.7933333333333333,
+      "brier": 0.15406588751102834,
+      "ece": 0.11859719471947201,
+      "missing_items": 0,
+      "n": 600
+    }
+  },
+  "interpretation": "This exercises cached-answer fitting, slice scoring, Pareto retention, and question-set merging. It cannot establish that JEVPA improves discovery or generalizes to live reviewer feedback.",
+  "jevpa": {
+    "candidate_fits": 8,
+    "candidates": [
+      "single:praise",
+      "single:criticism",
+      "single:mixed",
+      "single:irony",
+      "single:recommend",
+      "single:expectation",
+      "single:intensity",
+      "jevpa:merge-1:single:mixed+single:praise"
+    ],
+    "exploratory_test": {
+      "accuracy": 0.835,
+      "brier": 0.11566950472828966,
+      "ece": 0.035210207271174805,
+      "missing_items": 0,
+      "n": 600
+    },
+    "winner": "jevpa:merge-1:single:mixed+single:praise",
+    "winner_question_keys": [
+      "mixed",
+      "praise"
+    ],
+    "winner_selection": {
+      "accuracy": 0.798,
+      "brier": 0.13398089189872553,
+      "ece": 0.04184520636332879,
+      "missing_items": 0,
+      "n": 500
+    }
+  },
+  "jevpa_budget_unused_reason": "The bounded Pareto front contained only two candidates, yielding one unique question-set union; a second fit would duplicate that union.",
+  "jevpa_merge_question_sets": [
+    [
+      "mixed",
+      "praise"
+    ]
+  ],
+  "merge_differs_from_greedy": false,
+  "network_calls": 0,
+  "pareto_pair_fallback_used": true,
+  "pareto_pool": [
+    {
+      "candidate_id": "single:praise",
+      "question_keys": [
+        "praise"
+      ],
+      "selection_slices": {
+        "negative": 0.1197140841157395,
+        "positive": 0.14706087585374994
+      }
+    },
+    {
+      "candidate_id": "single:mixed",
+      "question_keys": [
+        "mixed"
+      ],
+      "selection_slices": {
+        "negative": 0.1500201449539972,
+        "positive": 0.13610822434594358
+      }
+    }
+  ],
+  "protocol": {
+    "discovery_items": 140,
+    "exploratory_test_items": 600,
+    "minimum_slice_n": 50,
+    "pair_fits_per_search_arm": 2,
+    "seed": 20260924,
+    "selection_items": 500,
+    "singleton_candidates": 7,
+    "slices": [
+      "positive",
+      "negative"
+    ]
+  }
+}

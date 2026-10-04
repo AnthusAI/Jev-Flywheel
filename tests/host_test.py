@@ -197,6 +197,19 @@ def test_a_valid_proposal_is_applied_priced_and_diffed_without_spending_anything
     assert check["n_features"] == 2
 
 
+def test_a_constrained_initial_round_requires_one_added_element_and_no_rewording(labeled):
+    host = FlywheelHost(labeled, SCORE, require_single_addition=True)
+
+    check = host.check(reply(add_elements=[SARCASM, PRAISE]))
+    assert not check["ok"]
+    assert "exactly one" in check["problems"][0]
+
+    reworded = host.check(reply(add_elements=[SARCASM], reword_elements=[{
+        "key": "holistic", "instructions": "Different question?"}]))
+    assert not reworded["ok"]
+    assert "must not retire or reword" in reworded["problems"][0]
+
+
 def test_reusing_already_cached_wordings_costs_nothing(labeled):
     check = host_for(labeled).check(reply(add_elements=[PRAISE, CRITICISM]))
 

@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "anthus-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/home/Projects/Anth.us && npm run develop"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "plain-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/home/Projects/Biased-Decisions-plmerge/site && npx astro dev --port 4371"
+      ],
+      "port": 4371
+    },
+    {
+      "name": "biased-decisions-dir",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/home/Projects/Biased-Decisions-dir/site && npx astro dev --port 4372"
+      ],
+      "port": 4372
+    },
+    {
+      "name": "methods-final",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/home/Projects/Biased-Decisions-methods-final/site && npx astro dev --port 4373"
+      ],
+      "port": 4373
+    }
+  ]
+}

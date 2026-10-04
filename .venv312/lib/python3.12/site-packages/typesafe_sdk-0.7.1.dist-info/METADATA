@@ -1,0 +1,77 @@
+Metadata-Version: 2.4
+Name: typesafe-sdk
+Version: 0.7.1
+Summary: Python SDK for TypeSafe AI API.
+Keywords: typesafe,sdk,api,ai
+Author: TypeSafe AI
+Author-email: TypeSafe AI <support@typesafe.ai>
+License-Expression: MIT
+License-File: LICENSE
+Classifier: Typing :: Typed
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: MIT License
+Requires-Dist: httpx2>=2.0.0
+Requires-Dist: pydantic>=2.12.0
+Requires-Dist: pydantic-core>=2.41.1
+Requires-Dist: tenacity>=9.0.0
+Requires-Dist: typing-extensions>=4.13.0
+Maintainer: Daniel Gafni
+Maintainer-email: Daniel Gafni <daniel@typesafe.ai>
+Requires-Python: >=3.10
+Project-URL: Homepage, https://typesafe.ai
+Project-URL: Documentation, https://docs.typesafe.ai/sdk/python/
+Project-URL: Changelog, https://docs.typesafe.ai/sdk/python/changelog/
+Project-URL: Repository, https://github.com/typesafe-ai/typesafe-sdk-python
+Project-URL: Issues, https://github.com/typesafe-ai/typesafe-sdk-python/issues
+Description-Content-Type: text/markdown
+
+# TypeSafe AI Python SDK
+
+Python SDK for [TypeSafe AI](https://typesafe.ai).
+
+## Quickstart
+
+Install the SDK:
+
+```
+uv add typesafe-sdk
+```
+
+Set `TYPESAFE_API_KEY` in your environment, then instantiate and use the client:
+
+```python
+from typesafe_sdk import Choice, TypeSafeClient
+
+with TypeSafeClient() as client:
+    response = client.system_one(
+        state={"document": "I was charged twice. Please fix this ASAP."},
+        questions={
+            "category": Choice(
+                instructions="What is this ticket about?",
+                criteria={"billing": None, "technical": None, "other": None},
+            ),
+        },
+    )
+
+print(response.choices["category"].choice)
+```
+
+learn what TypeSafe is, what it can do, and how to use it in [TypeSafe docs](https://docs.typesafe.ai/).
+
+## Documentation
+
+Learn more in [SDK docs](https://docs.typesafe.ai/sdk/python/).

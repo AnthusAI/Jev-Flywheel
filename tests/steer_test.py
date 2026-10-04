@@ -9,13 +9,19 @@ import shutil
 
 import pytest
 
-from jev_flywheel.steer import ScriptedApprover, SteerError, render_source, run_steering
+from jev_flywheel.steer import (
+    ScriptedApprover, SteerError, omits_temperature, render_source, run_steering)
 from jev_flywheel.workspace import Workspace
 from tests.host_test import (  # noqa: F401  (fixtures)
     SARCASM, Client, Response, labeled, labeled_template, reply, template, workspace)
 from tests.loop_test import SCORE
 
 pytest.importorskip("tactus")
+
+
+def test_kimi_k3_omits_unsupported_temperature_control():
+    assert omits_temperature("us.moonshotai.kimi-k3") is True
+    assert omits_temperature("gpt-5") is False
 
 
 class Silent(Client):

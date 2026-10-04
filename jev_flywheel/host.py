@@ -81,6 +81,7 @@ class FlywheelHost:
         max_mismatches: int = 25,
         max_agreement_notes: int = 5,
         max_labeled_sample: int = 40,
+        require_single_addition: bool = False,
         invariance_max_flip_rate: Optional[float] = None,
         flip_mismatches: Optional[List[Dict[str, Any]]] = None,
     ):
@@ -91,6 +92,7 @@ class FlywheelHost:
         self.max_mismatches = max_mismatches
         self.max_agreement_notes = max_agreement_notes
         self.max_labeled_sample = max_labeled_sample
+        self.require_single_addition = require_single_addition
         # The gender-invariance gate (jev_flywheel.invariance, studies/PREREGISTERED.md's J2/L2
         # arms). None reproduces every existing caller's behaviour exactly.
         self.invariance_max_flip_rate = invariance_max_flip_rate
@@ -283,6 +285,14 @@ class FlywheelHost:
         problems: List[str] = []
         try:
             proposal = parse_proposal(_plain(reply) if not isinstance(reply, str) else reply)
+            if self.require_single_addition and (len(proposal.add) != 1):
+                return {"ok": False, "noop": False,
+                        "problems": ["this registered initial round requires exactly one added element"],
+                        "plan": None}
+            if self.require_single_addition and (proposal.retire or proposal.reword):
+                return {"ok": False, "noop": False,
+                        "problems": ["this registered initial round must not retire or reword an element"],
+                        "plan": None}
             card = self.workspace.scorecard()
             candidate = apply_proposal(card, self.score_name, proposal)
         except ProposalError as error:

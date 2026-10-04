@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := help
-.PHONY: help install demo laya student finetune bios flipopt race race2 age pairs test diagrams
+.PHONY: help install demo jevpa laya student finetune bios flipopt race race2 age pairs test diagrams
 
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
 	@echo ""
 	@echo "  make install   set up a virtualenv (once)"
 	@echo "  make demo      1. the flywheel with Jev, replayed offline from a recording (~10 s)"
+	@echo "  make jevpa     JEVPA Pareto search machinery pilot, offline from cached answers"
 	@echo "  make laya      2. the same recording answered by a local Laya model (downloads ~843 MB)"
 	@echo "  make student   3. distil the result into a small local BERT classifier (downloads ~1.2 GB in all)"
 	@echo "  make finetune  4. does gradient fine-tuning of Laya itself beat the fitted head? (one seed, quick)"
@@ -34,6 +35,12 @@ demo:
 	@echo "analyst's new question. Accuracy is how often the verdict matches the labeler; ECE is"
 	@echo "how far stated confidence is from how often it is right (lower is better)."
 	@echo "The figure was redrawn at images/results.png. Next: README.md, 'The result'."
+
+# Search-machinery pilot using the original seven cached sentiment questions. It neither
+# discovers new questions nor calls Jev; see studies/JEVPA_PILOT.md for the limits.
+jevpa:
+	.venv/bin/python scripts/run_jevpa_offline.py --out var/jevpa_pilot.json > /dev/null
+	@echo "Exploratory JEVPA pilot written to var/jevpa_pilot.json. Read studies/JEVPA_PILOT.md."
 
 # Stage 2. The same recording, replayed against a local Laya model instead of Jev's answers.
 # Needs Apple silicon. Downloads the ~843 MB checkpoint on first use.

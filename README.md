@@ -35,6 +35,7 @@ full list, and it is not short.
 | how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
 | why this behaves like fine-tuning without any fine-tuning | [Fine-tuning's effect](#fine-tunings-effect-without-fine-tuning-anything) |
 | how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
+| the Pareto search prototype and what its first test found | [The JEVPA pilot](#the-jevpa-pilot) |
 | the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
 | getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
 | what actually fine-tuning an open engine buys, and costs | [Fine-tuning the engine instead](#fine-tuning-the-engine-instead) |
@@ -164,6 +165,31 @@ of them asking Laya, 6 training); you should see three lines, roughly 0.91 (soft
 (the ceiling), against a teacher at 0.89. The README's table uses three seeds; this runs one. It is
 [Moving off the hosted model](#moving-off-the-hosted-model-a-local-student), runnable. Stages 2
 and 3 write into `var/` and never touch the committed results in `studies/`.
+
+### The JEVPA pilot
+
+`make jevpa` tests a small Pareto search over scorecard questions, entirely
+offline. It gives a greedy search and JEVPA the same seven already-answered
+sentiment questions. JEVPA keeps candidates that are strongest on different
+label slices and can combine their questions, then refits the decision head.
+The run uses the recorded 140 labels to fit, 500 other pool items to select,
+and 600 more for an exploratory comparison. It writes `var/jevpa_pilot.json`.
+
+On this first run, the Pareto pool had only two distinct candidates and its
+one merge was also tried by greedy search. JEVPA did **not** beat greedy on the
+primary Brier score (0.1157 versus 0.1107 on the exploratory 600), though its
+accuracy was higher (0.835 versus 0.815). These pre-existing questions test
+the search machinery, not whether an analyst can discover better questions.
+The [protocol](studies/JEVPA_PILOT_PROTOCOL.md) and [full result](studies/JEVPA_PILOT.md)
+record the limits and the implementation correction made during review.
+
+The next experiment is a capped live comparison designed to test the missing
+mechanism: whether retaining a question-set specialist produces a final candidate
+that greedy search would discard. Its [frozen protocol](studies/JEVPA_LIVE_PROTOCOL.md)
+matches four shared and two per-arm analyst calls, limits Jev to 1,820 planned
+item-batch requests, and holds 500 fresh items for the final paired score. The
+`scripts/run_jevpa_live.py` helper prices each answer batch without spending by
+default; its final-test mode accepts only checksum-verified frozen winners.
 
 ### Using your own labels
 

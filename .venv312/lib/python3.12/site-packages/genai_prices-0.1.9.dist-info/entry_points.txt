@@ -1,0 +1,2 @@
+[console_scripts]
+genai-prices = genai_prices._cli:cli
