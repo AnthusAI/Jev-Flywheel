@@ -1,14 +1,14 @@
 """From one item's Jev answers to a score result.
 
-``ScoreResult`` mirrors Plexus's ``Score.Result``: a value, a confidence, an
+``ScoreResult`` mirrors Primus's ``Score.Result``: a value, a confidence, an
 explanation and a metadata dict. The fields and their meaning are deliberately the
 same, so the console, the evaluator and the Tactus host all speak the vocabulary
-Plexus does.
+Primus does.
 
 Two paths, chosen by whether the score declares a ``decision``:
 
 * **No decision.** The result is Jev's holistic answer, passed through. This is
-  what a Plexus JevScore does today, and it is the baseline everything is
+  what a Primus JevScore does today, and it is the baseline everything is
   measured against.
 * **A decision.** The result comes from the head over the score's features, and the
   confidence is calibrated. The holistic answer is just one feature among several,
@@ -24,7 +24,7 @@ from jev_flywheel.scorecard import Score, Scorecard
 
 @dataclass
 class ScoreResult:
-    """One score's answer for one item. Same fields as Plexus's ``Score.Result``."""
+    """One score's answer for one item. Same fields as Primus's ``Score.Result``."""
 
     score_name: str
     value: str

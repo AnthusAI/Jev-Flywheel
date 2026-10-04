@@ -4,7 +4,7 @@ Model class and calibration method are both limited by how much evidence there i
 so they are one policy. As labels accumulate a scorecard climbs this ladder on its
 own -- nobody has to notice that it crossed a threshold and edit a file.
 
-The policy is a frozen, named profile, in the same idiom Plexus uses for its
+The policy is a frozen, named profile, in the same idiom Primus uses for its
 optimization policy: ``CAPABILITY_LADDER_V1`` never changes in place, so a fit that
 records "tier standard under capability-ladder-v1" stays interpretable after the
 thresholds are revised in a v2.
@@ -26,7 +26,7 @@ Two rules keep the ladder honest:
 
 What this ladder does *not* include: generalized additive models, factorization
 machines, boosted trees, neural networks and set encoders. Those are the further
-rungs, they need artifact storage for their weights, and that is where Plexus's
+rungs, they need artifact storage for their weights, and that is where Primus's
 model registry picks up. The measured reason to want them is in the lab notes:
 boosting overtakes the logistic head at roughly 500 labels.
 """

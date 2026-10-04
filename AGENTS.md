@@ -1,6 +1,6 @@
 # Working in Jev-Flywheel
 
-A minimal, Plexus-compatible demonstration of Jev plus a learned decision head and a
+A minimal, Primus-compatible demonstration of Jev plus a learned decision head and a
 human-in-the-loop feedback flywheel. Keep it small: it is a calling card and an on-ramp,
 and its value is that a stranger can read all of it.
 
@@ -25,11 +25,11 @@ and its value is that a stranger can read all of it.
   propensity, and calibrate only on out-of-fold predictions.** Each has a spec for the
   failure it prevents.
 
-## Vocabulary (kept identical to Plexus)
+## Vocabulary (kept identical to Primus)
 
 Item, FeedbackItem (`initial_answer_value`, `final_answer_value`, `edit_comment_value`),
 label sources, score result, element, feature, decision, scorecard. Label normalization is
-copied from Plexus's Evaluation and must not drift, or metrics silently go to zero.
+copied from Primus's Evaluation and must not drift, or metrics silently go to zero.
 
 ## Commands
 

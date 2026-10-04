@@ -291,7 +291,7 @@ positive. But the two domain factors contribute −1.85 and −1.23, and the ver
 answer decides; the weights decide, and you can read them.
 
 The vocabulary (item, feedback item, element, feature, decision, label sources, the label
-normalization rules) is deliberately the same as [Plexus](https://github.com/AnthusAI/Plexus)'s,
+normalization rules) is deliberately the same as [Primus](https://github.com/AnthusAI/Primus)'s,
 so a scorecard and a feedback set made here move there as a port rather than a rewrite.
 
 ## The loop
@@ -1259,7 +1259,7 @@ whether or not it describes it. Describing it is what gives anyone the chance to
 
 Deliberately small: no database, no API, no accounts, no dashboard, no job queue, one score at a
 time, and a head that is a logistic model with a handful of features.
-[Plexus](https://github.com/AnthusAI/Plexus) is the industrial version, for scale and availability,
+[Primus](https://github.com/AnthusAI/Primus) is the industrial version, for scale and availability,
 multi-tenant accounts and audit trails, richer models once you have the labels to justify them, and
 a full reviewer workflow with vetted labels and sampling by confusion cell. The
 [Anthus AI Solutions](https://anth.us) team builds and runs it. If this was useful and you want to
@@ -1275,7 +1275,7 @@ says how the two fit together.
 
 ```
 jev_flywheel/
-  items.py        Item, FeedbackItem, label sources and Plexus's label normalization
+  items.py        Item, FeedbackItem, label sources and Primus's label normalization
   scorecard.py    the whole-scorecard YAML: load, validate, round-trip
   features.py     the frozen answer-to-feature contract
   head.py models.py   serving: standard library only, weights readable in the YAML

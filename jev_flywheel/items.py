@@ -1,7 +1,7 @@
 """Items, feedback, and the label normalization rules.
 
-The vocabulary here deliberately matches Plexus so that moving a working
-experiment into Plexus is a port and not a rewrite. Plexus's own Python models
+The vocabulary here deliberately matches Primus so that moving a working
+experiment into Primus is a port and not a rewrite. Primus's own Python models
 mirror its GraphQL schema and so use camelCase; this project uses snake_case
 because it has no GraphQL layer. The mapping is one-to-one:
 
@@ -15,7 +15,7 @@ because it has no GraphQL layer. The mapping is one-to-one:
     cache_key            <- FeedbackItem.cacheKey
 
 Storage is append-only JSONL. There is no database, no API and no account
-scoping; those are the things you graduate to Plexus for.
+scoping; those are the things you graduate to Primus for.
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional
 
-# Label provenance, spelled exactly as Plexus spells it, so a ported dataset
+# Label provenance, spelled exactly as Primus spells it, so a ported dataset
 # keeps its meaning. Only the first two are safe to train on: the third falls
 # back to the AI's own previous prediction, and training on that teaches the
 # model to imitate the incumbent champion.
@@ -45,7 +45,7 @@ def now() -> str:
 
 
 def normalize_prediction(value: Any) -> str:
-    """Normalize a predicted value the way Plexus's Evaluation does.
+    """Normalize a predicted value the way Primus's Evaluation does.
 
     Mirrors Evaluation.py: lowercase, strip, collapse internal whitespace.
     """
@@ -53,7 +53,7 @@ def normalize_prediction(value: Any) -> str:
 
 
 def normalize_label(value: Any) -> str:
-    """Normalize a human label the way Plexus's Evaluation does.
+    """Normalize a human label the way Primus's Evaluation does.
 
     Mirrors Evaluation.py: lowercase, strip trailing '.!?', then map the
     several spellings of "missing" onto one. Getting this wrong is the classic
@@ -72,7 +72,7 @@ def normalize_label(value: Any) -> str:
 def agrees(prediction: Any, label: Any) -> bool:
     """Whether a prediction counts as correct against a label.
 
-    Plexus compares after a second normalization pass in which every spelling
+    Primus compares after a second normalization pass in which every spelling
     of "missing" collapses to 'na', so '' and 'nan' and None all agree with
     each other. Exact string equality after that.
     """
@@ -88,7 +88,7 @@ class Item:
     """One thing to be scored.
 
     `identifiers` is a list of {name, value, url} objects, which is the shape
-    Plexus uses everywhere for human-facing IDs.
+    Primus uses everywhere for human-facing IDs.
     """
 
     id: str
@@ -171,7 +171,7 @@ class FeedbackItem:
     def confusion_cell(self) -> Optional[str]:
         """The (predicted, actual) cell this feedback lands in.
 
-        Plexus samples feedback per cell, which is what makes the training
+        Primus samples feedback per cell, which is what makes the training
         class balance synthetic and the IPW correction necessary.
         """
         if self.initial_answer_value is None or self.final_answer_value is None:

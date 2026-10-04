@@ -1,6 +1,6 @@
 """Feature: items, feedback, and label normalization.
 
-Normalization has to match Plexus exactly. A mismatch does not raise; it
+Normalization has to match Primus exactly. A mismatch does not raise; it
 silently sends every metric to zero, which is why it is spec'd this closely.
 """
 import pytest
@@ -42,7 +42,7 @@ def test_agreement_is_exact_after_normalization():
 
 
 def test_every_spelling_of_missing_agrees_with_every_other():
-    # Plexus collapses '', 'nan', 'none', 'null' and 'n/a' onto 'na' before
+    # Primus collapses '', 'nan', 'none', 'null' and 'n/a' onto 'na' before
     # comparing, so a blank prediction counts as correct against a blank label.
     assert agrees("", None)
     assert agrees("none", "nan")
