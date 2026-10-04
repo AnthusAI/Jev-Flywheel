@@ -262,7 +262,7 @@ def import_answers_jsonl(
 ) -> int:
     """Load a per-item extract, ``{"id", "model", "answers": {name: answer}}`` per line.
 
-    This is the format the Plexus experiment scripts wrote. Only names present in
+    This is the format the Primus experiment scripts wrote. Only names present in
     ``questions`` are imported, and each is stored under the hash of its *current*
     body, so an extract taken under different wording is correctly treated as
     stale rather than silently reused. Returns how many answers were stored.

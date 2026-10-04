@@ -3,8 +3,8 @@
 A calibration is a monotone map from a raw confidence to a calibrated one. It is
 stored as a 101-point lookup table, so applying it at serving time is
 interpolation over a list of numbers -- no pickles, no scikit-learn, and a human
-can read it in the YAML. Plexus stores its calibrations the same way
-(``serialize_calibration_model``), so a table fit here is a table Plexus reads.
+can read it in the YAML. Primus stores its calibrations the same way
+(``serialize_calibration_model``), so a table fit here is a table Primus reads.
 
 Three rules, each learned the expensive way:
 

@@ -9,7 +9,7 @@ items over-represent exactly the region where the previous model was wrong.
 The correction is inverse-probability weighting. Every labeled item carries the
 probability the selection rule gave it when it was shown, and the fit weights it
 by the reciprocal, so an item that was unlikely to be picked stands in for the
-many like it that were not. This is the same problem Plexus solves for feedback
+many like it that were not. This is the same problem Primus solves for feedback
 sampled per confusion-matrix cell, and the same cure.
 
 It only works if selection is *stochastic*. A rule that always shows the single
