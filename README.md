@@ -35,6 +35,7 @@ full list, and it is not short.
 | how a round of feedback turns into a changed scorecard | [The loop](#the-loop), then [step by step](#a-steering-round-step-by-step) |
 | why this behaves like fine-tuning without any fine-tuning | [Fine-tuning's effect](#fine-tunings-effect-without-fine-tuning-anything) |
 | how reliably it works across models and seeds | [How often does it work?](#how-often-does-it-work) |
+| whether Pareto search improves a scorecard over the ordinary loop | [JEVPA: a documented null result](#jevpa-a-documented-null-result) |
 | the same layer on a free local model instead of Jev | [A local model](#the-same-layer-on-a-local-model) |
 | getting off the hosted model with a distilled student | [A local student](#moving-off-the-hosted-model-a-local-student) |
 | what actually fine-tuning an open engine buys, and costs | [Fine-tuning the engine instead](#fine-tuning-the-engine-instead) |
@@ -164,6 +165,29 @@ of them asking Laya, 6 training); you should see three lines, roughly 0.91 (soft
 (the ceiling), against a teacher at 0.89. The README's table uses three seeds; this runs one. It is
 [Moving off the hosted model](#moving-off-the-hosted-model-a-local-student), runnable. Stages 2
 and 3 write into `var/` and never touch the committed results in `studies/`.
+
+### JEVPA: a documented null result
+
+We also built and tested **JEVPA**, a Pareto search that keeps several candidate
+scorecards alive, retains specialists on predeclared label slices, and tries to
+merge complementary question sets. The implementation correctly enforces the
+same separation as the ordinary flywheel: the analyst sees discovery labels;
+candidate fitting uses only those trusted labels; selection labels rank but do
+not fit candidates; and a final test remains sealed.
+
+The result so far is a useful negative one. The offline pilot showed that the
+machinery can retain and merge pre-existing question specialists, but it did
+not beat greedy selection on its primary Brier score. Three later real-data
+investigations stopped before a qualifying merge: the proposed questions were
+too similar to satisfy the preregistered diversity gate. We therefore do **not**
+present Pareto search as a default flywheel stage or as evidence of broad
+metacognitive discovery.
+
+The complete record is [the JEVPA conclusions](studies/JEVPA_CONCLUSIONS.md),
+with the [student-outcome protocol](studies/JEVPA_STUDENT_OUTCOME_PROTOCOL.md)
+and [selection-stage results](studies/JEVPA_STUDENT_OUTCOME_RESULTS.md). The
+ordinary loop remains the project’s supported path: test whether one steering
+round can identify one useful missing criterion.
 
 ### Using your own labels
 
