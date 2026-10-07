@@ -4,8 +4,22 @@ Pins where each of the three insertion kinds fires (pronoun, placeholder, PERSON
 and that a bio with none of them is excluded. See ``studies/PREREGISTERED.md``, "race from a
 full name, second attempt".
 """
+import pytest
+
 from jev_flywheel.fullname import (
     analyze_full_name, apply_full_name, apply_full_name_full, render_full_name)
+
+
+try:
+    import spacy
+    spacy.load("en_core_web_sm")
+    _HAS_NAME_MODEL = True
+except (ImportError, OSError):
+    _HAS_NAME_MODEL = False
+
+
+pytestmark = pytest.mark.skipif(
+    not _HAS_NAME_MODEL, reason="spacy en_core_web_sm is not installed (pip install '.[bios]')")
 
 
 def test_the_first_subject_pronoun_becomes_the_full_name():
