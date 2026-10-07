@@ -1,6 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help install demo jevpa laya student finetune bios flipopt race race2 age pairs test diagrams
 
+# A contributor can keep the environment wherever they prefer.  The common
+# checkout names work without an override; CI can pass PYTHON explicitly.
+PYTHON ?= $(firstword $(wildcard .venv/bin/python .venv312/bin/python))
+
 help:
 	@echo "Jev Flywheel: three things you can run. Nothing here needs a Jev key."
 	@echo ""
@@ -250,7 +254,7 @@ nurse:
 	@echo "Next: studies/PREREGISTERED.md, 'the learning loop on nurse vs physician'"
 
 test:
-	.venv/bin/python -m pytest -q
+	$(PYTHON) -m pytest -q
 
 # Re-render the diagrams. Needs d2 (https://d2lang.com); the SVGs are committed, so this is
 # only for changing one.
